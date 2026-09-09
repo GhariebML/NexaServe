@@ -1,0 +1,34 @@
+# Environment variables and secrets
+.env
+*.env.local
+
+# Persistent runtime data (stored on Drive E:)
+data/
+data/**
+
+# Backups
+backups/*
+!backups/.gitkeep
+*.sql
+*.tar
+*.gz
+
+# LLM Models and binaries
+*.bin
+*.gguf
+*.onnx
+
+# Logs and temporary files
+*.log
+scratch/
+tmp/
+.cache/
+
+# OS specific files
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# IDE configuration
+.vscode/
+.idea/
