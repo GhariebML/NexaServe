@@ -1,0 +1,10 @@
+{
+  "model": "gemma2:2b",
+  "prompt": "You are a customer service AI. A customer asks: 'Hello, I want to know the status of my order.' Output ONLY a JSON object with schema: {\"intent\": \"order_status\", \"confidence\": 0.95, \"requires_human\": false, \"response\": \"...\"}",
+  "stream": false,
+  "format": "json",
+  "options": {
+    "num_ctx": 1024,
+    "num_predict": 128
+  }
+}

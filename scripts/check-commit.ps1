@@ -1,0 +1,1 @@
+Get-Process | Sort-Object PrivateMemorySize64 -Descending | Select-Object -First 15 -Property Name, Id, @{Name="PrivateMem_MB"; Expression={[math]::Round($_.PrivateMemorySize64 / 1MB, 1)}}, @{Name="WorkingSet_MB"; Expression={[math]::Round($_.WorkingSet64 / 1MB, 1)}} | Format-Table -AutoSize
