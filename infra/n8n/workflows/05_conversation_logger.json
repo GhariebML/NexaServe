@@ -1,0 +1,129 @@
+{
+  "id": "CSWF000000000007",
+  "name": "SubWF 05 - Conversation & Audit Logger",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "node-trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO messages (conversation_id, customer_id, sender_type, content, intent, confidence, metadata)\nVALUES ('{{ $json.conversation?.id }}', '{{ $json.customer?.id }}', 'customer', '{{ ($json.customer_message || '').replace(/'/g, \"''\") }}', '{{ $json.ai_output?.intent || 'unknown' }}', {{ $json.ai_output?.confidence || 0 }}, '{{ JSON.stringify($json.ai_output?.entities || {}).replace(/'/g, \"''\") }}');"
+      },
+      "id": "node-save-cust-msg",
+      "name": "Save Customer Message",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [440, 200],
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_CRED_01",
+          "name": "CustomerService Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO messages (conversation_id, customer_id, sender_type, content, intent, confidence, metadata)\nVALUES ('{{ $json.conversation?.id }}', '{{ $json.customer?.id }}', 'ai', '{{ ($json.final_reply || '').replace(/'/g, \"''\") }}', '{{ $json.ai_output?.intent || 'unknown' }}', {{ $json.ai_output?.confidence || 0 }}, '{\"sentiment\": \"{{ $json.ai_output?.sentiment || 'neutral' }}\"}');"
+      },
+      "id": "node-save-ai-msg",
+      "name": "Save AI Response",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [440, 400],
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_CRED_01",
+          "name": "CustomerService Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO audit_logs (workflow_name, execution_id, event_type, payload, latency_ms)\nVALUES ('01_gateway_dispatcher', '{{ $execution.id || 'local_run' }}', 'turn_completed', '{\"intent\": \"{{ $json.ai_output?.intent }}\", \"status\": \"{{ $json.handler_status }}\"}', {{ $json.latency_ms || 0 }});"
+      },
+      "id": "node-insert-audit",
+      "name": "Insert Turn Audit Log",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [680, 300],
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_CRED_01",
+          "name": "CustomerService Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    logged: true,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "node-return-log",
+      "name": "Return Log Confirmation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [920, 300]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Save Customer Message",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Save AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Customer Message": {
+      "main": [
+        [
+          {
+            "node": "Insert Turn Audit Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save AI Response": {
+      "main": [
+        [
+          {
+            "node": "Insert Turn Audit Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Turn Audit Log": {
+      "main": [
+        [
+          {
+            "node": "Return Log Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

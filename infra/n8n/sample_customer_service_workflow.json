@@ -1,0 +1,109 @@
+{
+  "id": "CSWF000000000001",
+  "name": "Customer Service AI - Intent Classification Test",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "1",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "customer_message",
+              "value": "Hello, I want to know the status of my order."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2",
+      "name": "Mock Customer Input",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.2,
+      "position": [
+        420,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/generate",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"gemma2:2b\",\n  \"prompt\": \"You are a professional Customer Service AI assistant. Analyze the incoming customer message and classify its intent. Respond ONLY with a valid JSON object with the following fields: 'intent' (string, e.g. order_status, refund, return, general_inquiry), 'confidence' (float between 0 and 1), 'requires_human' (boolean), and 'response' (friendly customer-facing reply). Message: '\" + $json.customer_message + \"'\",\n  \"stream\": false,\n  \"format\": \"json\"\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "3",
+      "name": "Ollama AI Intent Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        640,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const rawResponse = $input.first().json.response;\nlet parsed = {};\ntry {\n  parsed = JSON.parse(rawResponse);\n} catch (e) {\n  parsed = {\n    error: 'Failed to parse JSON',\n    raw: rawResponse\n  };\n}\nreturn [{ json: parsed }];"
+      },
+      "id": "4",
+      "name": "Parse Structured JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        860,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Mock Customer Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mock Customer Input": {
+      "main": [
+        [
+          {
+            "node": "Ollama AI Intent Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama AI Intent Agent": {
+      "main": [
+        [
+          {
+            "node": "Parse Structured JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

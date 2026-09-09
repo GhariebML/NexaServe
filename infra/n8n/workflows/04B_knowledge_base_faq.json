@@ -1,0 +1,68 @@
+{
+  "id": "CSWF000000000005",
+  "name": "SubWF 04B - Knowledge Base & FAQ",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "node-trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT category, question, answer\nFROM knowledge_base\nWHERE is_active = TRUE\n  AND (question ILIKE '%{{ ($json.customer_message || '').replace(/'/g, \"''\") }}%'\n       OR answer ILIKE '%{{ ($json.customer_message || '').replace(/'/g, \"''\") }}%'\n       OR '{{ ($json.customer_message || '').replace(/'/g, \"''\") }}' ILIKE ANY(SELECT '%' || unnest(keywords) || '%'))\nLIMIT 1;"
+      },
+      "id": "node-db-kb",
+      "name": "Query Knowledge Base",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [440, 300],
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_CRED_01",
+          "name": "CustomerService Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst triggerData = $('Execute Workflow Trigger').first().json;\n\nif (items.length > 0 && items[0].json && items[0].json.answer) {\n  const kb = items[0].json;\n  return [{\n    json: {\n      status: 'success',\n      intent_handled: 'faq_query',\n      category: kb.category,\n      question_matched: kb.question,\n      reply: kb.answer\n    }\n  }];\n} else {\n  return [{\n    json: {\n      status: 'fallback',\n      intent_handled: 'faq_query',\n      reply: triggerData.ai_output?.direct_response || \"Our customer support team is available 24/7. Standard shipping takes 3-5 business days, and we offer a 30-day money-back guarantee on all products. How else may I assist you today?\"\n    }\n  }];\n}"
+      },
+      "id": "node-format-faq",
+      "name": "Format Knowledge Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Query Knowledge Base",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Knowledge Base": {
+      "main": [
+        [
+          {
+            "node": "Format Knowledge Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

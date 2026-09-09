@@ -1,0 +1,96 @@
+{
+  "id": "CSWF000000000002",
+  "name": "SubWF 02 - Customer Profile & Session Manager",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "node-trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO customers (phone_number, full_name, email)\nVALUES ('{{ ($json.phone_number || '+1234567890').replace(/'/g, \"''\") }}', '{{ ($json.full_name || 'Valued Customer').replace(/'/g, \"''\") }}', NULL)\nON CONFLICT (phone_number) DO UPDATE \n  SET updated_at = CURRENT_TIMESTAMP\nRETURNING id, phone_number, email, full_name, metadata;"
+      },
+      "id": "node-upsert-customer",
+      "name": "Find or Upsert Customer",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [440, 300],
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_CRED_01",
+          "name": "CustomerService Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=WITH existing AS (\n  SELECT id, customer_id, channel, status, created_at\n  FROM conversations\n  WHERE customer_id = '{{ $('Find or Upsert Customer').first().json.id }}' AND status = 'active'\n  ORDER BY created_at DESC\n  LIMIT 1\n),\ninserted AS (\n  INSERT INTO conversations (customer_id, channel, status)\n  SELECT '{{ $('Find or Upsert Customer').first().json.id }}', '{{ $('Execute Workflow Trigger').first().json.channel || 'web' }}', 'active'\n  WHERE NOT EXISTS (SELECT 1 FROM existing)\n  RETURNING id, customer_id, channel, status, created_at\n)\nSELECT * FROM existing\nUNION ALL\nSELECT * FROM inserted;"
+      },
+      "id": "node-get-conv",
+      "name": "Get or Start Conversation",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [680, 300],
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_CRED_01",
+          "name": "CustomerService Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const customer = $('Find or Upsert Customer').first().json;\nconst conv = $('Get or Start Conversation').first().json;\nconst trigger = $('Execute Workflow Trigger').first().json;\n\nreturn [{\n  json: {\n    customer: customer,\n    conversation: conv,\n    customer_message: trigger.customer_message || '',\n    channel: trigger.channel || 'web'\n  }\n}];"
+      },
+      "id": "node-package-session",
+      "name": "Compile Session Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [920, 300]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Find or Upsert Customer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find or Upsert Customer": {
+      "main": [
+        [
+          {
+            "node": "Get or Start Conversation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get or Start Conversation": {
+      "main": [
+        [
+          {
+            "node": "Compile Session Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

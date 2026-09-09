@@ -1,0 +1,68 @@
+{
+  "id": "CSWF000000000004",
+  "name": "SubWF 04A - Order Lookup & Tracking",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "node-trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT o.order_number, o.status, o.total_amount, o.currency, o.carrier, o.tracking_number, o.estimated_delivery, o.items, c.full_name\nFROM orders o\nJOIN customers c ON o.customer_id = c.id\nWHERE o.order_number ILIKE '%{{ ($json.entities?.order_number || 'UNKNOWN').replace(/'/g, \"''\") }}%' OR c.phone_number = '{{ ($json.customer?.phone_number || '').replace(/'/g, \"''\") }}'\nORDER BY o.created_at DESC\nLIMIT 1;"
+      },
+      "id": "node-db-order",
+      "name": "Query Order in PostgreSQL",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [440, 300],
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_CRED_01",
+          "name": "CustomerService Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst inputData = $('Execute Workflow Trigger').first().json;\n\nif (items.length > 0 && items[0].json && items[0].json.order_number) {\n  const order = items[0].json;\n  const formattedDate = order.estimated_delivery ? new Date(order.estimated_delivery).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'soon';\n  \n  let reply = `Hello ${order.full_name || 'there'}, your order **${order.order_number}** is currently **${order.status.toUpperCase()}**.\\n\\n`;\n  if (order.carrier && order.tracking_number) {\n    reply += `📦 Carrier: ${order.carrier}\\n🔍 Tracking Number: ${order.tracking_number}\\n📅 Estimated Delivery: ${formattedDate}\\n`;\n  } else {\n    reply += `We are preparing your items for shipment. Estimated delivery: ${formattedDate}.\\n`;\n  }\n  reply += `\\nTotal: ${order.total_amount} ${order.currency}. Let us know if you need anything else!`;\n  \n  return [{\n    json: {\n      status: 'success',\n      intent_handled: 'order_lookup',\n      order_found: true,\n      order_data: order,\n      reply: reply\n    }\n  }];\n} else {\n  const requestedNum = inputData.entities?.order_number || 'your requested order';\n  return [{\n    json: {\n      status: 'not_found',\n      intent_handled: 'order_lookup',\n      order_found: false,\n      reply: `I could not find an active order matching \"${requestedNum}\". Please verify your order number (e.g. ORD-1001) or provide the email address used during purchase.`\n    }\n  }];\n}"
+      },
+      "id": "node-format-order",
+      "name": "Format Order Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Query Order in PostgreSQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Order in PostgreSQL": {
+      "main": [
+        [
+          {
+            "node": "Format Order Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

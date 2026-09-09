@@ -1,0 +1,377 @@
+{
+  "id": "CSWF000000000001",
+  "name": "Master 01 - Customer Service Gateway & Dispatcher",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "customer-service",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [160, 240],
+      "webhookId": "cs-gateway-webhook"
+    },
+    {
+      "parameters": {},
+      "id": "node-manual",
+      "name": "Manual Test Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [160, 420]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first()?.json || {};\nconst body = input.body || input;\n\nconst customerMessage = body.message || body.customer_message || 'Hello, I want to know the status of my order ORD-1001.';\nconst phoneNumber = body.phone || body.phone_number || '+1234567890';\nconst fullName = body.name || body.full_name || 'John Doe';\nconst channel = body.channel || 'web';\n\nreturn [{\n  json: {\n    customer_message: customerMessage,\n    phone_number: phoneNumber,\n    full_name: fullName,\n    channel: channel,\n    start_time: Date.now()\n  }\n}];"
+      },
+      "id": "node-normalize",
+      "name": "Normalize Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [380, 320]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "CSWF000000000002",
+          "mode": "id"
+        }
+      },
+      "id": "node-call-session",
+      "name": "Call SubWF 02 - Session Manager",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [600, 320]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "CSWF000000000003",
+          "mode": "id"
+        }
+      },
+      "id": "node-call-ai",
+      "name": "Call SubWF 03 - AI Intent Engine",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [820, 320]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.ai_output?.requires_human || $json.ai_output?.intent === 'human_escalation' }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.ai_output?.intent }}",
+                    "rightValue": "order_lookup",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.ai_output?.intent }}",
+                    "rightValue": "faq_query",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "fallbackOutput": 3
+      },
+      "id": "node-switch-intent",
+      "name": "Route by Intent",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [1060, 320]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "CSWF000000000006",
+          "mode": "id"
+        }
+      },
+      "id": "node-route-escalate",
+      "name": "Call SubWF 04C - Escalation",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [1320, 100]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "CSWF000000000004",
+          "mode": "id"
+        }
+      },
+      "id": "node-route-order",
+      "name": "Call SubWF 04A - Order Lookup",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [1320, 240]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "CSWF000000000005",
+          "mode": "id"
+        }
+      },
+      "id": "node-route-faq",
+      "name": "Call SubWF 04B - Knowledge Base",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [1320, 380]
+    },
+    {
+      "parameters": {
+        "jsCode": "const ai = $('Call SubWF 03 - AI Intent Engine').first().json.ai_output;\nreturn [{\n  json: {\n    status: 'general',\n    intent_handled: 'general_support',\n    reply: ai?.direct_response || \"Thank you for reaching out! How can I assist you with your orders or questions today?\"\n  }\n}];"
+      },
+      "id": "node-route-general",
+      "name": "General Support Handler",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 520]
+    },
+    {
+      "parameters": {
+        "jsCode": "const handlerResult = $input.first()?.json || {};\nconst aiContext = $('Call SubWF 03 - AI Intent Engine').first()?.json || {};\nconst norm = $('Normalize Input').first()?.json || {};\n\nconst finalReply = handlerResult.reply || \"Thank you for contacting customer service. How may we assist you?\";\nconst latency = Date.now() - (norm.start_time || Date.now());\n\nreturn [{\n  json: {\n    customer: aiContext.customer,\n    conversation: aiContext.conversation,\n    customer_message: norm.customer_message,\n    ai_output: aiContext.ai_output,\n    handler_status: handlerResult.status,\n    final_reply: finalReply,\n    latency_ms: latency\n  }\n}];"
+      },
+      "id": "node-assemble-response",
+      "name": "Assemble Response & Metrics",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1580, 320]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "CSWF000000000007",
+          "mode": "id"
+        }
+      },
+      "id": "node-call-logger",
+      "name": "Call SubWF 05 - Logger",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [1800, 320]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"success\",\n  \"customer\": {\n    \"name\": \"{{ $('Assemble Response & Metrics').first().json.customer?.full_name }}\",\n    \"phone\": \"{{ $('Assemble Response & Metrics').first().json.customer?.phone_number }}\"\n  },\n  \"conversation_id\": \"{{ $('Assemble Response & Metrics').first().json.conversation?.id }}\",\n  \"intent\": \"{{ $('Assemble Response & Metrics').first().json.ai_output?.intent }}\",\n  \"confidence\": {{ $('Assemble Response & Metrics').first().json.ai_output?.confidence || 0 }},\n  \"response\": {{ JSON.stringify($('Assemble Response & Metrics').first().json.final_reply) }},\n  \"latency_ms\": {{ $('Assemble Response & Metrics').first().json.latency_ms }}\n}",
+        "options": {}
+      },
+      "id": "node-respond-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2020, 320]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Input": {
+      "main": [
+        [
+          {
+            "node": "Call SubWF 02 - Session Manager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call SubWF 02 - Session Manager": {
+      "main": [
+        [
+          {
+            "node": "Call SubWF 03 - AI Intent Engine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call SubWF 03 - AI Intent Engine": {
+      "main": [
+        [
+          {
+            "node": "Route by Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Intent": {
+      "main": [
+        [
+          {
+            "node": "Call SubWF 04C - Escalation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call SubWF 04A - Order Lookup",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call SubWF 04B - Knowledge Base",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "General Support Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call SubWF 04C - Escalation": {
+      "main": [
+        [
+          {
+            "node": "Assemble Response & Metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call SubWF 04A - Order Lookup": {
+      "main": [
+        [
+          {
+            "node": "Assemble Response & Metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call SubWF 04B - Knowledge Base": {
+      "main": [
+        [
+          {
+            "node": "Assemble Response & Metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "General Support Handler": {
+      "main": [
+        [
+          {
+            "node": "Assemble Response & Metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assemble Response & Metrics": {
+      "main": [
+        [
+          {
+            "node": "Call SubWF 05 - Logger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call SubWF 05 - Logger": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

@@ -1,0 +1,96 @@
+{
+  "id": "CSWF000000000006",
+  "name": "SubWF 04C - Human in the Loop Escalation",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "node-trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO tickets (ticket_number, customer_id, conversation_id, priority, status, reason)\nVALUES (\n  'TICK-' || floor(random() * 90000 + 10000)::text,\n  '{{ $json.customer?.id || 'a0000000-0000-0000-0000-000000000001' }}',\n  '{{ $json.conversation?.id || 'a0000000-0000-0000-0000-000000000001' }}',\n  '{{ $json.ai_output?.sentiment === 'angry' ? 'urgent' : 'high' }}',\n  'open',\n  '{{ ($json.customer_message || 'Customer requested human support').replace(/'/g, \"''\") }}'\n)\nRETURNING ticket_number, priority, status, created_at;"
+      },
+      "id": "node-create-ticket",
+      "name": "Create Support Ticket in Postgres",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [440, 300],
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_CRED_01",
+          "name": "CustomerService Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=UPDATE conversations SET status = 'handed_off', current_intent = 'human_escalation' WHERE id = '{{ $('Execute Workflow Trigger').first().json.conversation?.id }}';"
+      },
+      "id": "node-update-conv",
+      "name": "Mark Conversation Handed Off",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [680, 300],
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_CRED_01",
+          "name": "CustomerService Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const ticket = $('Create Support Ticket in Postgres').first().json;\nconst ticketNumber = ticket.ticket_number || 'TICK-NEW';\n\nreturn [{\n  json: {\n    status: 'escalated',\n    intent_handled: 'human_escalation',\n    ticket_number: ticketNumber,\n    priority: ticket.priority,\n    reply: `I understand this requires human assistance. I have opened priority support ticket #${ticketNumber} for you. A specialist has been assigned and is reviewing your request.`\n  }\n}];"
+      },
+      "id": "node-format-ticket",
+      "name": "Format Escalation Notice",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [920, 300]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Create Support Ticket in Postgres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Support Ticket in Postgres": {
+      "main": [
+        [
+          {
+            "node": "Mark Conversation Handed Off",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Conversation Handed Off": {
+      "main": [
+        [
+          {
+            "node": "Format Escalation Notice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
