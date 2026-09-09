@@ -9,9 +9,11 @@ data/**
 # Backups
 backups/*
 !backups/.gitkeep
-*.sql
+backups/*.sql
+backups/**/*.sql
 *.tar
 *.gz
+!infra/**/*.sql
 
 # LLM Models and binaries
 *.bin
