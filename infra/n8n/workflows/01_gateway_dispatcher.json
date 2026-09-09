@@ -214,6 +214,71 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [2020, 320]
+    },
+    {
+      "parameters": {
+        "content": "### 📥 Ingestion & Gateway\n- Listens on `POST /webhook/customer-service`\n- Manual Trigger for canvas debugging\n- Normalizes payload, extracts customer identity, & starts latency stopwatch",
+        "height": 340,
+        "width": 380,
+        "color": 4
+      },
+      "id": "note-gateway",
+      "name": "Note Gateway",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [100, 160]
+    },
+    {
+      "parameters": {
+        "content": "### 👤 Identity & Session\n- SubWF 02 provisions customer in Postgres\n- Restores active conversation\n- Caches session context",
+        "height": 340,
+        "width": 200,
+        "color": 3
+      },
+      "id": "note-session",
+      "name": "Note Session",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [560, 160]
+    },
+    {
+      "parameters": {
+        "content": "### 🧠 AI Intent Engine\n- Calls local **Ollama** (`gemma2:2b`)\n- Classifies intent & entities\n- Strict schema + heuristic fail-safe",
+        "height": 340,
+        "width": 200,
+        "color": 6
+      },
+      "id": "note-ai",
+      "name": "Note AI",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [780, 160]
+    },
+    {
+      "parameters": {
+        "content": "### 🔀 Intent Router & Domain Handlers\n- **Order Lookup (04A)**: Queries `orders` table in PostgreSQL\n- **Knowledge Base (04B)**: Store policies from `knowledge_base`\n- **Escalation (04C)**: Opens priority ticket in `tickets`\n- **General (04D)**: Direct conversational assistance",
+        "height": 560,
+        "width": 460,
+        "color": 5
+      },
+      "id": "note-router",
+      "name": "Note Router",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1020, 40]
+    },
+    {
+      "parameters": {
+        "content": "### 📊 Response & Telemetry\n- Assembles final payload & latency metrics\n- Asynchronously logs turn in `messages`\n- Records execution metrics in `audit_logs`\n- Returns 200 OK JSON response to caller",
+        "height": 340,
+        "width": 560,
+        "color": 7
+      },
+      "id": "note-telemetry",
+      "name": "Note Telemetry",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1520, 160]
     }
   ],
   "connections": {

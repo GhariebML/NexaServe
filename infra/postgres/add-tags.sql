@@ -1,0 +1,27 @@
+INSERT INTO tag_entity (id, name) 
+VALUES 
+  ('TAG01', 'Production'), 
+  ('TAG02', 'Customer Service'), 
+  ('TAG03', 'Sub-Workflow'), 
+  ('TAG04', 'AI Agent') 
+ON CONFLICT (name) DO NOTHING;
+
+INSERT INTO workflows_tags ("workflowId", "tagId") 
+VALUES 
+  ('CSWF000000000001', 'TAG01'), 
+  ('CSWF000000000001', 'TAG02'), 
+  ('CSWF000000000002', 'TAG03'), 
+  ('CSWF000000000002', 'TAG02'), 
+  ('CSWF000000000003', 'TAG04'), 
+  ('CSWF000000000003', 'TAG02'), 
+  ('CSWF000000000004', 'TAG03'), 
+  ('CSWF000000000004', 'TAG02'), 
+  ('CSWF000000000005', 'TAG03'), 
+  ('CSWF000000000005', 'TAG02'), 
+  ('CSWF000000000006', 'TAG03'), 
+  ('CSWF000000000006', 'TAG02'), 
+  ('CSWF000000000007', 'TAG03'), 
+  ('CSWF000000000007', 'TAG02'), 
+  ('CSWF000000000008', 'TAG01'), 
+  ('CSWF000000000008', 'TAG02') 
+ON CONFLICT ("workflowId", "tagId") DO NOTHING;
