@@ -8,18 +8,18 @@
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
-      "position": [200, 300]
+      "position": [160, 300]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "=SELECT category, question, answer\nFROM knowledge_base\nWHERE is_active = TRUE\n  AND (question ILIKE '%{{ ($json.customer_message || '').replace(/'/g, \"''\") }}%'\n       OR answer ILIKE '%{{ ($json.customer_message || '').replace(/'/g, \"''\") }}%'\n       OR '{{ ($json.customer_message || '').replace(/'/g, \"''\") }}' ILIKE ANY(SELECT '%' || unnest(keywords) || '%'))\nLIMIT 1;"
+        "query": "=SELECT COALESCE(json_agg(t), '[]'::json) AS results\nFROM (\n  SELECT id, category, question, answer, question_ar, answer_ar\n  FROM knowledge_base\n  WHERE is_active = TRUE\n    AND (\n      question ILIKE '%{{ ($json.customer_message || '').replace(/'/g, \"''\") }}%'\n      OR answer ILIKE '%{{ ($json.customer_message || '').replace(/'/g, \"''\") }}%'\n      OR question_ar ILIKE '%{{ ($json.customer_message || '').replace(/'/g, \"''\") }}%'\n      OR answer_ar ILIKE '%{{ ($json.customer_message || '').replace(/'/g, \"''\") }}%'\n      OR '{{ ($json.customer_message || '').replace(/'/g, \"''\") }}' ILIKE ANY(SELECT '%' || unnest(keywords) || '%')\n      OR '{{ ($json.customer_message || '').replace(/'/g, \"''\") }}' ILIKE ANY(SELECT '%' || unnest(keywords_ar) || '%')\n    )\n  ORDER BY id ASC\n  LIMIT 2\n) t;"
       },
-      "id": "node-db-kb",
-      "name": "Query Knowledge Base",
+      "id": "node-query-kb",
+      "name": "Query Bilingual Knowledge Base",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [440, 300],
+      "position": [380, 300],
       "credentials": {
         "postgres": {
           "id": "CS_PG_CRED_01",
@@ -29,13 +29,13 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconst triggerData = $('Execute Workflow Trigger').first().json;\n\nif (items.length > 0 && items[0].json && items[0].json.answer) {\n  const kb = items[0].json;\n  return [{\n    json: {\n      status: 'success',\n      intent_handled: 'faq_query',\n      category: kb.category,\n      question_matched: kb.question,\n      reply: kb.answer\n    }\n  }];\n} else {\n  return [{\n    json: {\n      status: 'fallback',\n      intent_handled: 'faq_query',\n      reply: triggerData.ai_output?.direct_response || \"Our customer support team is available 24/7. Standard shipping takes 3-5 business days, and we offer a 30-day money-back guarantee on all products. How else may I assist you today?\"\n    }\n  }];\n}"
+        "jsCode": "const results = $input.first()?.json.results || [];\nconst triggerData = $('Execute Workflow Trigger').first()?.json || {};\nconst locale = triggerData.locale || 'ar';\nconst isAr = locale === 'ar';\n\nif (results.length > 0 && results[0]) {\n  const kb = results[0];\n  const responseText = isAr ? (kb.answer_ar || kb.answer) : (kb.answer || kb.answer_ar);\n  const questionMatched = isAr ? (kb.question_ar || kb.question) : (kb.question || kb.question_ar);\n  \n  return [{\n    json: {\n      status: 'success',\n      intent_handled: 'faq_query',\n      category: kb.category,\n      question_matched: questionMatched,\n      reply: responseText,\n      sources: ['MCIT Official Knowledge Base - ' + (kb.category || 'General')]\n    }\n  }];\n} else {\n  const defaultReply = isAr\n    ? 'شكراً لتواصلك مع وزارة الاتصالات وتقنية المعلومات. يمكنك الاطلاع على خدماتنا ولوائحنا عبر المنصة الوطنية الموحدة. إذا كنت بحاجة لدعم إضافي، يمكنك طلب التحدث مع ممثل خدمة العملاء.'\n    : 'Thank you for contacting the Ministry of Communications and Information Technology (MCIT). You may explore our initiatives and services on the national portal. If you need further assistance, please ask to speak with a human specialist.';\n    \n  return [{\n    json: {\n      status: 'fallback',\n      intent_handled: 'faq_query',\n      reply: triggerData.ai_output?.direct_response || defaultReply,\n      sources: ['MCIT General Services Guidance']\n    }\n  }];\n}"
       },
-      "id": "node-format-faq",
-      "name": "Format Knowledge Response",
+      "id": "node-format-rag",
+      "name": "Format RAG Knowledge Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [680, 300]
+      "position": [600, 300]
     }
   ],
   "connections": {
@@ -43,18 +43,18 @@
       "main": [
         [
           {
-            "node": "Query Knowledge Base",
+            "node": "Query Bilingual Knowledge Base",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Query Knowledge Base": {
+    "Query Bilingual Knowledge Base": {
       "main": [
         [
           {
-            "node": "Format Knowledge Response",
+            "node": "Format RAG Knowledge Response",
             "type": "main",
             "index": 0
           }

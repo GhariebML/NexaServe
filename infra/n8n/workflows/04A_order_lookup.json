@@ -8,18 +8,18 @@
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
-      "position": [200, 300]
+      "position": [160, 300]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "=SELECT o.order_number, o.status, o.total_amount, o.currency, o.carrier, o.tracking_number, o.estimated_delivery, o.items, c.full_name\nFROM orders o\nJOIN customers c ON o.customer_id = c.id\nWHERE o.order_number ILIKE '%{{ ($json.entities?.order_number || 'UNKNOWN').replace(/'/g, \"''\") }}%' OR c.phone_number = '{{ ($json.customer?.phone_number || '').replace(/'/g, \"''\") }}'\nORDER BY o.created_at DESC\nLIMIT 1;"
+        "query": "=SELECT COALESCE(json_agg(t), '[]'::json) AS results\nFROM (\n  SELECT o.order_number, o.status, o.total_amount, o.currency, o.carrier, o.tracking_number, o.estimated_delivery, o.items, o.service_type, c.full_name\n  FROM orders o\n  JOIN customers c ON o.customer_id = c.id\n  WHERE o.order_number ILIKE '%' || '{{ ($json.ai_output?.entities?.order_number || $json.entities?.order_number || ($json.customer_message || '').match(/(?:ord|srv)-\\d+/i)?.[0] || 'UNKNOWN').replace(/'/g, \"''\") }}' || '%'\n     OR (c.phone_number IS NOT NULL AND c.phone_number != '' AND c.phone_number = '{{ ($json.customer?.phone_number || 'NONE').replace(/'/g, \"''\") }}')\n     OR (c.telegram_id IS NOT NULL AND c.telegram_id != '' AND c.telegram_id = '{{ ($json.customer?.telegram_id || 'NONE').replace(/'/g, \"''\") }}')\n  ORDER BY o.created_at DESC\n  LIMIT 1\n) t;"
       },
       "id": "node-db-order",
       "name": "Query Order in PostgreSQL",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [440, 300],
+      "position": [380, 300],
       "credentials": {
         "postgres": {
           "id": "CS_PG_CRED_01",
@@ -29,13 +29,13 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconst inputData = $('Execute Workflow Trigger').first().json;\n\nif (items.length > 0 && items[0].json && items[0].json.order_number) {\n  const order = items[0].json;\n  const formattedDate = order.estimated_delivery ? new Date(order.estimated_delivery).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'soon';\n  \n  let reply = `Hello ${order.full_name || 'there'}, your order **${order.order_number}** is currently **${order.status.toUpperCase()}**.\\n\\n`;\n  if (order.carrier && order.tracking_number) {\n    reply += `📦 Carrier: ${order.carrier}\\n🔍 Tracking Number: ${order.tracking_number}\\n📅 Estimated Delivery: ${formattedDate}\\n`;\n  } else {\n    reply += `We are preparing your items for shipment. Estimated delivery: ${formattedDate}.\\n`;\n  }\n  reply += `\\nTotal: ${order.total_amount} ${order.currency}. Let us know if you need anything else!`;\n  \n  return [{\n    json: {\n      status: 'success',\n      intent_handled: 'order_lookup',\n      order_found: true,\n      order_data: order,\n      reply: reply\n    }\n  }];\n} else {\n  const requestedNum = inputData.entities?.order_number || 'your requested order';\n  return [{\n    json: {\n      status: 'not_found',\n      intent_handled: 'order_lookup',\n      order_found: false,\n      reply: `I could not find an active order matching \"${requestedNum}\". Please verify your order number (e.g. ORD-1001) or provide the email address used during purchase.`\n    }\n  }];\n}"
+        "jsCode": "const results = $input.first()?.json.results || [];\nconst inputData = $('Execute Workflow Trigger').first()?.json || {};\nconst locale = inputData.locale || 'ar';\nconst isAr = locale === 'ar';\n\nconst statusMapAr = {\n  'shipped': 'تم الشحن والإرسال',\n  'delivered': 'تم التسليم بنجاح',\n  'processing': 'قيد المعالجة والتجهيز',\n  'in_review': 'قيد المراجعة والتدقيق',\n  'approved': 'تمت الموافقة المبدئية',\n  'cancelled': 'ملغي'\n};\n\nif (results.length > 0 && results[0].order_number) {\n  const order = results[0];\n  const formattedDate = order.estimated_delivery ? new Date(order.estimated_delivery).toLocaleDateString(isAr ? 'ar-SA' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : (isAr ? 'قريباً' : 'soon');\n  const statusText = isAr ? (statusMapAr[(order.status || '').toLowerCase()] || order.status) : (order.status || '').toUpperCase();\n  \n  let reply = '';\n  if (isAr) {\n    reply = `أهلاً بك ${order.full_name || 'عزيزنا العميل'}،\\nحالة طلبك/طلب الخدمة رقم **${order.order_number}** هي: **${statusText}**.\\n\\n`;\n    if (order.carrier && order.tracking_number) {\n      reply += `📦 جهة التوصيل/الناقل: ${order.carrier}\\n🔍 رقم التتبع: ${order.tracking_number}\\n📅 تاريخ الوصول المتوقع: ${formattedDate}\\n`;\n    } else {\n      reply += `يتم تجهيز طلبك حالياً، والتاريخ المتوقع للاكتمال: ${formattedDate}.\\n`;\n    }\n    if (order.service_type) {\n      reply += `📋 نوع الخدمة: ${order.service_type}\\n`;\n    }\n    reply += `\\nنسعد بخدمتك دائماً. هل لديك أي استفسار آخر؟`;\n  } else {\n    reply = `Hello ${order.full_name || 'there'},\\nYour service request/order **${order.order_number}** is currently **${statusText}**.\\n\\n`;\n    if (order.carrier && order.tracking_number) {\n      reply += `📦 Carrier: ${order.carrier}\\n🔍 Tracking Number: ${order.tracking_number}\\n📅 Estimated Delivery: ${formattedDate}\\n`;\n    } else {\n      reply += `We are processing your request. Estimated completion: ${formattedDate}.\\n`;\n    }\n    if (order.service_type) {\n      reply += `📋 Service Type: ${order.service_type}\\n`;\n    }\n    reply += `\\nTotal: ${order.total_amount} ${order.currency}. Please let us know if you need any additional support!`;\n  }\n  \n  return [{\n    json: {\n      status: 'success',\n      intent_handled: 'order_lookup',\n      order_found: true,\n      order_data: order,\n      reply: reply\n    }\n  }];\n} else {\n  const requestedNum = inputData.ai_output?.entities?.order_number || inputData.entities?.order_number || (inputData.customer_message || '').match(/(?:ord|srv)-\\d+/i)?.[0] || (isAr ? 'الطلب المحدد' : 'your requested order');\n  const notFoundReply = isAr\n    ? `لم نتمكن من العثور على طلب أو معاملة برقم \"${requestedNum}\". يرجى التأكد من صحة رقم الطلب (مثال: SRV-1001 أو ORD-1001) أو إرسال رقم الهوية/الجوال المسجل.`\n    : `I could not find an active service request or order matching \"${requestedNum}\". Please verify the reference number (e.g. SRV-1001 or ORD-1001) or provide your registered contact details.`;\n    \n  return [{\n    json: {\n      status: 'not_found',\n      intent_handled: 'order_lookup',\n      order_found: false,\n      reply: notFoundReply\n    }\n  }];\n}"
       },
       "id": "node-format-order",
       "name": "Format Order Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [680, 300]
+      "position": [600, 300]
     }
   ],
   "connections": {

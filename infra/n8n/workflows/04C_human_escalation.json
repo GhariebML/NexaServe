@@ -8,18 +8,18 @@
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
-      "position": [200, 300]
+      "position": [160, 300]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "=INSERT INTO tickets (ticket_number, customer_id, conversation_id, priority, status, reason)\nVALUES (\n  'TICK-' || floor(random() * 90000 + 10000)::text,\n  '{{ $json.customer?.id || 'a0000000-0000-0000-0000-000000000001' }}',\n  '{{ $json.conversation?.id || 'a0000000-0000-0000-0000-000000000001' }}',\n  '{{ $json.ai_output?.sentiment === 'angry' ? 'urgent' : 'high' }}',\n  'open',\n  '{{ ($json.customer_message || 'Customer requested human support').replace(/'/g, \"''\") }}'\n)\nRETURNING ticket_number, priority, status, created_at;"
+        "query": "=INSERT INTO tickets (ticket_number, customer_id, conversation_id, priority, status, reason, assigned_team, escalation_channel, sla_due_at)\nVALUES (\n  'TICK-' || floor(random() * 90000 + 10000)::text,\n  '{{ ($json.customer && $json.customer.id && $json.customer.id !== \"null\") ? $json.customer.id : \"a0000000-0000-0000-0000-000000000001\" }}'::uuid,\n  '{{ ($json.conversation && $json.conversation.id && $json.conversation.id !== \"null\") ? $json.conversation.id : \"a0000000-0000-0000-0000-000000000001\" }}'::uuid,\n  '{{ $json.ai_output?.sentiment === 'angry' ? 'urgent' : 'high' }}',\n  'open',\n  '{{ ($json.customer_message || 'Citizen requested specialist assistance').replace(/'/g, \"''\") }}',\n  'MCIT Citizen Escalations Team',\n  '{{ $json.channel || 'webchat' }}',\n  CURRENT_TIMESTAMP + (CASE WHEN '{{ $json.ai_output?.sentiment }}' = 'angry' THEN INTERVAL '30 minutes' ELSE INTERVAL '2 hours' END)\n)\nRETURNING ticket_number, priority, status, sla_due_at, created_at;"
       },
       "id": "node-create-ticket",
-      "name": "Create Support Ticket in Postgres",
+      "name": "Create SLA Ticket in Postgres",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [440, 300],
+      "position": [380, 300],
       "credentials": {
         "postgres": {
           "id": "CS_PG_CRED_01",
@@ -30,13 +30,13 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "=UPDATE conversations SET status = 'handed_off', current_intent = 'human_escalation' WHERE id = '{{ $('Execute Workflow Trigger').first().json.conversation?.id }}';"
+        "query": "=UPDATE conversations\nSET status = 'handed_off', current_intent = 'human_escalation'\nWHERE id = '{{ ($('Execute Workflow Trigger').first().json.conversation && $('Execute Workflow Trigger').first().json.conversation.id && $('Execute Workflow Trigger').first().json.conversation.id !== \"null\") ? $('Execute Workflow Trigger').first().json.conversation.id : \"a0000000-0000-0000-0000-000000000001\" }}'::uuid;"
       },
       "id": "node-update-conv",
       "name": "Mark Conversation Handed Off",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [680, 300],
+      "position": [600, 300],
       "credentials": {
         "postgres": {
           "id": "CS_PG_CRED_01",
@@ -46,13 +46,30 @@
     },
     {
       "parameters": {
-        "jsCode": "const ticket = $('Create Support Ticket in Postgres').first().json;\nconst ticketNumber = ticket.ticket_number || 'TICK-NEW';\n\nreturn [{\n  json: {\n    status: 'escalated',\n    intent_handled: 'human_escalation',\n    ticket_number: ticketNumber,\n    priority: ticket.priority,\n    reply: `I understand this requires human assistance. I have opened priority support ticket #${ticketNumber} for you. A specialist has been assigned and is reviewing your request.`\n  }\n}];"
+        "operation": "executeQuery",
+        "query": "=INSERT INTO audit_logs (workflow_name, event_type, channel, payload)\nVALUES (\n  'SubWF 04C - Escalation',\n  'hitl_escalated',\n  '{{ $('Execute Workflow Trigger').first().json.channel || 'webchat' }}',\n  json_build_object(\n    'ticket_number', '{{ $('Create SLA Ticket in Postgres').first().json.ticket_number }}',\n    'priority', '{{ $('Create SLA Ticket in Postgres').first().json.priority }}',\n    'sla_due_at', '{{ $('Create SLA Ticket in Postgres').first().json.sla_due_at }}',\n    'customer', '{{ $('Execute Workflow Trigger').first().json.customer?.full_name }}',\n    'channel_user_id', '{{ $('Execute Workflow Trigger').first().json.channel_user_id }}'\n  )\n);"
+      },
+      "id": "node-agent-notify-audit",
+      "name": "Dispatch Agent Notification & Audit",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [820, 300],
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_CRED_01",
+          "name": "CustomerService Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const ticket = $('Create SLA Ticket in Postgres').first()?.json || {};\nconst trigger = $('Execute Workflow Trigger').first()?.json || {};\nconst locale = trigger.locale || 'ar';\nconst isAr = locale === 'ar';\nconst ticketNum = ticket.ticket_number || 'TICK-NEW';\nconst priority = ticket.priority || 'high';\n\nlet reply = '';\nif (isAr) {\n  reply = `تم استلام طلبك وتصعيده إلى الفريق المختص. تم فتح تذكرة دعم ذات أولوية برقم **#${ticketNum}** (درجة الأولوية: ${priority === 'urgent' ? 'عاجلة' : 'عالية'}).\\nيقوم أحد مسؤولي خدمة العملاء بمراجعة تفاصيل استفسارك حالياً وسيتواصل معك مباشرة.`;\n} else {\n  reply = `I understand this requires specialist attention. I have opened priority support ticket **#${ticketNum}** for you (Priority: ${priority.toUpperCase()}).\\nA customer support representative has been assigned and is reviewing your request to assist you directly.`;\n}\n\nreturn [{\n  json: {\n    status: 'escalated',\n    intent_handled: 'human_escalation',\n    ticket_number: ticketNum,\n    priority: priority,\n    sla_due_at: ticket.sla_due_at,\n    reply: reply\n  }\n}];"
       },
       "id": "node-format-ticket",
       "name": "Format Escalation Notice",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [920, 300]
+      "position": [1040, 300]
     }
   ],
   "connections": {
@@ -60,14 +77,14 @@
       "main": [
         [
           {
-            "node": "Create Support Ticket in Postgres",
+            "node": "Create SLA Ticket in Postgres",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Create Support Ticket in Postgres": {
+    "Create SLA Ticket in Postgres": {
       "main": [
         [
           {
@@ -79,6 +96,17 @@
       ]
     },
     "Mark Conversation Handed Off": {
+      "main": [
+        [
+          {
+            "node": "Dispatch Agent Notification & Audit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dispatch Agent Notification & Audit": {
       "main": [
         [
           {

@@ -8,18 +8,18 @@
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
-      "position": [200, 300]
+      "position": [160, 300]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "=INSERT INTO messages (conversation_id, customer_id, sender_type, content, intent, confidence, metadata)\nVALUES ('{{ $json.conversation?.id }}', '{{ $json.customer?.id }}', 'customer', '{{ ($json.customer_message || '').replace(/'/g, \"''\") }}', '{{ $json.ai_output?.intent || 'unknown' }}', {{ $json.ai_output?.confidence || 0 }}, '{{ JSON.stringify($json.ai_output?.entities || {}).replace(/'/g, \"''\") }}');"
+        "query": "=INSERT INTO messages (conversation_id, customer_id, sender_type, content, intent, confidence, pii_detected, metadata)\nVALUES (\n  '{{ ($json.conversation && $json.conversation.id && $json.conversation.id !== \"null\" && $json.conversation.id !== \"undefined\") ? $json.conversation.id : \"a0000000-0000-0000-0000-000000000001\" }}'::uuid,\n  '{{ ($json.customer && $json.customer.id && $json.customer.id !== \"null\" && $json.customer.id !== \"undefined\") ? $json.customer.id : \"a0000000-0000-0000-0000-000000000001\" }}'::uuid,\n  'customer',\n  '{{ ($json.sanitized_message || $json.customer_message || \"\").replace(/'/g, \"''\") }}',\n  '{{ $json.ai_output?.intent || \"unknown\" }}',\n  {{ $json.ai_output?.confidence || 0 }},\n  {{ $json.pii_detected ? 'TRUE' : 'FALSE' }},\n  '{{ JSON.stringify($json.ai_output?.entities || {}).replace(/'/g, \"''\") }}'\n);"
       },
       "id": "node-save-cust-msg",
       "name": "Save Customer Message",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [440, 200],
+      "position": [380, 300],
       "credentials": {
         "postgres": {
           "id": "CS_PG_CRED_01",
@@ -30,13 +30,13 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "=INSERT INTO messages (conversation_id, customer_id, sender_type, content, intent, confidence, metadata)\nVALUES ('{{ $json.conversation?.id }}', '{{ $json.customer?.id }}', 'ai', '{{ ($json.final_reply || '').replace(/'/g, \"''\") }}', '{{ $json.ai_output?.intent || 'unknown' }}', {{ $json.ai_output?.confidence || 0 }}, '{\"sentiment\": \"{{ $json.ai_output?.sentiment || 'neutral' }}\"}');"
+        "query": "=INSERT INTO messages (conversation_id, customer_id, sender_type, content, intent, confidence, metadata)\nVALUES (\n  '{{ ($('Execute Workflow Trigger').first().json.conversation && $('Execute Workflow Trigger').first().json.conversation.id && $('Execute Workflow Trigger').first().json.conversation.id !== \"null\" && $('Execute Workflow Trigger').first().json.conversation.id !== \"undefined\") ? $('Execute Workflow Trigger').first().json.conversation.id : \"a0000000-0000-0000-0000-000000000001\" }}'::uuid,\n  '{{ ($('Execute Workflow Trigger').first().json.customer && $('Execute Workflow Trigger').first().json.customer.id && $('Execute Workflow Trigger').first().json.customer.id !== \"null\" && $('Execute Workflow Trigger').first().json.customer.id !== \"undefined\") ? $('Execute Workflow Trigger').first().json.customer.id : \"a0000000-0000-0000-0000-000000000001\" }}'::uuid,\n  'ai',\n  '{{ ($('Execute Workflow Trigger').first().json.final_reply || \"\").replace(/'/g, \"''\") }}',\n  '{{ $('Execute Workflow Trigger').first().json.ai_output?.intent || \"unknown\" }}',\n  {{ $('Execute Workflow Trigger').first().json.ai_output?.confidence || 0 }},\n  json_build_object('sentiment', '{{ $('Execute Workflow Trigger').first().json.ai_output?.sentiment || \"neutral\" }}', 'locale', '{{ $('Execute Workflow Trigger').first().json.locale || \"ar\" }}')\n);"
       },
       "id": "node-save-ai-msg",
       "name": "Save AI Response",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [440, 400],
+      "position": [600, 300],
       "credentials": {
         "postgres": {
           "id": "CS_PG_CRED_01",
@@ -47,13 +47,13 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "=INSERT INTO audit_logs (workflow_name, execution_id, event_type, payload, latency_ms)\nVALUES ('01_gateway_dispatcher', '{{ $execution.id || 'local_run' }}', 'turn_completed', '{\"intent\": \"{{ $json.ai_output?.intent }}\", \"status\": \"{{ $json.handler_status }}\"}', {{ $json.latency_ms || 0 }});"
+        "query": "=INSERT INTO audit_logs (workflow_name, execution_id, event_type, channel, pii_masked, payload, latency_ms)\nVALUES (\n  '01_gateway_dispatcher',\n  '{{ $execution.id || (\"turn_\" + Math.floor(Math.random() * 90000 + 10000)) }}',\n  'turn_completed',\n  '{{ $('Execute Workflow Trigger').first().json.channel || \"webchat\" }}',\n  {{ $('Execute Workflow Trigger').first().json.pii_detected ? 'TRUE' : 'FALSE' }},\n  json_build_object(\n    'intent', '{{ $('Execute Workflow Trigger').first().json.ai_output?.intent }}',\n    'status', '{{ $('Execute Workflow Trigger').first().json.handler_status }}',\n    'ticket_number', '{{ $('Execute Workflow Trigger').first().json.ticket_number }}',\n    'locale', '{{ $('Execute Workflow Trigger').first().json.locale }}',\n    'customer', '{{ $('Execute Workflow Trigger').first().json.customer?.full_name }}'\n  ),\n  {{ $('Execute Workflow Trigger').first().json.latency_ms || 0 }}\n);"
       },
       "id": "node-insert-audit",
       "name": "Insert Turn Audit Log",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [680, 300],
+      "position": [820, 300],
       "credentials": {
         "postgres": {
           "id": "CS_PG_CRED_01",
@@ -69,7 +69,7 @@
       "name": "Return Log Confirmation",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [920, 300]
+      "position": [1040, 300]
     }
   ],
   "connections": {
@@ -80,11 +80,6 @@
             "node": "Save Customer Message",
             "type": "main",
             "index": 0
-          },
-          {
-            "node": "Save AI Response",
-            "type": "main",
-            "index": 0
           }
         ]
       ]
@@ -93,7 +88,7 @@
       "main": [
         [
           {
-            "node": "Insert Turn Audit Log",
+            "node": "Save AI Response",
             "type": "main",
             "index": 0
           }

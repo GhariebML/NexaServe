@@ -1,0 +1,228 @@
+{
+  "id": "F7kjakLJXmzBDsvS",
+  "name": "SubWF 06 - Output Channel Dispatcher",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "node-trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [160, 300]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.channel }}",
+                    "rightValue": "whatsapp",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.channel }}",
+                    "rightValue": "telegram",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.channel }}",
+                    "rightValue": "email",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "fallbackOutput": 3
+      },
+      "id": "node-switch-channel",
+      "name": "Route by Channel",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [380, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first()?.json || {};\nconst recipient = item.phone_number || item.channel_user_id || '+966501234567';\nconst text = item.reply || item.message || '';\n\nreturn [{\n  json: {\n    channel: 'whatsapp',\n    recipient: recipient,\n    dispatched: true,\n    meta_payload: {\n      messaging_product: 'whatsapp',\n      recipient_type: 'individual',\n      to: recipient.replace(/[^0-9]/g, ''),\n      type: 'text',\n      text: { body: text }\n    },\n    message: text,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "node-format-whatsapp",
+      "name": "Format WhatsApp Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [620, 120]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first()?.json || {};\nconst chatId = item.channel_user_id || item.customer?.telegram_id || '987654321';\nconst text = item.reply || item.message || '';\n\nreturn [{\n  json: {\n    channel: 'telegram',\n    recipient: chatId,\n    dispatched: true,\n    meta_payload: {\n      chat_id: chatId,\n      text: text,\n      parse_mode: 'Markdown'\n    },\n    message: text,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "node-format-telegram",
+      "name": "Format Telegram Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [620, 240]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first()?.json || {};\nconst email = item.customer?.email || item.email || 'citizen@example.gov.sa';\nconst text = item.reply || item.message || '';\n\nreturn [{\n  json: {\n    channel: 'email',\n    recipient: email,\n    dispatched: true,\n    meta_payload: {\n      to: email,\n      subject: 'MCIT Citizen Customer Service Notification',\n      body: text\n    },\n    message: text,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "node-format-email",
+      "name": "Format Email Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [620, 360]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first()?.json || {};\nconst text = item.reply || item.message || '';\n\nreturn [{\n  json: {\n    channel: 'webchat',\n    recipient: item.customer?.id || 'web-session',\n    dispatched: true,\n    meta_payload: {\n      session_id: item.session_id || item.conversation?.id,\n      response: text\n    },\n    message: text,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "node-format-webchat",
+      "name": "Format Webchat Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [620, 480]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO audit_logs (workflow_name, event_type, channel, payload)\nVALUES (\n  '06_output_channel_dispatcher',\n  'message_dispatched',\n  '{{ $json.channel }}',\n  json_build_object(\n    'recipient', '{{ $json.recipient }}',\n    'channel', '{{ $json.channel }}',\n    'status', 'dispatched'\n  )\n);"
+      },
+      "id": "node-audit-egress",
+      "name": "Log Egress Audit",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [860, 300],
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_CRED_01",
+          "name": "CustomerService Postgres"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Route by Channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Channel": {
+      "main": [
+        [
+          {
+            "node": "Format WhatsApp Payload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Telegram Payload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Email Payload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Webchat Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format WhatsApp Payload": {
+      "main": [
+        [
+          {
+            "node": "Log Egress Audit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Telegram Payload": {
+      "main": [
+        [
+          {
+            "node": "Log Egress Audit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Email Payload": {
+      "main": [
+        [
+          {
+            "node": "Log Egress Audit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Webchat Payload": {
+      "main": [
+        [
+          {
+            "node": "Log Egress Audit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

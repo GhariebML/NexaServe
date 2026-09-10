@@ -12,13 +12,23 @@
     },
     {
       "parameters": {
-        "jsCode": "const customerMsg = $json.customer_message || 'Hello';\nconst promptText = `You are the automated Cognitive Routing Engine for an enterprise Customer Service platform. Analyze the incoming customer message and classify it.\\n\\nRules:\\n1. If customer asks about order status, tracking, shipment, or mentions an order number (e.g. ORD-1001), classify intent as 'order_lookup' and extract order_number entity.\\n2. If customer asks about policies, returns, refunds, shipping times, warranty, or general store questions, classify intent as 'faq_query'.\\n3. If customer is angry, abusive, demands a supervisor, or expresses extreme frustration, classify intent as 'human_escalation' and set requires_human to true.\\n4. Otherwise classify intent as 'general_support'.\\n\\nRespond STRICTLY with a valid JSON object matching this schema:\\n{\\n  \"intent\": \"order_lookup\" | \"faq_query\" | \"human_escalation\" | \"general_support\",\\n  \"confidence\": 0.95,\\n  \"entities\": { \"order_number\": \"...\" },\\n  \"sentiment\": \"positive\" | \"neutral\" | \"frustrated\" | \"angry\",\\n  \"requires_human\": false,\\n  \"direct_response\": \"friendly greeting or acknowledgment\"\\n}\\n\\nCustomer Message: ${JSON.stringify(customerMsg)}`;\n\nreturn [{\n  json: {\n    ollama_body: {\n      model: 'gemma2:2b',\n      prompt: promptText,\n      stream: false,\n      format: 'json',\n      options: {\n        num_ctx: 1024,\n        num_predict: 160\n      }\n    },\n    customer_message: customerMsg,\n    customer: $json.customer,\n    conversation: $json.conversation\n  }\n}];"
+        "jsCode": "const input = $input.first()?.json || {};\nconst rawMsg = input.sanitized_message || input.customer_message || 'Hello';\n\n// Enterprise Guardrails: Detect Prompt Injection and Harmful Input\nconst injectionPatterns = [\n  /ignore\\s+(all\\s+)?(previous|prior|above)\\s+instructions/i,\n  /system\\s*prompt/i,\n  /jailbreak/i,\n  /bypass\\s+rules/i,\n  /disregard\\s+guidelines/i,\n  /تجاهل\\s+(كافة|جميع)?\\s+التعليمات/i,\n  /تخطي\\s+الحماية/i\n];\n\nlet promptInjection = false;\nfor (const pattern of injectionPatterns) {\n  if (pattern.test(rawMsg)) {\n    promptInjection = true;\n    break;\n  }\n}\n\nreturn [{\n  json: {\n    ...input,\n    guardrail_safe: !promptInjection,\n    flagged_reason: promptInjection ? 'prompt_injection_attempt' : null\n  }\n}];"
+      },
+      "id": "node-guardrails",
+      "name": "Guardrails & Safety Filter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [380, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first()?.json || {};\nconst customerMsg = item.sanitized_message || item.customer_message || 'مرحبا';\nconst locale = item.locale || (customerMsg.match(/[\\u0600-\\u06FF]/) ? 'ar' : 'en');\n\nif (!item.guardrail_safe) {\n  const deflection = locale === 'ar'\n    ? 'عذراً، لا يمكن معالجة هذا الطلب وفقاً لمعايير الأمان المعتمدة. كيف يمكنني مساعدتك في خدماتنا الرسمية؟'\n    : 'Sorry, this request cannot be processed according to enterprise security policies. How may I assist you with our official services?';\n    \n  return [{\n    json: {\n      direct_bypass: true,\n      ai_output: {\n        intent: 'general_support',\n        confidence: 0.99,\n        entities: {},\n        sentiment: 'neutral',\n        requires_human: false,\n        direct_response: deflection\n      },\n      ...item\n    }\n  }];\n}\n\n// Build Contextual Prompt for Ollama\nconst history = (item.conversation_history || []).slice(-3).map(h => `${h.sender_type}: ${h.content}`).join('\\n');\n\nconst promptText = `You are the official Enterprise AI Cognitive Engine for the Ministry of Communications and Information Technology (MCIT) Customer Service Platform.\nAnalyze the incoming message (which may be Arabic or English) and classify it.\n\nRules:\n1. If citizen/customer asks about order status, delivery, shipment, service request, tracking, or mentions a reference code (e.g. ORD-1001, SRV-1001), classify intent as 'order_lookup' and extract order_number entity.\n2. If citizen asks about regulations, training programs (Future Skills), digital signatures, telecommunication complaints, working hours, or FAQs, classify intent as 'faq_query'.\n3. If citizen is angry, frustrated, uses harsh language, demands a supervisor or human specialist, classify intent as 'human_escalation' and set requires_human to true.\n4. Otherwise classify intent as 'general_support'.\n\nRespond STRICTLY with a valid JSON object matching this schema:\n{\n  \"intent\": \"order_lookup\" | \"faq_query\" | \"human_escalation\" | \"general_support\",\n  \"confidence\": 0.95,\n  \"entities\": { \"order_number\": \"...\" },\n  \"sentiment\": \"positive\" | \"neutral\" | \"frustrated\" | \"angry\",\n  \"requires_human\": false,\n  \"direct_response\": \"polite contextual response in ${locale === 'ar' ? 'Arabic' : 'English'}\"\n}\n\n${history ? 'Previous Context:\\n' + history + '\\n' : ''}\nCustomer Message: ${JSON.stringify(customerMsg)}`;\n\nreturn [{\n  json: {\n    ollama_body: {\n      model: 'llama3.1:8b',\n      prompt: promptText,\n      stream: false,\n      format: 'json',\n      options: {\n        num_ctx: 1024,\n        num_predict: 180,\n        temperature: 0.2\n      }\n    },\n    direct_bypass: false,\n    customer_message: customerMsg,\n    customer: item.customer,\n    conversation: item.conversation,\n    channel: item.channel,\n    channel_user_id: item.channel_user_id,\n    locale: locale\n  }\n}];"
       },
       "id": "node-build-payload",
       "name": "Build Prompt Payload",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [380, 300]
+      "position": [600, 300]
     },
     {
       "parameters": {
@@ -33,24 +43,35 @@
       },
       "onError": "continueRegularOutput",
       "id": "node-ollama",
-      "name": "Ollama Intent Classifier",
+      "name": "Ollama Cognitive Classifier",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [600, 300]
+      "position": [820, 300]
     },
     {
       "parameters": {
-        "jsCode": "const rawResponse = $input.first()?.json?.response;\nconst originalInput = $('Build Prompt Payload').first().json;\n\nlet parsed = {};\ntry {\n  parsed = JSON.parse(rawResponse);\n} catch (e) {\n  const msg = (originalInput.customer_message || '').toLowerCase();\n  if (msg.includes('order') || msg.includes('track') || msg.includes('ord-')) {\n    parsed = {\n      intent: 'order_lookup',\n      confidence: 0.85,\n      entities: { order_number: (msg.match(/ord-\\d+/i) || [])[0] || null },\n      sentiment: 'neutral',\n      requires_human: false,\n      direct_response: 'Checking your order details...'\n    };\n  } else if (msg.includes('refund') || msg.includes('return') || msg.includes('warranty') || msg.includes('shipping')) {\n    parsed = {\n      intent: 'faq_query',\n      confidence: 0.85,\n      entities: {},\n      sentiment: 'neutral',\n      requires_human: false,\n      direct_response: 'Looking up our store policies...'\n    };\n  } else if (msg.includes('human') || msg.includes('agent') || msg.includes('supervisor') || msg.includes('angry') || msg.includes('terrible') || msg.includes('furious')) {\n    parsed = {\n      intent: 'human_escalation',\n      confidence: 0.95,\n      entities: {},\n      sentiment: 'frustrated',\n      requires_human: true,\n      direct_response: 'Connecting you with human support...'\n    };\n  } else {\n    parsed = {\n      intent: 'general_support',\n      confidence: 0.70,\n      entities: {},\n      sentiment: 'neutral',\n      requires_human: false,\n      direct_response: 'Hello! How can I assist you today?'\n    };\n  }\n}\n\nif (!parsed.entities) { parsed.entities = {}; }\nif (!parsed.entities.order_number) {\n  const match = (originalInput.customer_message || '').match(/ord-\\d+/i);\n  if (match) { parsed.entities.order_number = match[0].toUpperCase(); }\n}\n\nreturn [{\n  json: {\n    ai_output: parsed,\n    customer_message: originalInput.customer_message,\n    customer: originalInput.customer,\n    conversation: originalInput.conversation\n  }\n}];"
+        "jsCode": "const nodeInput = $input.first()?.json || {};\nconst buildData = $('Build Prompt Payload').first()?.json || {};\n\nif (buildData.direct_bypass) {\n  return [{\n    json: {\n      ai_output: buildData.ai_output,\n      customer_message: buildData.customer_message,\n      customer: buildData.customer,\n      conversation: buildData.conversation,\n      channel: buildData.channel,\n      channel_user_id: buildData.channel_user_id,\n      locale: buildData.locale\n    }\n  }];\n}\n\nconst rawResponse = nodeInput.response;\nconst originalMsg = (buildData.customer_message || '').toLowerCase();\nconst locale = buildData.locale || 'ar';\n\nlet parsed = null;\ntry {\n  if (rawResponse) {\n    parsed = JSON.parse(rawResponse);\n  }\n} catch (e) {\n  parsed = null;\n}\n\n// Enterprise Heuristic Fail-Safe (Bilingual Arabic & English)\nif (!parsed || !parsed.intent) {\n  const isAr = locale === 'ar';\n  \n  const isOrder = originalMsg.includes('order') || originalMsg.includes('srv-') || originalMsg.includes('ord-') || originalMsg.includes('طلب') || originalMsg.includes('شحن') || originalMsg.includes('تتبع');\n  const isEscalation = originalMsg.includes('human') || originalMsg.includes('supervisor') || originalMsg.includes('angry') || originalMsg.includes('موظف') || originalMsg.includes('مشرف') || originalMsg.includes('شكوى') || originalMsg.includes('إنسان');\n  const isFaq = originalMsg.includes('skill') || originalMsg.includes('policy') || originalMsg.includes('hours') || originalMsg.includes('مهارات') || originalMsg.includes('ساعات') || originalMsg.includes('شروط') || originalMsg.includes('تقديم');\n  \n  if (isEscalation) {\n    parsed = {\n      intent: 'human_escalation',\n      confidence: 0.95,\n      entities: {},\n      sentiment: 'frustrated',\n      requires_human: true,\n      direct_response: isAr ? 'يتم الآن تحويلك إلى ممثل خدمة العملاء المختص...' : 'Connecting you with a human support specialist...'\n    };\n  } else if (isOrder) {\n    const match = originalMsg.match(/(?:ord|srv)-\\d+/i);\n    parsed = {\n      intent: 'order_lookup',\n      confidence: 0.90,\n      entities: { order_number: match ? match[0].toUpperCase() : 'SRV-1001' },\n      sentiment: 'neutral',\n      requires_human: false,\n      direct_response: isAr ? 'جاري الاستعلام عن بيانات طلبك...' : 'Looking up your service request details...'\n    };\n  } else if (isFaq) {\n    parsed = {\n      intent: 'faq_query',\n      confidence: 0.90,\n      entities: {},\n      sentiment: 'neutral',\n      requires_human: false,\n      direct_response: isAr ? 'جاري البحث في قاعدة المعرفة المعتمدة...' : 'Searching the official knowledge base...'\n    };\n  } else {\n    parsed = {\n      intent: 'general_support',\n      confidence: 0.75,\n      entities: {},\n      sentiment: 'neutral',\n      requires_human: false,\n      direct_response: isAr ? 'أهلاً بك في منصة خدمة العملاء لوزارة الاتصالات وتقنية المعلومات. كيف يمكننا مساعدتك اليوم؟' : 'Welcome to the MCIT Customer Service platform. How may we assist you today?'\n    };\n  }\n}\n\n// Ensure entity normalization\nif (!parsed.entities) { parsed.entities = {}; }\nif (!parsed.entities.order_number) {\n  const match = originalMsg.match(/(?:ord|srv)-\\d+/i);\n  if (match) { parsed.entities.order_number = match[0].toUpperCase(); }\n}\n\nreturn [{\n  json: {\n    ai_output: parsed,\n    customer_message: buildData.customer_message,\n    customer: buildData.customer,\n    conversation: buildData.conversation,\n    channel: buildData.channel,\n    channel_user_id: buildData.channel_user_id,\n    locale: locale\n  }\n}];"
       },
       "id": "node-parse-ai",
       "name": "Parse & Validate AI Schema",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [820, 300]
+      "position": [1040, 300]
     }
   ],
   "connections": {
     "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Guardrails & Safety Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardrails & Safety Filter": {
       "main": [
         [
           {
@@ -65,14 +86,14 @@
       "main": [
         [
           {
-            "node": "Ollama Intent Classifier",
+            "node": "Ollama Cognitive Classifier",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Ollama Intent Classifier": {
+    "Ollama Cognitive Classifier": {
       "main": [
         [
           {

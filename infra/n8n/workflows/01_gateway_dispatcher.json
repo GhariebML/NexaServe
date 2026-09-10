@@ -10,7 +10,7 @@
         "options": {}
       },
       "id": "node-webhook",
-      "name": "Webhook Trigger",
+      "name": "Webhook Ingress",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [160, 240],
@@ -26,10 +26,10 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first()?.json || {};\nconst body = input.body || input;\n\nconst customerMessage = body.message || body.customer_message || 'Hello, I want to know the status of my order ORD-1001.';\nconst phoneNumber = body.phone || body.phone_number || '+1234567890';\nconst fullName = body.name || body.full_name || 'John Doe';\nconst channel = body.channel || 'web';\n\nreturn [{\n  json: {\n    customer_message: customerMessage,\n    phone_number: phoneNumber,\n    full_name: fullName,\n    channel: channel,\n    start_time: Date.now()\n  }\n}];"
+        "jsCode": "const input = $input.first()?.json || {};\nconst body = input.body || input;\n\nlet channel = body.channel || 'webchat';\nlet customerMessage = '';\nlet phoneNumber = '';\nlet telegramId = '';\nlet email = '';\nlet fullName = '';\nlet channelUserId = '';\n\n// 1. Meta WhatsApp Webhook Detection\nif (body.entry && body.entry[0]?.changes && body.entry[0].changes[0]?.value?.messages) {\n  channel = 'whatsapp';\n  const val = body.entry[0].changes[0].value;\n  const msg = val.messages[0];\n  customerMessage = msg.text?.body || msg.interactive?.button_reply?.title || 'Hello';\n  phoneNumber = '+' + msg.from;\n  channelUserId = phoneNumber;\n  fullName = val.contacts?.[0]?.profile?.name || 'WhatsApp User';\n}\n// 2. Telegram Bot Webhook Detection\nelse if (body.message && body.message.chat) {\n  channel = 'telegram';\n  customerMessage = body.message.text || 'مرحبا';\n  telegramId = String(body.message.from?.id || body.message.chat.id);\n  channelUserId = telegramId;\n  fullName = [body.message.from?.first_name, body.message.from?.last_name].filter(Boolean).join(' ') || body.message.from?.username || 'Telegram Citizen';\n}\n// 3. Email Ingress Detection\nelse if (body.from && (body.subject || body.body)) {\n  channel = 'email';\n  customerMessage = body.body || body.message || body.subject || '';\n  email = body.from;\n  channelUserId = email;\n  fullName = body.name || email.split('@')[0];\n}\n// 4. Webchat / Direct REST API\nelse {\n  customerMessage = body.customer_message || body.message || 'مرحبا، أود الاستفسار عن حالة طلبي SRV-1001';\n  phoneNumber = body.phone || body.phone_number || '';\n  telegramId = body.telegram_id || '';\n  email = body.email || '';\n  fullName = body.name || body.full_name || 'Valued Citizen';\n  channelUserId = phoneNumber || telegramId || email || 'web-anon';\n}\n\n// 5. MCIT Compliance: PII Masking & Language Detection\nlet sanitizedMessage = customerMessage;\nlet piiDetected = false;\n\n// Saudi National ID (10 digits starting with 1 or 2)\nif (/\\b[12]\\d{9}\\b/.test(sanitizedMessage)) {\n  sanitizedMessage = sanitizedMessage.replace(/\\b[12]\\d{9}\\b/g, '[NATIONAL_ID_MASKED]');\n  piiDetected = true;\n}\n\n// Credit Card numbers\nif (/\\b(?:\\d{4}[ -]?){3}\\d{4}\\b/.test(sanitizedMessage)) {\n  sanitizedMessage = sanitizedMessage.replace(/\\b(?:\\d{4}[ -]?){3}\\d{4}\\b/g, '[CARD_MASKED]');\n  piiDetected = true;\n}\n\n// Saudi IBANs\nif (/\\bSA\\d{2}[0-9A-Z]{20}\\b/i.test(sanitizedMessage)) {\n  sanitizedMessage = sanitizedMessage.replace(/\\bSA\\d{2}[0-9A-Z]{20}\\b/gi, '[IBAN_MASKED]');\n  piiDetected = true;\n}\n\n// Language Detection (Arabic block)\nconst isArabic = /[\\u0600-\\u06FF]/.test(customerMessage);\nconst locale = isArabic ? 'ar' : 'en';\n\nreturn [{\n  json: {\n    channel: channel,\n    channel_user_id: channelUserId,\n    customer_message: customerMessage,\n    sanitized_message: sanitizedMessage,\n    pii_detected: piiDetected,\n    phone_number: phoneNumber,\n    telegram_id: telegramId,\n    email: email,\n    full_name: fullName,\n    locale: locale,\n    start_time: Date.now()\n  }\n}];"
       },
-      "id": "node-normalize",
-      "name": "Normalize Input",
+      "id": "node-normalize-ingress",
+      "name": "Channel Ingress & PII Sanitizer",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [380, 320]
@@ -116,10 +116,26 @@
                   }
                 ]
               }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ true }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              }
             }
           ]
-        },
-        "fallbackOutput": 3
+        }
       },
       "id": "node-switch-intent",
       "name": "Route by Intent",
@@ -171,7 +187,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const ai = $('Call SubWF 03 - AI Intent Engine').first().json.ai_output;\nreturn [{\n  json: {\n    status: 'general',\n    intent_handled: 'general_support',\n    reply: ai?.direct_response || \"Thank you for reaching out! How can I assist you with your orders or questions today?\"\n  }\n}];"
+        "jsCode": "const ai = $('Call SubWF 03 - AI Intent Engine').first()?.json.ai_output || {};\nconst norm = $('Channel Ingress & PII Sanitizer').first()?.json || {};\nconst isAr = norm.locale === 'ar';\n\nconst defaultGreeting = isAr\n  ? 'أهلاً بك في منصة خدمة العملاء الموحدة لوزارة الاتصالات وتقنية المعلومات. كيف يمكننا خدمتك اليوم في استفساراتك أو معاملاتك؟'\n  : 'Welcome to the unified MCIT Customer Service platform. How may we assist you today with our services or your inquiries?';\n\nreturn [{\n  json: {\n    status: 'general',\n    intent_handled: 'general_support',\n    reply: ai?.direct_response || defaultGreeting\n  }\n}];"
       },
       "id": "node-route-general",
       "name": "General Support Handler",
@@ -181,13 +197,27 @@
     },
     {
       "parameters": {
-        "jsCode": "const handlerResult = $input.first()?.json || {};\nconst aiContext = $('Call SubWF 03 - AI Intent Engine').first()?.json || {};\nconst norm = $('Normalize Input').first()?.json || {};\n\nconst finalReply = handlerResult.reply || \"Thank you for contacting customer service. How may we assist you?\";\nconst latency = Date.now() - (norm.start_time || Date.now());\n\nreturn [{\n  json: {\n    customer: aiContext.customer,\n    conversation: aiContext.conversation,\n    customer_message: norm.customer_message,\n    ai_output: aiContext.ai_output,\n    handler_status: handlerResult.status,\n    final_reply: finalReply,\n    latency_ms: latency\n  }\n}];"
+        "jsCode": "const handlerResult = $input.first()?.json || {};\nconst aiContext = $('Call SubWF 03 - AI Intent Engine').first()?.json || {};\nconst norm = $('Channel Ingress & PII Sanitizer').first()?.json || {};\n\nconst finalReply = handlerResult.reply || \"Thank you for contacting customer service. How may we assist you?\";\nconst latency = Date.now() - (norm.start_time || Date.now());\n\nreturn [{\n  json: {\n    customer: aiContext.customer,\n    conversation: aiContext.conversation,\n    customer_message: norm.customer_message,\n    sanitized_message: norm.sanitized_message,\n    pii_detected: norm.pii_detected,\n    channel: norm.channel,\n    channel_user_id: norm.channel_user_id,\n    locale: norm.locale,\n    ai_output: aiContext.ai_output,\n    handler_status: handlerResult.status,\n    ticket_number: handlerResult.ticket_number || null,\n    order_found: handlerResult.order_found || null,\n    final_reply: finalReply,\n    latency_ms: latency\n  }\n}];"
       },
       "id": "node-assemble-response",
       "name": "Assemble Response & Metrics",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [1580, 320]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "F7kjakLJXmzBDsvS",
+          "mode": "id"
+        }
+      },
+      "id": "node-call-egress",
+      "name": "Call SubWF 06 - Output Dispatcher",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [1800, 320]
     },
     {
       "parameters": {
@@ -201,23 +231,23 @@
       "name": "Call SubWF 05 - Logger",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
-      "position": [1800, 320]
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={\n  \"status\": \"success\",\n  \"customer\": {\n    \"name\": \"{{ $('Assemble Response & Metrics').first().json.customer?.full_name }}\",\n    \"phone\": \"{{ $('Assemble Response & Metrics').first().json.customer?.phone_number }}\"\n  },\n  \"conversation_id\": \"{{ $('Assemble Response & Metrics').first().json.conversation?.id }}\",\n  \"intent\": \"{{ $('Assemble Response & Metrics').first().json.ai_output?.intent }}\",\n  \"confidence\": {{ $('Assemble Response & Metrics').first().json.ai_output?.confidence || 0 }},\n  \"response\": {{ JSON.stringify($('Assemble Response & Metrics').first().json.final_reply) }},\n  \"latency_ms\": {{ $('Assemble Response & Metrics').first().json.latency_ms }}\n}",
-        "options": {}
-      },
-      "id": "node-respond-webhook",
-      "name": "Respond to Webhook",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
       "position": [2020, 320]
     },
     {
       "parameters": {
-        "content": "### 📥 Ingestion & Gateway\n- Listens on `POST /webhook/customer-service`\n- Manual Trigger for canvas debugging\n- Normalizes payload, extracts customer identity, & starts latency stopwatch",
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"success\",\n  \"channel\": \"{{ $('Assemble Response & Metrics').first().json.channel }}\",\n  \"locale\": \"{{ $('Assemble Response & Metrics').first().json.locale }}\",\n  \"customer\": {\n    \"name\": \"{{ $('Assemble Response & Metrics').first().json.customer?.full_name }}\",\n    \"phone\": \"{{ $('Assemble Response & Metrics').first().json.customer?.phone_number || '' }}\",\n    \"telegram_id\": \"{{ $('Assemble Response & Metrics').first().json.customer?.telegram_id || '' }}\"\n  },\n  \"conversation_id\": \"{{ $('Assemble Response & Metrics').first().json.conversation?.id }}\",\n  \"intent\": \"{{ $('Assemble Response & Metrics').first().json.ai_output?.intent }}\",\n  \"confidence\": {{ $('Assemble Response & Metrics').first().json.ai_output?.confidence || 0 }},\n  \"ticket_number\": {{ JSON.stringify($('Assemble Response & Metrics').first().json.ticket_number) }},\n  \"pii_masked\": {{ $('Assemble Response & Metrics').first().json.pii_detected || false }},\n  \"response\": {{ JSON.stringify($('Assemble Response & Metrics').first().json.final_reply) }},\n  \"latency_ms\": {{ $('Assemble Response & Metrics').first().json.latency_ms }}\n}",
+        "options": {}
+      },
+      "id": "node-respond-webhook",
+      "name": "Respond to Ingress Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2240, 320]
+    },
+    {
+      "parameters": {
+        "content": "### 📥 Multi-Channel Ingestion & PII Masking\n- Unified Ingress for WhatsApp, Telegram, Webchat, Email\n- MCIT PDPL Compliance: Masks National ID, IBAN, Cards\n- Language Detection (Arabic / English)",
         "height": 340,
         "width": 380,
         "color": 4
@@ -230,7 +260,7 @@
     },
     {
       "parameters": {
-        "content": "### 👤 Identity & Session\n- SubWF 02 provisions customer in Postgres\n- Restores active conversation\n- Caches session context",
+        "content": "### 👤 Identity & Session\n- SubWF 02 provisions customer in Postgres\n- Multi-channel identity resolution (Phone/Telegram/Email)\n- Turn-by-turn history memory buffer",
         "height": 340,
         "width": 200,
         "color": 3
@@ -243,7 +273,7 @@
     },
     {
       "parameters": {
-        "content": "### 🧠 AI Intent Engine\n- Calls local **Ollama** (`gemma2:2b`)\n- Classifies intent & entities\n- Strict schema + heuristic fail-safe",
+        "content": "### 🧠 AI Cognitive Engine\n- Calls local **Ollama** (`llama3.1:8b`)\n- Guardrails against prompt injection\n- Structured JSON classification & entity extraction",
         "height": 340,
         "width": 200,
         "color": 6
@@ -256,37 +286,37 @@
     },
     {
       "parameters": {
-        "content": "### 🔀 Intent Router & Domain Handlers\n- **Order Lookup (04A)**: Queries `orders` table in PostgreSQL\n- **Knowledge Base (04B)**: Store policies from `knowledge_base`\n- **Escalation (04C)**: Opens priority ticket in `tickets`\n- **General (04D)**: Direct conversational assistance",
-        "height": 560,
+        "content": "### 🔀 Intent Routing & Decision\n- Escalates directly to SLA-governed Human-in-the-Loop\n- Queries order/service tracking\n- Queries bilingual Knowledge Base RAG",
+        "height": 340,
         "width": 460,
-        "color": 5
+        "color": 2
       },
-      "id": "note-router",
-      "name": "Note Router",
+      "id": "note-routing",
+      "name": "Note Routing",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [1020, 40]
+      "position": [1020, 160]
     },
     {
       "parameters": {
-        "content": "### 📊 Response & Telemetry\n- Assembles final payload & latency metrics\n- Asynchronously logs turn in `messages`\n- Records execution metrics in `audit_logs`\n- Returns 200 OK JSON response to caller",
+        "content": "### 📤 Multi-Channel Egress & Audit\n- Dispatches output via SubWF 06 to active channel\n- Logs audit trails to PostgreSQL\n- Returns standardized synchronous JSON",
         "height": 340,
-        "width": 560,
-        "color": 7
+        "width": 420,
+        "color": 5
       },
-      "id": "note-telemetry",
-      "name": "Note Telemetry",
+      "id": "note-egress",
+      "name": "Note Egress",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [1520, 160]
+      "position": [1740, 160]
     }
   ],
   "connections": {
-    "Webhook Trigger": {
+    "Webhook Ingress": {
       "main": [
         [
           {
-            "node": "Normalize Input",
+            "node": "Channel Ingress & PII Sanitizer",
             "type": "main",
             "index": 0
           }
@@ -297,14 +327,14 @@
       "main": [
         [
           {
-            "node": "Normalize Input",
+            "node": "Channel Ingress & PII Sanitizer",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Normalize Input": {
+    "Channel Ingress & PII Sanitizer": {
       "main": [
         [
           {
@@ -417,18 +447,17 @@
       "main": [
         [
           {
+            "node": "Call SubWF 06 - Output Dispatcher",
+            "type": "main",
+            "index": 0
+          },
+          {
             "node": "Call SubWF 05 - Logger",
             "type": "main",
             "index": 0
-          }
-        ]
-      ]
-    },
-    "Call SubWF 05 - Logger": {
-      "main": [
-        [
+          },
           {
-            "node": "Respond to Webhook",
+            "node": "Respond to Ingress Webhook",
             "type": "main",
             "index": 0
           }
