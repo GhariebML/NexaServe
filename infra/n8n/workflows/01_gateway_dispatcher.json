@@ -13,7 +13,10 @@
       "name": "Webhook Ingress",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [160, 240],
+      "position": [
+        160,
+        240
+      ],
       "webhookId": "cs-gateway-webhook"
     },
     {
@@ -22,17 +25,25 @@
       "name": "Manual Test Trigger",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
-      "position": [160, 420]
+      "position": [
+        160,
+        420
+      ]
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first()?.json || {};\nconst body = input.body || input;\n\nlet channel = body.channel || 'webchat';\nlet customerMessage = '';\nlet phoneNumber = '';\nlet telegramId = '';\nlet email = '';\nlet fullName = '';\nlet channelUserId = '';\n\n// 1. Meta WhatsApp Webhook Detection\nif (body.entry && body.entry[0]?.changes && body.entry[0].changes[0]?.value?.messages) {\n  channel = 'whatsapp';\n  const val = body.entry[0].changes[0].value;\n  const msg = val.messages[0];\n  customerMessage = msg.text?.body || msg.interactive?.button_reply?.title || 'Hello';\n  phoneNumber = '+' + msg.from;\n  channelUserId = phoneNumber;\n  fullName = val.contacts?.[0]?.profile?.name || 'WhatsApp User';\n}\n// 2. Telegram Bot Webhook Detection\nelse if (body.message && body.message.chat) {\n  channel = 'telegram';\n  customerMessage = body.message.text || 'مرحبا';\n  telegramId = String(body.message.from?.id || body.message.chat.id);\n  channelUserId = telegramId;\n  fullName = [body.message.from?.first_name, body.message.from?.last_name].filter(Boolean).join(' ') || body.message.from?.username || 'Telegram Citizen';\n}\n// 3. Email Ingress Detection\nelse if (body.from && (body.subject || body.body)) {\n  channel = 'email';\n  customerMessage = body.body || body.message || body.subject || '';\n  email = body.from;\n  channelUserId = email;\n  fullName = body.name || email.split('@')[0];\n}\n// 4. Webchat / Direct REST API\nelse {\n  customerMessage = body.customer_message || body.message || 'مرحبا، أود الاستفسار عن حالة طلبي SRV-1001';\n  phoneNumber = body.phone || body.phone_number || '';\n  telegramId = body.telegram_id || '';\n  email = body.email || '';\n  fullName = body.name || body.full_name || 'Valued Citizen';\n  channelUserId = phoneNumber || telegramId || email || 'web-anon';\n}\n\n// 5. MCIT Compliance: PII Masking & Language Detection\nlet sanitizedMessage = customerMessage;\nlet piiDetected = false;\n\n// Saudi National ID (10 digits starting with 1 or 2)\nif (/\\b[12]\\d{9}\\b/.test(sanitizedMessage)) {\n  sanitizedMessage = sanitizedMessage.replace(/\\b[12]\\d{9}\\b/g, '[NATIONAL_ID_MASKED]');\n  piiDetected = true;\n}\n\n// Credit Card numbers\nif (/\\b(?:\\d{4}[ -]?){3}\\d{4}\\b/.test(sanitizedMessage)) {\n  sanitizedMessage = sanitizedMessage.replace(/\\b(?:\\d{4}[ -]?){3}\\d{4}\\b/g, '[CARD_MASKED]');\n  piiDetected = true;\n}\n\n// Saudi IBANs\nif (/\\bSA\\d{2}[0-9A-Z]{20}\\b/i.test(sanitizedMessage)) {\n  sanitizedMessage = sanitizedMessage.replace(/\\bSA\\d{2}[0-9A-Z]{20}\\b/gi, '[IBAN_MASKED]');\n  piiDetected = true;\n}\n\n// Language Detection (Arabic block)\nconst isArabic = /[\\u0600-\\u06FF]/.test(customerMessage);\nconst locale = isArabic ? 'ar' : 'en';\n\nreturn [{\n  json: {\n    channel: channel,\n    channel_user_id: channelUserId,\n    customer_message: customerMessage,\n    sanitized_message: sanitizedMessage,\n    pii_detected: piiDetected,\n    phone_number: phoneNumber,\n    telegram_id: telegramId,\n    email: email,\n    full_name: fullName,\n    locale: locale,\n    start_time: Date.now()\n  }\n}];"
+        "jsCode": "/* ==========================================================================\n   🐍 PYTHON ALTERNATIVE / البديل البرمجي بلغة بايثون لنفس المهمة\n   --------------------------------------------------------------------------\n   This node is documented in both Python and JavaScript.\n   Below is the production-grade Python function equivalent:\n\ndef channel_ingress_and_pii_sanitizer(input_data: dict) -> dict:\n    \"\"\"\n    تطبيع الرسائل الواردة من جميع القنوات (واتساب، تيليجرام، بريد، ويب شات)\n    وإخفاء البيانات الشخصية الحساسة (رقم قومي، بطاقة ائتمان، IBAN).\n\n    Normalizes incoming messages from all channels and masks sensitive PII\n    for PDPL (Personal Data Protection Law) compliance.\n\n    Args:\n        input_data: Raw webhook payload from any channel.\n\n    Returns:\n        Normalized dict with unified fields and PII masking applied.\n    \"\"\"\n    body = input_data.get(\"body\", input_data)\n\n    channel = body.get(\"channel\", \"webchat\")\n    customer_message = \"\"\n    phone_number = \"\"\n    telegram_id = \"\"\n    email = \"\"\n    full_name = \"\"\n    channel_user_id = \"\"\n\n    # 1. Meta WhatsApp Webhook Detection\n    entry = body.get(\"entry\", [])\n    if entry and entry[0].get(\"changes\", [{}])[0].get(\"value\", {}).get(\"messages\"):\n        channel = \"whatsapp\"\n        val = entry[0][\"changes\"][0][\"value\"]\n        msg = val[\"messages\"][0]\n        customer_message = (\n            msg.get(\"text\", {}).get(\"body\")\n            or msg.get(\"interactive\", {}).get(\"button_reply\", {}).get(\"title\")\n            or \"Hello\"\n        )\n        phone_number = \"+\" + msg.get(\"from\", \"\")\n        channel_user_id = phone_number\n        contacts = val.get(\"contacts\", [{}])\n        full_name = contacts[0].get(\"profile\", {}).get(\"name\", \"WhatsApp User\") if contacts else \"WhatsApp User\"\n\n    # 1b. Direct / Baileys / Evolution WhatsApp Ingress\n    elif body.get(\"channel\") == \"whatsapp\" or (\n        body.get(\"event\") == \"messages.upsert\" and body.get(\"data\", {}).get(\"message\")\n    ) or body.get(\"data\", {}).get(\"key\", {}).get(\"remoteJid\"):\n        channel = \"whatsapp\"\n        data = body.get(\"data\", body)\n        msg = data.get(\"message\", {})\n        customer_message = (\n            body.get(\"customer_message\")\n            or msg.get(\"conversation\")\n            or msg.get(\"extendedTextMessage\", {}).get(\"text\")\n            or body.get(\"message\")\n            or \"Hello\"\n        )\n        remote_jid = data.get(\"key\", {}).get(\"remoteJid\", \"\")\n        raw_phone = remote_jid.split(\"@\")[0] if remote_jid else (\n            body.get(\"phone_number\") or body.get(\"phone\") or \"\"\n        )\n        phone_number = raw_phone if raw_phone.startswith(\"+\") else (\n            \"+\" + re.sub(r\"[^0-9]\", \"\", raw_phone) if raw_phone else \"+966500000000\"\n        )\n        channel_user_id = phone_number\n        full_name = body.get(\"full_name\") or data.get(\"pushName\") or \"WhatsApp Citizen\"\n\n    # 2. Telegram Bot Webhook\n    elif body.get(\"message\", {}).get(\"chat\"):\n        channel = \"telegram\"\n        customer_message = body[\"message\"].get(\"text\", \"مرحبا\")\n        from_user = body[\"message\"].get(\"from\", {})\n        telegram_id = str(from_user.get(\"id\") or body[\"message\"][\"chat\"].get(\"id\", \"\"))\n        channel_user_id = telegram_id\n        parts = [from_user.get(\"first_name\", \"\"), from_user.get(\"last_name\", \"\")]\n        full_name = \" \".join(filter(None, parts)) or from_user.get(\"username\", \"Telegram Citizen\")\n\n    # 3. Email Ingress\n    elif body.get(\"from\") and (body.get(\"subject\") or body.get(\"body\")):\n        channel = \"email\"\n        customer_message = body.get(\"body\") or body.get(\"message\") or body.get(\"subject\") or \"\"\n        email = body[\"from\"]\n        channel_user_id = email\n        full_name = body.get(\"name\") or email.split(\"@\")[0]\n\n    # 4. Webchat / Direct REST API\n    else:\n        customer_message = body.get(\"customer_message\") or body.get(\"message\") or \"مرحبا، أود الاستفسار\"\n        phone_number = body.get(\"phone\") or body.get(\"phone_number\") or \"\"\n        telegram_id = body.get(\"telegram_id\") or \"\"\n        email = body.get(\"email\") or \"\"\n        full_name = body.get(\"name\") or body.get(\"full_name\") or \"Valued Citizen\"\n        channel_user_id = phone_number or telegram_id or email or \"web-anon\"\n\n    # 5. PII Masking (PDPL Compliance)\n    sanitized_message = customer_message\n    pii_detected = False\n\n    # Saudi National ID (10 digits starting with 1 or 2)\n    if re.search(r\"\\b[12]\\d{9}\\b\", sanitized_message):\n        sanitized_message = re.sub(r\"\\b[12]\\d{9}\\b\", \"[NATIONAL_ID_MASKED]\", sanitized_message)\n        pii_detected = True\n\n    # Credit Card numbers\n    if re.search(r\"\\b(?:\\d{4}[ -]?){3}\\d{4}\\b\", sanitized_message):\n        sanitized_message = re.sub(r\"\\b(?:\\d{4}[ -]?){3}\\d{4}\\b\", \"[CARD_MASKED]\", sanitized_message)\n        pii_detected = True\n\n    # Saudi IBANs\n    if re.search(r\"\\bSA\\d{2}[0-9A-Za-z]{20}\\b\", sanitized_message):\n        sanitized_message = re.sub(r\"\\bSA\\d{2}[0-9A-Za-z]{20}\\b\", \"[IBAN_MASKED]\", sanitized_message)\n        pii_detected = True\n\n    # Language Detection\n    is_arabic = bool(re.search(r\"[\\u0600-\\u06FF]\", customer_message))\n    locale = \"ar\" if is_arabic else \"en\"\n\n    return {\n        \"channel\": channel,\n        \"channel_user_id\": channel_user_id,\n        \"customer_message\": customer_message,\n        \"sanitized_message\": sanitized_message,\n        \"pii_detected\": pii_detected,\n        \"phone_number\": phone_number,\n        \"telegram_id\": telegram_id,\n        \"email\": email,\n        \"full_name\": full_name,\n        \"locale\": locale,\n        \"start_time\": int(datetime.now(timezone.utc).timestamp() * 1000),\n    }\n\n\n# ==============================================================================\n# 2. WORKFLOW 02 — Compile Session Context\n# Node: \"Compile Session Context\"\n# Purpose: Merges customer profile, conversation data, and history into a\n#          single context object for downstream AI processing.\n# ==============================================================================\n   ========================================================================== */\n\n/* === ACTIVE JAVASCRIPT IMPLEMENTATION === */\nconst input = $input.first()?.json || {};\nconst body = input.body || input;\n\nlet channel = body.channel || 'webchat';\nlet customerMessage = '';\nlet phoneNumber = '';\nlet telegramId = '';\nlet email = '';\nlet fullName = '';\nlet channelUserId = '';\n\n// 1. Meta WhatsApp Webhook Detection\nif (body.entry && body.entry[0]?.changes && body.entry[0].changes[0]?.value?.messages) {\n  channel = 'whatsapp';\n  const val = body.entry[0].changes[0].value;\n  const msg = val.messages[0];\n  customerMessage = msg.text?.body || msg.interactive?.button_reply?.title || 'Hello';\n  phoneNumber = '+' + msg.from;\n  channelUserId = phoneNumber;\n  fullName = val.contacts?.[0]?.profile?.name || 'WhatsApp User';\n}\n\n// 1b. Direct / Baileys / Evolution WhatsApp Ingress Detection\nelse if (body.channel === 'whatsapp' || (body.event === 'messages.upsert' && body.data?.message) || body.data?.key?.remoteJid) {\n  channel = 'whatsapp';\n  const data = body.data || body;\n  const msg = data.message || {};\n  customerMessage = body.customer_message || msg.conversation || msg.extendedTextMessage?.text || body.message || 'Hello';\n  const rawPhone = (data.key?.remoteJid ? data.key.remoteJid.split('@')[0] : (body.phone_number || body.phone || ''));\n  phoneNumber = rawPhone ? (rawPhone.startsWith('+') ? rawPhone : ('+' + rawPhone.replace(/[^0-9]/g, ''))) : '+966500000000';\n  channelUserId = phoneNumber;\n  fullName = body.full_name || data.pushName || 'WhatsApp Citizen';\n}\n// 2. Telegram Bot Webhook Detection\nelse if (body.message && body.message.chat) {\n  channel = 'telegram';\n  customerMessage = body.message.text || 'مرحبا';\n  telegramId = String(body.message.from?.id || body.message.chat.id);\n  channelUserId = telegramId;\n  fullName = [body.message.from?.first_name, body.message.from?.last_name].filter(Boolean).join(' ') || body.message.from?.username || 'Telegram Citizen';\n}\n// 3. Email Ingress Detection\nelse if (body.from && (body.subject || body.body)) {\n  channel = 'email';\n  customerMessage = body.body || body.message || body.subject || '';\n  email = body.from;\n  channelUserId = email;\n  fullName = body.name || email.split('@')[0];\n}\n// 4. Webchat / Direct REST API\nelse {\n  customerMessage = body.customer_message || body.message || 'مرحبا، أود الاستفسار عن حالة طلبي SRV-1001';\n  phoneNumber = body.phone || body.phone_number || '';\n  telegramId = body.telegram_id || '';\n  email = body.email || '';\n  fullName = body.name || body.full_name || 'Valued Citizen';\n  channelUserId = phoneNumber || telegramId || email || 'web-anon';\n}\n\n// 5. MCIT Compliance: PII Masking & Language Detection\nlet sanitizedMessage = customerMessage;\nlet piiDetected = false;\n\n// Saudi National ID (10 digits starting with 1 or 2) & Egyptian National ID (14 digits starting with 2 or 3)\nif (/\\b[12]\\d{9}\\b/.test(sanitizedMessage) || /\\b[23]\\d{13}\\b/.test(sanitizedMessage)) {\n  sanitizedMessage = sanitizedMessage.replace(/\\b[12]\\d{9}\\b/g, '[NATIONAL_ID_MASKED]').replace(/\\b[23]\\d{13}\\b/g, '[NATIONAL_ID_MASKED]');\n  piiDetected = true;\n}\n\n// Credit Card numbers\nif (/\\b(?:\\d{4}[ -]?){3}\\d{4}\\b/.test(sanitizedMessage)) {\n  sanitizedMessage = sanitizedMessage.replace(/\\b(?:\\d{4}[ -]?){3}\\d{4}\\b/g, '[CARD_MASKED]');\n  piiDetected = true;\n}\n\n// Saudi IBANs\nif (/\\bSA\\d{2}[0-9A-Z]{20}\\b/i.test(sanitizedMessage)) {\n  sanitizedMessage = sanitizedMessage.replace(/\\bSA\\d{2}[0-9A-Z]{20}\\b/gi, '[IBAN_MASKED]');\n  piiDetected = true;\n}\n\n// Language Detection (Arabic block)\nconst isArabic = /[\\u0600-\\u06FF]/.test(customerMessage);\nconst locale = isArabic ? 'ar' : 'en';\n\nreturn [{\n  json: {\n    channel: channel,\n    channel_user_id: channelUserId,\n    customer_message: customerMessage,\n    sanitized_message: sanitizedMessage,\n    pii_detected: piiDetected,\n    phone_number: phoneNumber,\n    telegram_id: telegramId,\n    email: email,\n    full_name: fullName,\n    locale: locale,\n    start_time: Date.now()\n  }\n}];"
       },
       "id": "node-normalize-ingress",
       "name": "Channel Ingress & PII Sanitizer",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [380, 320]
+      "position": [
+        380,
+        320
+      ],
+      "notesInFlow": true,
+      "notes": "🐍 Python & ⚡ JS Dual-Language Node\nEquivalent: channel_ingress_and_pii_sanitizer()"
     },
     {
       "parameters": {
@@ -46,7 +57,10 @@
       "name": "Call SubWF 02 - Session Manager",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
-      "position": [600, 320]
+      "position": [
+        600,
+        320
+      ]
     },
     {
       "parameters": {
@@ -60,7 +74,10 @@
       "name": "Call SubWF 03 - AI Intent Engine",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
-      "position": [820, 320]
+      "position": [
+        820,
+        320
+      ]
     },
     {
       "parameters": {
@@ -141,7 +158,10 @@
       "name": "Route by Intent",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
-      "position": [1060, 320]
+      "position": [
+        1060,
+        320
+      ]
     },
     {
       "parameters": {
@@ -155,7 +175,10 @@
       "name": "Call SubWF 04C - Escalation",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
-      "position": [1320, 100]
+      "position": [
+        1320,
+        100
+      ]
     },
     {
       "parameters": {
@@ -169,7 +192,10 @@
       "name": "Call SubWF 04A - Order Lookup",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
-      "position": [1320, 240]
+      "position": [
+        1320,
+        240
+      ]
     },
     {
       "parameters": {
@@ -183,27 +209,40 @@
       "name": "Call SubWF 04B - Knowledge Base",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
-      "position": [1320, 380]
+      "position": [
+        1320,
+        380
+      ]
     },
     {
       "parameters": {
-        "jsCode": "const ai = $('Call SubWF 03 - AI Intent Engine').first()?.json.ai_output || {};\nconst norm = $('Channel Ingress & PII Sanitizer').first()?.json || {};\nconst isAr = norm.locale === 'ar';\n\nconst defaultGreeting = isAr\n  ? 'أهلاً بك في منصة خدمة العملاء الموحدة لوزارة الاتصالات وتقنية المعلومات. كيف يمكننا خدمتك اليوم في استفساراتك أو معاملاتك؟'\n  : 'Welcome to the unified MCIT Customer Service platform. How may we assist you today with our services or your inquiries?';\n\nreturn [{\n  json: {\n    status: 'general',\n    intent_handled: 'general_support',\n    reply: ai?.direct_response || defaultGreeting\n  }\n}];"
+        "jsCode": "/* ==========================================================================\n   🐍 PYTHON ALTERNATIVE / البديل البرمجي بلغة بايثون لنفس المهمة\n   --------------------------------------------------------------------------\n   This node is documented in both Python and JavaScript.\n   Below is the production-grade Python function equivalent:\n\ndef general_support_handler(\n    ai_output: dict, norm_data: dict\n) -> dict:\n    \"\"\"\n    مُعالج الدعم العام — يُنتج رسالة ترحيبية احترافية مع قائمة الخدمات.\n\n    Generates a professional welcome message with a list of available\n    services when the intent is classified as general_support.\n\n    Args:\n        ai_output: AI classification output.\n        norm_data: Normalized ingress data.\n\n    Returns:\n        Dict with status, intent_handled, and reply.\n    \"\"\"\n    is_ar = norm_data.get(\"locale\") == \"ar\"\n    customer_name = norm_data.get(\"full_name\", \"\")\n\n    welcome_ar = (\n        f\"أهلاً وسهلاً بك{' ' + customer_name if customer_name else ''} في منصة خدمة العملاء الذكية \"\n        f\"لمبادرة الرواد الرقميون (DEPI)! 🏛️\\n\\n\"\n        \"يسعدني مساعدتك. يمكنك الاستفسار عن أي من خدماتنا التالية:\\n\\n\"\n        \"📌 *مبادرة الرواد الرقميون (DEPI)* - برامج الماجستير والتدريب المهني\\n\"\n        \"📝 *شروط التقديم والتسجيل* - الفئات المستهدفة والمستندات المطلوبة\\n\"\n        \"🎓 *نظام الدراسة والامتحانات* - المنصة التعليمية والإجازات\\n\"\n        \"🏆 *التخصصات المتاحة* - الذكاء الاصطناعي، الأمن السيبراني، وغيرها\\n\"\n        \"⏱️ *الدعم الفني* - مساعدة واستفسارات\\n\\n\"\n        \"ما الذي تودّ الاستفسار عنه؟\"\n    )\n\n    welcome_en = (\n        f\"Welcome{' ' + customer_name if customer_name else ''} to the DEPI AI Customer Service Platform! 🏛️\\n\\n\"\n        \"I'm here to help. You can inquire about any of our services:\\n\\n\"\n        \"📌 *Digital Pioneers Initiative (DEPI)* - Master's & Professional Training\\n\"\n        \"📝 *Admissions & Registration* - Eligibility & Required Documents\\n\"\n        \"🎓 *Study & Exams System* - LMS & Attendance\\n\"\n        \"🏆 *Available Tracks* - AI, Cybersecurity, etc.\\n\"\n        \"⏱️ *Support* - Help & Inquiries\\n\\n\"\n        \"What would you like to know more about?\"\n    )\n\n    return {\n        \"status\": \"general\",\n        \"intent_handled\": \"general_support\",\n        \"reply\": ai_output.get(\"direct_response\") or (welcome_ar if is_ar else welcome_en),\n    }\n\n\n# ==============================================================================\n# 7. WORKFLOW 01 — Assemble Response & Metrics\n# Node: \"Assemble Response & Metrics\"\n# Purpose: Merges handler results, AI context, and metrics into a single\n#          response envelope for the egress dispatcher and logger.\n# ==============================================================================\n   ========================================================================== */\n\n/* === ACTIVE JAVASCRIPT IMPLEMENTATION === */\nconst ai = $('Call SubWF 03 - AI Intent Engine').first()?.json.ai_output || {};\nconst norm = $('Channel Ingress & PII Sanitizer').first()?.json || {};\nconst isAr = norm.locale === 'ar';\nconst customerName = norm.full_name || '';\n\nconst welcomeAr = `أهلاً وسهلاً بك${customerName ? ' ' + customerName : ''} في منصة خدمة العملاء الذكية لمبادرة الرواد الرقميون (DEPI)! 🏛️\n\nيسعدني مساعدتك. يمكنك الاستفسار عن أي من خدماتنا التالية:\n\n📌 *مبادرة الرواد الرقميون (DEPI)* - برامج الماجستير والتدريب المهني\n📝 *شروط التقديم والتسجيل* - الفئات المستهدفة والمستندات المطلوبة\n🎓 *نظام الدراسة والامتحانات* - المنصة التعليمية والإجازات\n🏆 *التخصصات المتاحة* - الذكاء الاصطناعي، الأمن السيبراني، وغيرها\n⏱️ *الدعم الفني* - مساعدة واستفسارات\n\nما الذي تودّ الاستفسار عنه؟`;\n\nconst welcomeEn = `Welcome${customerName ? ' ' + customerName : ''} to the DEPI AI Customer Service Platform! 🏛️\n\nI'm here to help. You can inquire about any of our services:\n\n📌 *Digital Pioneers Initiative (DEPI)* - Master's & Professional Training\n📝 *Admissions & Registration* - Eligibility & Required Documents\n🎓 *Study & Exams System* - LMS & Attendance\n🏆 *Available Tracks* - AI, Cybersecurity, etc.\n⏱️ *Support* - Help & Inquiries\n\nWhat would you like to know more about?`;\n\nreturn [{\n  json: {\n    status: 'general',\n    intent_handled: 'general_support',\n    reply: ai.direct_response || (isAr ? welcomeAr : welcomeEn)\n  }\n}];"
       },
       "id": "node-route-general",
       "name": "General Support Handler",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1320, 520]
+      "position": [
+        1320,
+        520
+      ],
+      "notesInFlow": true,
+      "notes": "🐍 Python & ⚡ JS Dual-Language Node\nEquivalent: general_support_handler()"
     },
     {
       "parameters": {
-        "jsCode": "const handlerResult = $input.first()?.json || {};\nconst aiContext = $('Call SubWF 03 - AI Intent Engine').first()?.json || {};\nconst norm = $('Channel Ingress & PII Sanitizer').first()?.json || {};\n\nconst finalReply = handlerResult.reply || \"Thank you for contacting customer service. How may we assist you?\";\nconst latency = Date.now() - (norm.start_time || Date.now());\n\nreturn [{\n  json: {\n    customer: aiContext.customer,\n    conversation: aiContext.conversation,\n    customer_message: norm.customer_message,\n    sanitized_message: norm.sanitized_message,\n    pii_detected: norm.pii_detected,\n    channel: norm.channel,\n    channel_user_id: norm.channel_user_id,\n    locale: norm.locale,\n    ai_output: aiContext.ai_output,\n    handler_status: handlerResult.status,\n    ticket_number: handlerResult.ticket_number || null,\n    order_found: handlerResult.order_found || null,\n    final_reply: finalReply,\n    latency_ms: latency\n  }\n}];"
+        "jsCode": "/* ==========================================================================\n   🐍 PYTHON ALTERNATIVE / البديل البرمجي بلغة بايثون لنفس المهمة\n   --------------------------------------------------------------------------\n   This node is documented in both Python and JavaScript.\n   Below is the production-grade Python function equivalent:\n\ndef assemble_response_and_metrics(\n    handler_result: dict, ai_context: dict, norm_data: dict\n) -> dict:\n    \"\"\"\n    تجميع الرد النهائي مع بيانات القياس والمقاييس.\n\n    Assembles the final response envelope including handler output,\n    AI context, and latency metrics.\n\n    Args:\n        handler_result: Output from the intent-specific handler.\n        ai_context: AI engine classification output.\n        norm_data: Original normalized ingress data.\n\n    Returns:\n        Complete response envelope for egress and logging.\n    \"\"\"\n    final_reply = handler_result.get(\"reply\") or \"Thank you for contacting customer service.\"\n    latency = int(datetime.now(timezone.utc).timestamp() * 1000) - (\n        norm_data.get(\"start_time\") or int(datetime.now(timezone.utc).timestamp() * 1000)\n    )\n\n    return {\n        \"customer\": ai_context.get(\"customer\"),\n        \"conversation\": ai_context.get(\"conversation\"),\n        \"customer_message\": norm_data.get(\"customer_message\"),\n        \"sanitized_message\": norm_data.get(\"sanitized_message\"),\n        \"pii_detected\": norm_data.get(\"pii_detected\"),\n        \"channel\": norm_data.get(\"channel\"),\n        \"channel_user_id\": norm_data.get(\"channel_user_id\"),\n        \"locale\": norm_data.get(\"locale\"),\n        \"ai_output\": ai_context.get(\"ai_output\"),\n        \"handler_status\": handler_result.get(\"status\"),\n        \"ticket_number\": handler_result.get(\"ticket_number\"),\n        \"order_found\": handler_result.get(\"order_found\"),\n        \"final_reply\": final_reply,\n        \"latency_ms\": latency,\n    }\n\n\n# ==============================================================================\n# 8. WORKFLOW 04A — Format Order Response\n# Node: \"Format Order Response\"\n# Purpose: Formats order/service request lookup results into a professional\n#          bilingual reply with tracking details.\n# ==============================================================================\n   ========================================================================== */\n\n/* === ACTIVE JAVASCRIPT IMPLEMENTATION === */\nconst handlerResult = $input.first()?.json || {};\nconst aiContext = $('Call SubWF 03 - AI Intent Engine').first()?.json || {};\nconst norm = $('Channel Ingress & PII Sanitizer').first()?.json || {};\n\nconst finalReply = handlerResult.reply || \"Thank you for contacting customer service. How may we assist you?\";\nconst latency = Date.now() - (norm.start_time || Date.now());\n\nreturn [{\n  json: {\n    customer: aiContext.customer,\n    conversation: aiContext.conversation,\n    customer_message: norm.customer_message,\n    sanitized_message: norm.sanitized_message,\n    pii_detected: norm.pii_detected,\n    channel: norm.channel,\n    channel_user_id: norm.channel_user_id,\n    locale: norm.locale,\n    ai_output: aiContext.ai_output,\n    handler_status: handlerResult.status,\n    ticket_number: handlerResult.ticket_number || null,\n    order_found: handlerResult.order_found || null,\n    final_reply: finalReply,\n    latency_ms: latency\n  }\n}];"
       },
       "id": "node-assemble-response",
       "name": "Assemble Response & Metrics",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1580, 320]
+      "position": [
+        1580,
+        320
+      ],
+      "notesInFlow": true,
+      "notes": "🐍 Python & ⚡ JS Dual-Language Node\nEquivalent: assemble_response_and_metrics()"
     },
     {
       "parameters": {
@@ -217,7 +256,10 @@
       "name": "Call SubWF 06 - Output Dispatcher",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
-      "position": [1800, 320]
+      "position": [
+        1800,
+        320
+      ]
     },
     {
       "parameters": {
@@ -231,7 +273,10 @@
       "name": "Call SubWF 05 - Logger",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
-      "position": [2020, 320]
+      "position": [
+        2020,
+        320
+      ]
     },
     {
       "parameters": {
@@ -243,7 +288,10 @@
       "name": "Respond to Ingress Webhook",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [2240, 320]
+      "position": [
+        2240,
+        320
+      ]
     },
     {
       "parameters": {
@@ -256,7 +304,10 @@
       "name": "Note Gateway",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [100, 160]
+      "position": [
+        100,
+        160
+      ]
     },
     {
       "parameters": {
@@ -269,7 +320,10 @@
       "name": "Note Session",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [560, 160]
+      "position": [
+        560,
+        160
+      ]
     },
     {
       "parameters": {
@@ -282,7 +336,10 @@
       "name": "Note AI",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [780, 160]
+      "position": [
+        780,
+        160
+      ]
     },
     {
       "parameters": {
@@ -295,7 +352,10 @@
       "name": "Note Routing",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [1020, 160]
+      "position": [
+        1020,
+        160
+      ]
     },
     {
       "parameters": {
@@ -308,7 +368,10 @@
       "name": "Note Egress",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [1740, 160]
+      "position": [
+        1740,
+        160
+      ]
     }
   ],
   "connections": {

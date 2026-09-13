@@ -8,7 +8,10 @@
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
-      "position": [160, 300]
+      "position": [
+        160,
+        300
+      ]
     },
     {
       "parameters": {
@@ -19,7 +22,10 @@
       "name": "Create SLA Ticket in Postgres",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [380, 300],
+      "position": [
+        380,
+        300
+      ],
       "credentials": {
         "postgres": {
           "id": "CS_PG_CRED_01",
@@ -36,7 +42,10 @@
       "name": "Mark Conversation Handed Off",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [600, 300],
+      "position": [
+        600,
+        300
+      ],
       "credentials": {
         "postgres": {
           "id": "CS_PG_CRED_01",
@@ -53,7 +62,10 @@
       "name": "Dispatch Agent Notification & Audit",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [820, 300],
+      "position": [
+        820,
+        300
+      ],
       "credentials": {
         "postgres": {
           "id": "CS_PG_CRED_01",
@@ -63,13 +75,18 @@
     },
     {
       "parameters": {
-        "jsCode": "const ticket = $('Create SLA Ticket in Postgres').first()?.json || {};\nconst trigger = $('Execute Workflow Trigger').first()?.json || {};\nconst locale = trigger.locale || 'ar';\nconst isAr = locale === 'ar';\nconst ticketNum = ticket.ticket_number || 'TICK-NEW';\nconst priority = ticket.priority || 'high';\n\nlet reply = '';\nif (isAr) {\n  reply = `تم استلام طلبك وتصعيده إلى الفريق المختص. تم فتح تذكرة دعم ذات أولوية برقم **#${ticketNum}** (درجة الأولوية: ${priority === 'urgent' ? 'عاجلة' : 'عالية'}).\\nيقوم أحد مسؤولي خدمة العملاء بمراجعة تفاصيل استفسارك حالياً وسيتواصل معك مباشرة.`;\n} else {\n  reply = `I understand this requires specialist attention. I have opened priority support ticket **#${ticketNum}** for you (Priority: ${priority.toUpperCase()}).\\nA customer support representative has been assigned and is reviewing your request to assist you directly.`;\n}\n\nreturn [{\n  json: {\n    status: 'escalated',\n    intent_handled: 'human_escalation',\n    ticket_number: ticketNum,\n    priority: priority,\n    sla_due_at: ticket.sla_due_at,\n    reply: reply\n  }\n}];"
+        "jsCode": "/* ==========================================================================\n   🐍 PYTHON ALTERNATIVE / البديل البرمجي بلغة بايثون لنفس المهمة\n   --------------------------------------------------------------------------\n   This node is documented in both Python and JavaScript.\n   Below is the production-grade Python function equivalent:\n\ndef format_escalation_notice(ticket: dict, trigger_data: dict) -> dict:\n    \"\"\"\n    تنسيق إشعار التصعيد مع رقم التذكرة ودرجة الأولوية.\n\n    Formats a professional bilingual escalation notice with the\n    generated ticket number and SLA priority level.\n\n    Args:\n        ticket: Row returned from the tickets INSERT.\n        trigger_data: Original trigger data with locale.\n\n    Returns:\n        Dict with escalation status, ticket info, and reply.\n    \"\"\"\n    locale = trigger_data.get(\"locale\", \"ar\")\n    is_ar = locale == \"ar\"\n    ticket_num = ticket.get(\"ticket_number\", \"TICK-NEW\")\n    priority = ticket.get(\"priority\", \"high\")\n\n    if is_ar:\n        priority_text = \"عاجلة\" if priority == \"urgent\" else \"عالية\"\n        reply = (\n            f\"تم استلام طلبك وتصعيده إلى الفريق المختص. تم فتح تذكرة دعم ذات أولوية \"\n            f\"برقم **#{ticket_num}** (درجة الأولوية: {priority_text}).\\n\"\n            \"يقوم أحد مسؤولي خدمة العملاء بمراجعة تفاصيل استفسارك حالياً وسيتواصل معك مباشرة.\"\n        )\n    else:\n        reply = (\n            f\"I understand this requires specialist attention. I have opened priority support \"\n            f\"ticket **#{ticket_num}** for you (Priority: {priority.upper()}).\\n\"\n            \"A customer support representative has been assigned and is reviewing your request.\"\n        )\n\n    return {\n        \"status\": \"escalated\",\n        \"intent_handled\": \"human_escalation\",\n        \"ticket_number\": ticket_num,\n        \"priority\": priority,\n        \"sla_due_at\": ticket.get(\"sla_due_at\"),\n        \"reply\": reply,\n    }\n\n\n# ==============================================================================\n# 12. WORKFLOW 05 — Return Log Confirmation\n# Node: \"Return Log Confirmation\"\n# Purpose: Simple confirmation return after all logging operations complete.\n# ==============================================================================\n   ========================================================================== */\n\n/* === ACTIVE JAVASCRIPT IMPLEMENTATION === */\nconst ticket = $('Create SLA Ticket in Postgres').first()?.json || {};\nconst trigger = $('Execute Workflow Trigger').first()?.json || {};\nconst locale = trigger.locale || 'ar';\nconst isAr = locale === 'ar';\nconst ticketNum = ticket.ticket_number || 'TICK-NEW';\nconst priority = ticket.priority || 'high';\n\nlet reply = '';\nif (isAr) {\n  reply = `تم استلام طلبك وتصعيده إلى الفريق المختص. تم فتح تذكرة دعم ذات أولوية برقم **#${ticketNum}** (درجة الأولوية: ${priority === 'urgent' ? 'عاجلة' : 'عالية'}).\\nيقوم أحد مسؤولي خدمة العملاء بمراجعة تفاصيل استفسارك حالياً وسيتواصل معك مباشرة.`;\n} else {\n  reply = `I understand this requires specialist attention. I have opened priority support ticket **#${ticketNum}** for you (Priority: ${priority.toUpperCase()}).\\nA customer support representative has been assigned and is reviewing your request to assist you directly.`;\n}\n\nreturn [{\n  json: {\n    status: 'escalated',\n    intent_handled: 'human_escalation',\n    ticket_number: ticketNum,\n    priority: priority,\n    sla_due_at: ticket.sla_due_at,\n    reply: reply\n  }\n}];"
       },
       "id": "node-format-ticket",
       "name": "Format Escalation Notice",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1040, 300]
+      "position": [
+        1040,
+        300
+      ],
+      "notesInFlow": true,
+      "notes": "🐍 Python & ⚡ JS Dual-Language Node\nEquivalent: format_escalation_notice()"
     }
   ],
   "connections": {

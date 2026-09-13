@@ -8,7 +8,10 @@
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
-      "position": [160, 300]
+      "position": [
+        160,
+        300
+      ]
     },
     {
       "parameters": {
@@ -19,7 +22,10 @@
       "name": "Save Customer Message",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [380, 300],
+      "position": [
+        380,
+        300
+      ],
       "credentials": {
         "postgres": {
           "id": "CS_PG_CRED_01",
@@ -36,7 +42,10 @@
       "name": "Save AI Response",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [600, 300],
+      "position": [
+        600,
+        300
+      ],
       "credentials": {
         "postgres": {
           "id": "CS_PG_CRED_01",
@@ -53,7 +62,10 @@
       "name": "Insert Turn Audit Log",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [820, 300],
+      "position": [
+        820,
+        300
+      ],
       "credentials": {
         "postgres": {
           "id": "CS_PG_CRED_01",
@@ -63,13 +75,18 @@
     },
     {
       "parameters": {
-        "jsCode": "return [{\n  json: {\n    logged: true,\n    timestamp: new Date().toISOString()\n  }\n}];"
+        "jsCode": "/* ==========================================================================\n   🐍 PYTHON ALTERNATIVE / البديل البرمجي بلغة بايثون لنفس المهمة\n   --------------------------------------------------------------------------\n   This node is documented in both Python and JavaScript.\n   Below is the production-grade Python function equivalent:\n\ndef return_log_confirmation() -> dict:\n    \"\"\"\n    تأكيد اكتمال عملية التسجيل في قاعدة البيانات.\n\n    Simple confirmation return after all audit logging operations.\n\n    Returns:\n        Dict with logged=True and ISO timestamp.\n    \"\"\"\n    return {\n        \"logged\": True,\n        \"timestamp\": datetime.now(timezone.utc).isoformat(),\n    }\n\n\n# ==============================================================================\n# 13. WORKFLOW 06 — Format Channel Payloads (WhatsApp/Telegram/Email/Webchat)\n# Nodes: \"Format WhatsApp Payload\", \"Format Telegram Payload\",\n#        \"Format Email Payload\", \"Format Webchat Payload\"\n# Purpose: Formats the final reply into channel-specific dispatch payloads.\n# ==============================================================================\n   ========================================================================== */\n\n/* === ACTIVE JAVASCRIPT IMPLEMENTATION === */\nreturn [{\n  json: {\n    logged: true,\n    timestamp: new Date().toISOString()\n  }\n}];"
       },
       "id": "node-return-log",
       "name": "Return Log Confirmation",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1040, 300]
+      "position": [
+        1040,
+        300
+      ],
+      "notesInFlow": true,
+      "notes": "🐍 Python & ⚡ JS Dual-Language Node\nEquivalent: return_log_confirmation()"
     }
   ],
   "connections": {

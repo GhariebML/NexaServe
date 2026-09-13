@@ -1,0 +1,18 @@
+{
+  "name": "nexaserve-whatsapp-bridge",
+  "version": "1.0.0",
+  "description": "WhatsApp QR Code Bridge for NexaServe AI Customer Service",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.24",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "pino": "^9.6.0",
+    "qrcode": "^1.5.4",
+    "qrcode-terminal": "^0.12.0"
+  }
+}
