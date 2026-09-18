@@ -299,5 +299,23 @@ WHERE NOT EXISTS (
         print("STDERR:", err)
     print(f"Successfully seeded {len(faqs)} DEPI FAQ records!")
 
+    # Bump KB cache version for server.js
+    import os
+    version_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'infra', 'whatsapp', 'KB_CACHE_VERSION')
+    current = 1
+    if os.path.exists(version_file):
+        try:
+            with open(version_file, 'r') as vf:
+                current = int(vf.read().strip()) or 1
+        except (ValueError, IOError):
+            current = 1
+    new_version = current + 1
+    try:
+        with open(version_file, 'w') as vf:
+            vf.write(str(new_version))
+    except IOError:
+        pass
+    print(f"KB cache version bumped: {current} -> {new_version}")
+
 if __name__ == "__main__":
     seed()

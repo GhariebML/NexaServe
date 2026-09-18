@@ -20,6 +20,13 @@ backups/**/*.sql
 *.gguf
 *.onnx
 
+# Node modules
+node_modules/
+
+# Python
+__pycache__/
+*.pyc
+
 # Logs and temporary files
 *.log
 scratch/

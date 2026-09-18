@@ -47,9 +47,14 @@ function isRecentlyDispatched(key) {
 }
 
 // Response cache for AI generation (TTL: 60s) — prevents duplicate Ollama calls
+// Cache keys include KB_CACHE_VERSION so KB updates invalidate old entries
+let kbCacheVersion = parseInt(process.env.KB_CACHE_VERSION || '1', 10);
 const responseCache = new Map();
+function getCacheKey(msg) {
+  return kbCacheVersion + ':' + (msg || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
 function getCachedReply(msg) {
-  const key = (msg || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const key = getCacheKey(msg);
   if (responseCache.has(key)) {
     const entry = responseCache.get(key);
     if (Date.now() - entry.timestamp < 60000) return entry.reply;
@@ -58,8 +63,14 @@ function getCachedReply(msg) {
   return null;
 }
 function setCachedReply(msg, reply) {
-  const key = (msg || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const key = getCacheKey(msg);
   responseCache.set(key, { reply, timestamp: Date.now() });
+}
+function invalidateCache() {
+  kbCacheVersion++;
+  responseCache.clear();
+  console.log('[Cache] Invalidated. New version:', kbCacheVersion);
+  return kbCacheVersion;
 }
 function detectLanguage(text) {
   const arChars = (text || '').match(/[\u0600-\u06FF]/g);
@@ -796,6 +807,19 @@ app.post('/logout', async (req, res) => {
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
+});
+
+// Cache management endpoints
+app.get('/cache/status', (req, res) => {
+  res.json({
+    version: kbCacheVersion,
+    entries: responseCache.size,
+    maxTTL: 60000
+  });
+});
+app.post('/cache/invalidate', (req, res) => {
+  const newVersion = invalidateCache();
+  res.json({ success: true, new_version: newVersion, cleared_entries: responseCache.size });
 });
 
 // Ollama model pre-warming — fires a dummy request at startup to reduce first-request latency
