@@ -1,0 +1,114 @@
+{
+  "id": "CSWF000000000009",
+  "name": "07_Analytics & Reporting",
+  "active": true,
+  "nodes": [
+    {
+      "id": "node-analytics-webhook",
+      "name": "Analytics Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        160,
+        300
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "analytics-report",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "cs-analytics-webhook"
+    },
+    {
+      "id": "node-load-metrics",
+      "name": "Aggregate PostgreSQL Metrics",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        420,
+        300
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT json_build_object(\n  'conversations_today', (SELECT COUNT(*) FROM conversations WHERE created_at >= CURRENT_DATE),\n  'conversations_this_week', (SELECT COUNT(*) FROM conversations WHERE created_at >= DATE_TRUNC('week', CURRENT_DATE)),\n  'conversations_this_month', (SELECT COUNT(*) FROM conversations WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE)),\n  'avg_response_time_seconds', COALESCE((SELECT ROUND(AVG(EXTRACT(EPOCH FROM (first_response_at - created_at)))::numeric, 2) FROM tickets WHERE first_response_at IS NOT NULL), 0),\n  'avg_resolution_time_seconds', COALESCE((SELECT ROUND(AVG(EXTRACT(EPOCH FROM (updated_at - created_at)))::numeric, 2) FROM tickets WHERE status = 'resolved'), 0),\n  'tickets_by_priority', (SELECT COALESCE(json_object_agg(priority, cnt), '{}'::json) FROM (SELECT priority, COUNT(*) as cnt FROM tickets GROUP BY priority) s),\n  'tickets_by_status', (SELECT COALESCE(json_object_agg(status, cnt), '{}'::json) FROM (SELECT status, COUNT(*) as cnt FROM tickets GROUP BY status) s),\n  'tickets_by_category', (SELECT COALESCE(json_object_agg(cat_name, cnt), '{}'::json) FROM (SELECT COALESCE(tc.name, 'uncategorized') as cat_name, COUNT(t.id) as cnt FROM tickets t LEFT JOIN ticket_categories tc ON t.category_id = tc.id GROUP BY tc.name) s),\n  'channel_distribution', (SELECT COALESCE(json_object_agg(channel, cnt), '{}'::json) FROM (SELECT COALESCE(channel, 'webchat') as channel, COUNT(*) as cnt FROM conversations GROUP BY channel) s),\n  'csat_average', COALESCE((SELECT ROUND(AVG(rating)::numeric, 2) FROM csat_surveys), 0),\n  'escalation_rate', COALESCE((SELECT ROUND((COUNT(*) FILTER (WHERE priority = 'urgent')::numeric / NULLIF(COUNT(*), 0)), 2) FROM tickets), 0),\n  'agent_performance', (SELECT COALESCE(json_agg(json_build_object(\n      'agent_id', a.id,\n      'name', a.name,\n      'role', a.role,\n      'team', a.team,\n      'status', a.status,\n      'tickets_assigned', (SELECT COUNT(*) FROM tickets t WHERE t.assigned_agent_id = a.id),\n      'tickets_resolved', (SELECT COUNT(*) FROM tickets t WHERE t.assigned_agent_id = a.id AND t.status = 'resolved'),\n      'avg_response_time_seconds', COALESCE((SELECT ROUND(AVG(EXTRACT(EPOCH FROM (t.first_response_at - t.created_at)))::numeric, 2) FROM tickets t WHERE t.assigned_agent_id = a.id AND t.first_response_at IS NOT NULL), 0)\n    )), '[]'::json) FROM agents a)\n) AS metrics;"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_CRED_01",
+          "name": "CustomerService Postgres"
+        }
+      }
+    },
+    {
+      "id": "node-format-analytics",
+      "name": "Format Analytics JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.first()?.json || {};\nconst metrics = item.metrics || {};\nreturn [{\n  json: {\n    status: 'success',\n    initiative: 'Digital Egypt Pioneers Initiative (DEPI)',\n    generated_at: new Date().toISOString(),\n    metrics: metrics\n  }\n}];"
+      }
+    },
+    {
+      "id": "node-respond-analytics",
+      "name": "Respond Analytics",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        940,
+        300
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Analytics Webhook": {
+      "main": [
+        [
+          {
+            "node": "Aggregate PostgreSQL Metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate PostgreSQL Metrics": {
+      "main": [
+        [
+          {
+            "node": "Format Analytics JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Analytics JSON": {
+      "main": [
+        [
+          {
+            "node": "Respond Analytics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "pinData": {},
+  "versionId": "",
+  "triggerCount": 1
+}

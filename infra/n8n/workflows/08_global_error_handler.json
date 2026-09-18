@@ -1,0 +1,59 @@
+{
+  "id": "CSWF000000000008",
+  "name": "Global Error Handler & Dead Letter Queue",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "node-trigger",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO audit_logs (workflow_name, execution_id, event_type, payload)\nVALUES ($1, $2, 'error', $3);",
+        "additionalFields": {
+          "queryParams": "={{ [ $json.workflow?.name || 'unknown_workflow', $json.execution?.id || 'error_id', JSON.stringify($json.execution?.error || $json) ] }}"
+        }
+      },
+      "id": "node-log-error",
+      "name": "Log Error to Postgres",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        440,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_CRED_01",
+          "name": "CustomerService Postgres"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Log Error to Postgres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {},
+  "staticData": null,
+  "pinData": {},
+  "versionId": "",
+  "triggerCount": 0
+}

@@ -76,8 +76,6 @@ services:
       - cs-network
 
   ollama:
-    profiles:
-      - container-ollama
     image: ollama/ollama:latest
     container_name: cs-ollama
     restart: unless-stopped
@@ -87,7 +85,7 @@ services:
     volumes:
       - ./data/ollama:/root/.ollama
     ports:
-      - "127.0.0.1:${OLLAMA_PORT:-11435}:11434"
+      - "127.0.0.1:${OLLAMA_PORT:-11434}:11434"
     healthcheck:
       test: ["CMD-SHELL", "ollama list || exit 1"]
       interval: 10s
@@ -125,11 +123,13 @@ services:
     container_name: cs-whatsapp
     restart: unless-stopped
     environment:
-      PORT: 8080
-      AUTH_DIR: /app/data/auth
-      N8N_WEBHOOK_URL: http://cs-n8n:5678/webhook/customer-service
+       PORT: 8080
+       AUTH_DIR: /app/data/auth
+       N8N_WEBHOOK_URL: http://cs-n8n:5678/webhook/customer-service
+       OLLAMA_URL: http://cs-ollama:11434/api/generate
     volumes:
       - ./data/whatsapp-auth:/app/data/auth
+      - ./infra/whatsapp/server.js:/app/server.js
     ports:
       - "127.0.0.1:${WHATSAPP_PORT:-8080}:8080"
     healthcheck:

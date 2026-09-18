@@ -122,15 +122,15 @@ try {
 # -------------------------------------------------------------
 try {
     Write-Host "[*] Executing test restart of stack containers..." -ForegroundColor Yellow
-    docker compose -f (Join-Path $ProjectDir "docker-compose.yml") restart postgres redis n8n | Out-Null
+    docker compose -f (Join-Path $ProjectDir "docker-compose.yml") restart postgres redis n8n ollama | Out-Null
     Start-Sleep -Seconds 10
     $allRunning = $true
-    foreach ($c in @("cs-postgres", "cs-n8n", "cs-redis")) {
+    foreach ($c in @("cs-postgres", "cs-n8n", "cs-redis", "cs-ollama")) {
         $st = docker inspect --format '{{.State.Status}}' $c 2>$null
         if ($st -ne "running") { $allRunning = $false }
     }
     if ($allRunning) {
-        Record-Test 7 "Container Restart Tolerance" $true "All stack services (postgres, redis, n8n) restarted and recovered successfully"
+        Record-Test 7 "Container Restart Tolerance" $true "All stack services (postgres, redis, n8n, ollama) restarted and recovered successfully"
     } else {
         Record-Test 7 "Container Restart Tolerance" $false "One or more containers failed to recover after restart"
     }
@@ -175,7 +175,7 @@ try {
 try {
     $modelCheck = Invoke-RestMethod -Uri "http://127.0.0.1:11434/api/tags" -TimeoutSec 5 2>&1
     $foundModels = ($modelCheck.models | ForEach-Object { $_.name }) -join ", "
-    if ($foundModels -match "llama|gemma") {
+    if ($foundModels -match "qwen|llama|gemma") {
         Record-Test 10 "Ollama Model Persistence" $true "Models verified available on host: $foundModels"
     } else {
         Record-Test 10 "Ollama Model Persistence" $false "Expected models not found: $foundModels"

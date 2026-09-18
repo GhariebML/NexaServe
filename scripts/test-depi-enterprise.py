@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-MCIT Enterprise Customer Service Platform - Automated E2E Test Suite
+DEPI Enterprise Customer Service Platform - Automated E2E Test Suite
 Tests:
   1. WhatsApp Ingress: Arabic Knowledge Base RAG Query
   2. Telegram Ingress: Citizen E-Service / Order Tracking
@@ -55,7 +55,7 @@ def post_json(url, payload, timeout=45):
 def main():
     global pass_count, fail_count
     print("=" * 70)
-    print(" 🚀 MCIT Enterprise AI Customer Service - Verification Suite")
+    print(" 🚀 DEPI Enterprise AI Customer Service - Verification Suite")
     print("=" * 70)
 
     # --------------------------------------------------------------------------
@@ -99,7 +99,7 @@ def main():
         assert_test("Intent classified as faq_query", res1.get("intent") == "faq_query", f"Intent: {res1.get('intent')}, Confidence: {res1.get('confidence')}")
         ans = res1.get("response", "")
         has_content = ("مهارات المستقبل" in ans) or ("تدريب" in ans) or ("نفاذ" in ans)
-        assert_test("Response contains official MCIT Future Skills information", has_content, f"Preview: {ans[:80]}...")
+        assert_test("Response contains official DEPI Digital Pioneers Initiative information", has_content, f"Preview: {ans[:80]}...")
     except Exception as e:
         assert_test("WhatsApp Ingress execution failed", False, str(e))
 
@@ -131,7 +131,7 @@ def main():
         assert_test("Detected Channel is Telegram", res2.get("channel") == "telegram", f"Resolved: {res2.get('channel')}")
         assert_test("Intent classified as order_lookup", res2.get("intent") == "order_lookup", f"Intent: {res2.get('intent')}")
         ans2 = res2.get("response", "")
-        has_order = "SRV-1001" in ans2 and ("سبل" in ans2 or "Saudi Post" in ans2 or "الشحن" in ans2 or "shipped" in ans2.lower())
+        has_order = "SRV-1001" in ans2 and ("سبل" in ans2 or "البريد المصري" in ans2 or "الشحن" in ans2 or "shipped" in ans2.lower())
         assert_test("Response contains service request status and carrier", has_order, f"Preview: {ans2[:80]}...")
     except Exception as e:
         assert_test("Telegram Ingress execution failed", False, str(e))
@@ -150,7 +150,7 @@ def main():
     try:
         res3 = post_json(GATEWAY_URL, escalate_payload)
         assert_test("Webchat Ingress returns HTTP 200", res3.get("status") == "success", f"Channel: {res3.get('channel')}")
-        assert_test("MCIT PII Masking triggered on Saudi National ID", res3.get("pii_masked") is True, f"PII Masked: {res3.get('pii_masked')}")
+        assert_test("DEPI PII Masking triggered on Egyptian National ID", res3.get("pii_masked") is True, f"PII Masked: {res3.get('pii_masked')}")
         assert_test("Intent classified as human_escalation", res3.get("intent") == "human_escalation", f"Intent: {res3.get('intent')}")
         t_num = res3.get("ticket_number")
         has_ticket = t_num is not None and t_num.startswith("TICK-")

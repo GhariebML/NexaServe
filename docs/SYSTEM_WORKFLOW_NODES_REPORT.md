@@ -1,4 +1,4 @@
-# 📖 MCIT Enterprise AI Customer Service Platform
+# 📖 DEPI AI Customer Service Platform
 ## Complete Technical Architecture & Node-by-Node Specification Report
 
 ---
@@ -26,12 +26,12 @@
 
 ## 1. Executive System Summary
 
-The **MCIT Enterprise AI Customer Service System** is an air-gapped, sovereign, intelligent customer engagement platform developed for the **Ministry of Communications and Information Technology (MCIT)**. 
+The **DEPI AI Customer Service System** is an air-gapped, sovereign, intelligent customer engagement platform developed for the **Ministry of Communications and Information Technology (DEPI)**. 
 
 ### Key Characteristics:
 - **100% Local & Air-Gapped**: Operates strictly on private infrastructure without reliance on external commercial cloud APIs (OpenAI, Anthropic, AWS, etc.).
-- **Data Sovereignty & PDPL Compliance**: In line with the Saudi Personal Data Protection Law (PDPL), sensitive citizen data—such as Saudi National IDs (`10xxxxxxxx`), Saudi IBANs (`SA...`), and credit card numbers—is automatically detected and masked prior to storage or language model processing.
-- **Bilingual Modern Standard Arabic & English**: Fully native comprehension and response generation in Arabic (`ar`) and English (`en`), incorporating domain-specific terminology for MCIT initiatives (e.g., Future Skills *مهارات المستقبل*, digital licensing, citizen services).
+- **Data Sovereignty & PDPL Compliance**: In line with the Saudi Personal Data Protection Law (PDPL), sensitive citizen data—such as Egyptian National IDs (`10xxxxxxxx`), Egyptian IBANs (`SA...`), and credit card numbers—is automatically detected and masked prior to storage or language model processing.
+- **Bilingual Modern Standard Arabic & English**: Fully native comprehension and response generation in Arabic (`ar`) and English (`en`), incorporating domain-specific terminology for DEPI initiatives (e.g., Digital Pioneers Initiative (DEPI) *مهارات المستقبل*, digital licensing, citizen services).
 - **Multi-Channel Omnichannel Hub**: Unifies communications across WhatsApp (Cloud/On-Premise Business API), Telegram Bot, Website Webchat, and Email.
 - **SLA-Governed Human-in-the-Loop (HITL)**: Intelligently identifies frustrated citizens or complex enterprise cases, issues priority support tickets with dynamic SLAs (`urgent` = 30 minutes, `high` = 2 hours), and provides live bidirectional agent-to-citizen messaging.
 
@@ -67,7 +67,7 @@ flowchart TB
     subgraph Layer4 [4. Human-in-the-Loop Layer]
         ESC["SubWF 04C: SLA Ticket Generator<br/>(TICK-XXXXX Priority Queues)"]
         BRDG["SubWF 04D: Live Agent Bridge<br/>(POST /webhook/agent-response)"]
-        HUMAN["MCIT Tier-2 Support Specialists"]
+        HUMAN["DEPI Tier-2 Support Specialists"]
     end
 
     subgraph Layer5 [5. Data & Egress Layer]
@@ -142,7 +142,7 @@ Below is the complete, granular breakdown of every node in each workflow.
 | Node Name | Node Type | Version | Technical Function & Logic |
 | :--- | :--- | :---: | :--- |
 | **Webhook Ingress** | `n8n-nodes-base.webhook` | `2.0` | Listens at `POST /webhook/customer-service`. Accepts synchronous payloads in JSON or form format. Configured with `responseMode: responseNode` for controlled responses. |
-| **Channel Ingress & PII Sanitizer** | `n8n-nodes-base.code` | `2.0` | **Multi-channel Normalizer**: Detects whether incoming payload is WhatsApp Cloud API (`entry[0].changes[0].value`), Telegram Bot (`message.chat.id`), Webchat, or Email.<br/>**Saudi PDPL PII Filter**: Applies regular expressions to detect and mask Saudi National IDs (`10\d{8}` $\to$ `[SAUDI_NATIONAL_ID_MASKED]`), Saudi IBANs (`SA\d{22}` $\to$ `[SAUDI_IBAN_MASKED]`), and Credit Cards.<br/>**Language Detector**: Inspects Arabic character presence (`/[\u0600-\u06FF]/`) to set locale to `'ar'` or `'en'`. |
+| **Channel Ingress & PII Sanitizer** | `n8n-nodes-base.code` | `2.0` | **Multi-channel Normalizer**: Detects whether incoming payload is WhatsApp Cloud API (`entry[0].changes[0].value`), Telegram Bot (`message.chat.id`), Webchat, or Email.<br/>**DEPI Data Protection PII Filter**: Applies regular expressions to detect and mask Egyptian National IDs (`10\d{8}` $\to$ `[EGYPTIAN_NATIONAL_ID_MASKED]`), Egyptian IBANs (`SA\d{22}` $\to$ `[EGYPTIAN_IBAN_MASKED]`), and Credit Cards.<br/>**Language Detector**: Inspects Arabic character presence (`/[\u0600-\u06FF]/`) to set locale to `'ar'` or `'en'`. |
 | **Call SubWF 02 - Session Manager** | `n8n-nodes-base.executeWorkflow` | `1.1` | Invokes `CSWF000000000002`. Passes normalized customer profile and channel IDs to retrieve the customer record, active conversation UUID, and recent history memory. |
 | **Call SubWF 03 - AI Cognitive Engine** | `n8n-nodes-base.executeWorkflow` | `1.1` | Invokes `CSWF000000000003`. Submits conversation history and sanitized message to Ollama `llama3.1:8b` to obtain intent classification, confidence score, sentiment, and extracted entities. |
 | **Switch on Intent** | `n8n-nodes-base.switch` | `3.2` | Inspects `$json.ai_output.intent`. Routes across 4 deterministic branches:<br/>• Output 0: `order_lookup`<br/>• Output 1: `faq_query` / `knowledge_base`<br/>• Output 2: `human_escalation`<br/>• Output 3: `general_support` (Fallback) |
@@ -180,7 +180,7 @@ Below is the complete, granular breakdown of every node in each workflow.
 | :--- | :--- | :--- |
 | **Execute Workflow Trigger** | `executeWorkflowTrigger` | Ingests normalized text, conversation history, customer profile, and locale. |
 | **Guardrails & Safety Filter** | `code` (v2.0) | **Enterprise Security Shield**: Scans input against prompt injection patterns (`"ignore previous instructions"`, `"system prompt"`, `"jailbreak"`, `"bypass"`). If detected, triggers immediate bypass returning a safe defensive response without wasting LLM compute. |
-| **Build Prompt Payload** | `code` (v2.0) | Formats a strict system prompt embedding MCIT enterprise rules, conversation history, and an explicit JSON schema (`intent`, `confidence`, `entities`, `sentiment`, `requires_human`). |
+| **Build Prompt Payload** | `code` (v2.0) | Formats a strict system prompt embedding DEPI enterprise rules, conversation history, and an explicit JSON schema (`intent`, `confidence`, `entities`, `sentiment`, `requires_human`). |
 | **Ollama Cognitive Classifier** | `httpRequest` (v4.2) | Executes `POST http://host.docker.internal:11434/api/generate` requesting model `llama3.1:8b` with `stream: false` and `format: "json"`. Zero cloud transmission. |
 | **Parse & Validate AI Schema** | `code` (v2.0) | Parses JSON from Ollama. Validates intent schema. Features a robust bilingual heuristic fallback that guarantees classification even in the event of LLM syntax anomalies. Extracts order/service numbers (`SRV-xxxx`, `ORD-xxxx`). |
 
@@ -202,13 +202,13 @@ Below is the complete, granular breakdown of every node in each workflow.
 ### SubWF 04B: Knowledge Base & FAQ (Bilingual RAG)
 * **Workflow ID**: `CSWF000000000005`
 * **File**: `infra/n8n/workflows/04B_knowledge_base_faq.json`
-* **Role**: Implements hybrid retrieval-augmented generation over MCIT policies, digital initiatives, and official regulations.
+* **Role**: Implements hybrid retrieval-augmented generation over DEPI policies, digital initiatives, and official regulations.
 
 | Node Name | Node Type | Technical Function & Logic |
 | :--- | :--- | :--- |
 | **Execute Workflow Trigger** | `executeWorkflowTrigger` | Receives citizen inquiry, language, and AI context. |
 | **Query Bilingual Knowledge Base** | `postgres` (v2.5) | Performs full-text matching (`ILIKE`) on `question`, `answer`, `question_ar`, and `answer_ar`, as well as keyword array unnesting (`keywords` and `keywords_ar`). Returns top matched articles. |
-| **Format RAG Knowledge Response** | `code` (v2.0) | Selects the language-appropriate answer (`answer_ar` vs `answer`). Injects official source attribution (e.g., `MCIT Official Knowledge Base - Future Skills`). Returns graceful guidance fallback if query is unmatched. |
+| **Format RAG Knowledge Response** | `code` (v2.0) | Selects the language-appropriate answer (`answer_ar` vs `answer`). Injects official source attribution (e.g., `DEPI Official Knowledge Base - Digital Pioneers Initiative (DEPI)`). Returns graceful guidance fallback if query is unmatched. |
 
 ---
 
@@ -220,7 +220,7 @@ Below is the complete, granular breakdown of every node in each workflow.
 | Node Name | Node Type | Technical Function & Logic |
 | :--- | :--- | :--- |
 | **Execute Workflow Trigger** | `executeWorkflowTrigger` | Receives escalation trigger, sentiment, customer data, and message context. |
-| **Create SLA Ticket in Postgres** | `postgres` (v2.5) | Generates `TICK-XXXXX`. Evaluates sentiment: if `angry` $\to$ assigns `urgent` priority with 30-minute SLA (`sla_due_at = NOW() + 30m`); otherwise `high` with 2-hour SLA. Assigns to `MCIT Citizen Escalations Team`. |
+| **Create SLA Ticket in Postgres** | `postgres` (v2.5) | Generates `TICK-XXXXX`. Evaluates sentiment: if `angry` $\to$ assigns `urgent` priority with 30-minute SLA (`sla_due_at = NOW() + 30m`); otherwise `high` with 2-hour SLA. Assigns to `DEPI Citizen Escalations Team`. |
 | **Mark Conversation Handed Off** | `postgres` (v2.5) | Updates `conversations.status = 'handed_off'` to prevent automatic AI intervention until an agent releases the ticket. |
 | **Dispatch Agent Notification & Audit** | `postgres` (v2.5) | Logs `hitl_escalated` audit event containing ticket number, customer contact details, and priority. |
 | **Format Escalation Notice** | `code` (v2.0) | Returns an empathetic, reassuring message to the citizen in their preferred language containing their ticket number and priority tier. |
@@ -266,7 +266,7 @@ Below is the complete, granular breakdown of every node in each workflow.
 | Node Name | Node Type | Technical Function & Logic |
 | :--- | :--- | :--- |
 | **Execute Workflow Trigger** | `executeWorkflowTrigger` | Ingests final reply, channel name, recipient ID, and locale. |
-| **Format Egress Payload** | `code` (v2.0) | Generates exact protocol payload:<br/>• **WhatsApp**: `{ messaging_product: 'whatsapp', to: phone, text: { body } }`<br/>• **Telegram**: `{ chat_id: id, text: body, parse_mode: 'Markdown' }`<br/>• **Webchat**: `{ recipient_id: id, message: body, locale }`<br/>• **Email**: `{ to: email, subject: 'MCIT Customer Support', body }` |
+| **Format Egress Payload** | `code` (v2.0) | Generates exact protocol payload:<br/>• **WhatsApp**: `{ messaging_product: 'whatsapp', to: phone, text: { body } }`<br/>• **Telegram**: `{ chat_id: id, text: body, parse_mode: 'Markdown' }`<br/>• **Webchat**: `{ recipient_id: id, message: body, locale }`<br/>• **Email**: `{ to: email, subject: 'DEPI Customer Support', body }` |
 | **Egress Audit Record** | `postgres` (v2.5) | Records `channel_egress_dispatched` in audit log for delivery accountability. |
 | **Return Dispatch Result** | `code` (v2.0) | Confirms dispatch readiness back to caller. |
 
@@ -355,7 +355,7 @@ All relational data is isolated inside PostgreSQL 16 (`customerservice` database
 2. **Sanitization**: Master 01 normalizes the message, detects Arabic (`ar`), and executes regex scrubbing to guarantee no National ID or IBAN is exposed.
 3. **Session Retrieval**: SubWF 02 upserts the citizen's phone/WhatsApp profile and pulls the previous 4 conversation turns from Postgres.
 4. **Cognitive Analysis**: SubWF 03 invokes local **Ollama** (`llama3.1:8b`). Ollama classifies intent as `faq_query` with 95% confidence.
-5. **Knowledge Retrieval**: SubWF 04B queries the PostgreSQL bilingual knowledge base, matching MCIT's Future Skills initiative (`مهارات المستقبل`).
+5. **Knowledge Retrieval**: SubWF 04B queries the PostgreSQL bilingual knowledge base, matching DEPI's Digital Pioneers Initiative (DEPI) initiative (`مهارات المستقبل`).
 6. **Parallel Egress & Auditing**:
    - Master 01 constructs the response and returns an HTTP 200 JSON payload to the caller in **< 1.5 seconds**.
    - SubWF 06 prepares the outbound WhatsApp template message.
@@ -389,7 +389,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\chat-cli.ps1
 #### 2. Automated Enterprise Verification Suite
 Run the 23-assertion test suite:
 ```powershell
-python .\scripts\test-mcit-enterprise.py
+python .\scripts\test-depi-enterprise.py
 ```
 *Validates WhatsApp RAG queries, Telegram service tracking, Webchat PII masking, SLA human escalation, Agent response bridge, Guardrails prompt injection deflection, and database audit logs.*
 
@@ -398,7 +398,7 @@ To simulate a human specialist resolving an escalated ticket:
 ```powershell
 $agentPayload = @{
     ticket_number = "TICK-22701"
-    agent_name    = "Fahad Al-Harbi (MCIT Tier-2 Support)"
+    agent_name    = "Karim Hassan (DEPI Tier-2 Support)"
     agent_message = "تمت مراجعة طلبكم والتحقق من الحساب، تم تفعيل الخدمة المطلوبة بنجاح."
     action        = "resolve"
 } | ConvertTo-Json -Compress

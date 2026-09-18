@@ -1,0 +1,199 @@
+{
+  "id": "CSWF000000000013",
+  "name": "11_KB Admin",
+  "active": true,
+  "nodes": [
+    {
+      "id": "n1",
+      "name": "Webhook: KB Admin",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        100,
+        300
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "kb-admin",
+        "responseMode": "responseNode"
+      }
+    },
+    {
+      "id": "n2",
+      "name": "Route Action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 2,
+      "position": [
+        340,
+        300
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body?.action }}",
+                    "rightValue": "create"
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body?.action }}",
+                    "rightValue": "update"
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body?.action }}",
+                    "rightValue": "search"
+                  }
+                ]
+              }
+            }
+          ],
+          "fallbackOutput": 3
+        }
+      }
+    },
+    {
+      "id": "n3a",
+      "name": "KB - Create",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        580,
+        100
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO knowledge_base (category, question, answer, keywords, question_ar, answer_ar, keywords_ar, is_active) VALUES ('{{ $json.body?.category || \"general\" }}', '{{ ($json.body?.question || '').replace(/'/g, \"''\") }}', '{{ ($json.body?.answer || '').replace(/'/g, \"''\") }}', ARRAY['general'], '{{ ($json.body?.question_ar || '').replace(/'/g, \"''\") }}', '{{ ($json.body?.answer_ar || '').replace(/'/g, \"''\") }}', ARRAY['general'], TRUE) RETURNING *;",
+        "credentials": {
+          "postgres": {
+            "id": "CS_PG_CRED_01",
+            "name": "CustomerService Postgres"
+          }
+        }
+      }
+    },
+    {
+      "id": "n3b",
+      "name": "KB - Search",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        580,
+        300
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM knowledge_base WHERE is_active = TRUE AND (question ILIKE '%{{ $json.body?.query || '' }}%' OR answer ILIKE '%{{ $json.body?.query || '' }}%') LIMIT 20;",
+        "credentials": {
+          "postgres": {
+            "id": "CS_PG_CRED_01",
+            "name": "CustomerService Postgres"
+          }
+        }
+      }
+    },
+    {
+      "id": "n4",
+      "name": "Respond KB",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 2,
+      "position": [
+        820,
+        300
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ $json }"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook: KB Admin": {
+      "main": [
+        [
+          {
+            "node": "Route Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Action": {
+      "main": [
+        [
+          {
+            "node": "KB - Create",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "KB - Search",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond KB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KB - Create": {
+      "main": [
+        [
+          {
+            "node": "Respond KB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KB - Search": {
+      "main": [
+        [
+          {
+            "node": "Respond KB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "pinData": {},
+  "versionId": "",
+  "triggerCount": 1
+}

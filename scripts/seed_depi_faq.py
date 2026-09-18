@@ -123,6 +123,147 @@ faqs = [
         "question": "What is the withdrawal and cancellation policy for DEPI?",
         "answer": "Because the scholarship is fully state-funded and full-time, withdrawal after training begins is permitted only under extreme force majeure with written management approval; otherwise, full reimbursement costs apply.",
         "keywords": ["withdrawal", "cancellation", "penalty", "policy", "costs"]
+    },
+    {
+        "category": "depi_grants",
+        "question_ar": """ما هي المنح والتمويل المتاح لطلاب مبادرة الرواد الرقميون؟""",
+        "answer_ar": """مبادرة الرواد الرقميون (DEPI) ممولة بالكامل من الدولة.
+- لا رسوم دراسية لجميع البرامج.
+- بدل إقامة يومي شامل الوجبات.
+- تغطية تكاليف النقل للطلاب من خارج القاهرة.
+- جوائز مالية للمتفوقين.
+- دعم شراء الأجهزة التقنية للطلاب المحتاجين.""",
+        "keywords_ar": ["\u0645\u0646\u062d\u0629", "\u062a\u0645\u0648\u064a\u0644", "\u0631\u0633\u0648\u0645", "\u0625\u0642\u0627\u0645\u0629", "\u0628\u062f\u0644", "\u062c\u0648\u0627\u0626\u0632", "\u0623\u062c\u0647\u0632\u0629", "\u062a\u0645\u0648\u064a\u0644"],
+        "question": "What grants and funding are available for DEPI students?",
+        "answer": "DEPI is fully state-funded: no tuition fees, daily meal/boarding allowance, transport coverage for non-Cairo students, cash prizes for top performers, and device support for needy students.",
+        "keywords": ["grants", "funding", "scholarship", "tuition", "allowance", "prizes"]
+    },
+    {
+        "category": "depi_lms_platform",
+        "question_ar": """ما هي المنصة التعليمية (LMS) المستخدمة في DEPI؟""",
+        "answer_ar": """تستخدم مبادرة الرواد الرقميون منصة LMS متكاملة تقدم:
+- المحاضرات والفيديوهات التعليمية
+- الواجبات والاختبارات الإلكترونية
+- نظام الحضور والإجازات
+- التواصل بين الطلاب والمدربين
+- لوحة التحكم الشخصية لكل طالب
+
+الدعم الفني: info@depi.gov.eg""",
+        "keywords_ar": ["LMS", "\u0627\u0644\u0645\u0646\u0635\u0629 \u0627\u0644\u062a\u0639\u0644\u064a\u0645\u064a\u0629", "\u0627\u0644\u0645\u062d\u0627\u0636\u0631\u0627\u062a", "\u0627\u0644\u0648\u0627\u062c\u0628\u0627\u062a", "\u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631\u0627\u062a", "\u0627\u0644\u062d\u0636\u0648\u0631", "\u0627\u0644\u0625\u062c\u0627\u0632\u0627\u062a"],
+        "question": "What LMS platform does DEPI use for online learning?",
+        "answer": "DEPI uses a comprehensive LMS featuring video lectures, e-assessments, attendance tracking, student-instructor communication, and personal dashboards. Support: info@depi.gov.eg",
+        "keywords": ["LMS", "e-learning", "platform", "video", "assessment", "attendance"]
+    },
+    {
+        "category": "depi_international_partnerships",
+        "question_ar": """ما هي الشراكات الدولية لمبادرة الرواد الرقميون؟""",
+        "answer_ar": """تتعاون مبادرة DEPI مع جامعات وشركات تقنية عالمية:
+- جامعات في ألمانيا وبريطانيا وكندا
+- شراكات مع مايكروسوفت وغوغل وأمازون
+- برامج تبادل ثقافي وتدريب مشترك
+- اعتمادات دولية للشهادات
+- مشاريع بحثية مشتركة""",
+        "keywords_ar": ["\u0634\u0631\u0627\u0643\u0627\u062a", "\u062f\u0648\u0644\u064a\u0629", "\u062c\u0627\u0645\u0639\u0627\u062a", "\u0634\u0631\u0643\u0627\u062a", "\u062a\u0642\u0646\u064a\u0629", "\u062a\u0628\u0627\u062f\u0644", "\u0627\u0639\u062a\u0645\u0627\u062f\u0627\u062a", "\u0628\u062d\u062b"],
+        "question": "What international partnerships does DEPI have?",
+        "answer": "DEPI partners with universities in Germany, UK, Canada and tech companies like Microsoft, Google, and Amazon for joint programs, certifications, and research.",
+        "keywords": ["partnerships", "international", "universities", "Microsoft", "Google", "certifications"]
+    },
+    {
+        "category": "depi_evaluation_criteria",
+        "question_ar": """ما هي معايير تقييم الطلاب في مبادرة الرواد الرقميون؟""",
+        "answer_ar": """يتم تقييم الطلاب وفقاً لمعايير متعددة:
+- الاختبارات الإلكترونية: 30%
+- المشاريع التطبيقية: 30%
+- الحضور والمشاركة: 15%
+- الامتحان النهائي: 25%
+
+الحد الأدنى للنجاح: 60%
+التقديرات: ممتاز (90+)، جيد جداً (80+)، جيد (70+)، مقبول (60+)""",
+        "keywords_ar": ["\u062a\u0642\u064a\u064a\u0645", "\u0627\u0645\u062a\u062d\u0627\u0646\u0627\u062a", "\u0627\u062e\u062a\u0628\u0627\u0631\u0627\u062a", "\u0645\u0634\u0627\u0631\u064a\u0639", "\u062d\u0636\u0648\u0631", "\u062a\u0642\u062f\u064a\u0631\u0627\u062a", "\u0646\u062c\u0627\u062d", "\u062f\u0631\u062c\u0627\u062a"],
+        "question": "What are the student evaluation criteria in DEPI?",
+        "answer": "Evaluation: E-tests 30%, projects 30%, attendance 15%, final exam 25%. Minimum passing: 60%. Grades: Excellent (90+), Very Good (80+), Good (70+), Pass (60+).",
+        "keywords": ["evaluation", "grading", "exams", "projects", "attendance", "criteria"]
+    },
+    {
+        "category": "depi_admission_appeal",
+        "question_ar": "كيف يمكنني تقديم اعتراض أو الطعن في قرار القبول؟",
+        "answer_ar": "إجراءات الاعتراض على قرارات القبول في مبادرة الرواد الرقميون:\n1. تقديم اعتراض رسمي عبر البوابة الإلكترونية خلال 5 أيام عمل من إعلان النتيجة.\n2. دفع رسوم الاعتراض (تُسترد في حال إلغاء القرار).\n3. مراجعة اللجنة العليا للاعتراضات.\n4. الإخطار بالنتيجة خلال 10 أيام عمل.\n5. في حال عدم الرضا عن النتيجة، يمكن التواصل مع مكتب أمين المظالم.",
+        "keywords_ar": ["اعتراض", "طعن", "قرار", "قبول", "نتيجة", "التماس", "مراجعة", "أمين مظالم"],
+        "question": "How can I appeal or contest an admission decision?",
+        "answer": "Appeal process: 1. Submit formal appeal via portal within 5 business days of result announcement. 2. Pay appeal fee (refunded if decision overturned). 3. Higher Appeals Committee reviews. 4. Notified within 10 business days. 5. If unsatisfied, contact the Ombudsman office.",
+        "keywords": ["appeal", "contest", "admission", "decision", "result", "ombudsman"]
+    },
+    {
+        "category": "depi_admission_deferral",
+        "question_ar": "هل يمكن تأجيل التسجيل أو إعادة تفعيل الطلب؟",
+        "answer_ar": "سياسة التأجيل وإعادة التفعيل:\n- يمكن تأجيل التسجيل مرة واحدة لمدة تصل إلى فصل دراسي واحد بأسباب قهرية موثقة.\n- يجب تقديم طلب التأجيل عبر البوابة مع المستندات الداعمة.\n- لا يحق تأجيل التسجيل بعد استكمال الاختبارات.\n- إعادة التفعيل تتطلب إعادة تقديم الطلب ودفع أي رسوم مستحقة.",
+        "keywords_ar": ["تأجيل", "تأخير", "إعادة تفعيل", "طلب", "أسباب قهرية", "موثقة"],
+        "question": "Can I defer my registration or reactivate my application?",
+        "answer": "Deferral allowed once for up to one semester with documented force majeure reasons. Submit via portal with supporting documents. Cannot defer after completing exams. Reactivation requires re-application and any outstanding fees.",
+        "keywords": ["defer", "postpone", "reactivate", "force majeure", "reapply"]
+    },
+    {
+        "category": "depi_exam_appeal",
+        "question_ar": "كيف يمكنني الاعتراض على نتيجة الامتحان أو طلب مراجعتها؟",
+        "answer_ar": "إجراءات مراجعة نتائج الامتحانات:\n1. تقديم طلب مراجعة خلال 7 أيام عمل من إعلان النتيجة.\n2. يتم مراجعة الإجابات مقارنة بمعايير التصحيح المعتمدة.\n3. لا تُعاد تصحيح الإجابات إلا في حال وجود خطأ واضح في التصحيح.\n4. تُرد رسوم المراجعة في حال تغيير النتيجة.\n5. التواصل عبر: exam.review@depi.gov.eg",
+        "keywords_ar": ["مراجعة", "النتيجة", "نتيجة", "امتحان", "اعتراض", "تصحيح", "خطأ", "رسوم", "إجابات"],
+        "question": "How can I contest an exam result or request a review?",
+        "answer": "Review process: 1. Submit request within 7 business days of result. 2. Answers compared against approved grading criteria. 3. Re-grading only for clear grading errors. 4. Review fee refunded if grade changes. 5. Contact: exam.review@depi.gov.eg",
+        "keywords": ["review", "grade", "exam", "contest", "re-grade", "fee"]
+    },
+    {
+        "category": "depi_exam_incident",
+        "question_ar": "ماذا أفعل في حالة حدوث طارئ أو حادث أثناء الامتحان؟",
+        "answer_ar": "الإبلاغ عن الحوادث أثناء الامتحانات:\n- في حال حدوث عطل فني أو طارئ أثناء الامتحان: الضغط على زر المساعدة في البوصة أو التواصل مع المشرف فوراً.\n- الإبلاغ عبر: exam.incidents@depi.gov.eg\n- توثيق الحادث بالصور أو الفيديو إن أمكن.\n- سيتم النظر في الطلب خلال 48 ساعة عمل.\n- قد يتم جدولة إعادة للامتحان المتأثر.",
+        "keywords_ar": ["طوارئ", "طارئ", "حادث", "امتحان", "عطل", "إبلاغ", "مساعدة", "مشرف", "جدولة", "إعادة"],
+        "question": "What should I do in an emergency or incident during an exam?",
+        "answer": "Report incidents: Press help button in the exam browser or contact supervisor immediately. Email: exam.incidents@depi.gov.eg. Document with photos/video if possible. Reviewed within 48 hours. Affected exam may be rescheduled.",
+        "keywords": ["emergency", "incident", "exam", "report", "supervisor", "reschedule"]
+    },
+    {
+        "category": "depi_exam_accommodation",
+        "question_ar": "هل تتوفر تسهيلات خاصة للطلاب ذوي الاحتياجات الخاصة في الامتحانات؟",
+        "answer_ar": "التسهيلات الخاصة للطلاب ذوي الاحتياجات الخاصة:\n- توفير وقت إضافي (25% إضافية).\n- توفير قاعة منفصلة ومرتبة.\n- توفير أدوات مساعدة (حاسوب، قارئ شاشة).\n- توفير مترجم لغة الإشارة عند الطلب.\n- يجب تقديم طلب مسبق مع تقرير طبي معتمد قبل 14 يوم من الامتحان.\n- التواصل: accommodations@depi.gov.eg",
+        "keywords_ar": ["تسهيلات", "احتياجات خاصة", "إعاقة", "إضافي", "قاعة", "مترجم", "تقرير طبي"],
+        "question": "Are there special accommodations for students with disabilities during exams?",
+        "answer": "Accommodations include: 25% extra time, separate quiet room, assistive devices (computer, screen reader), sign language interpreter. Submit request 14 days before exam with medical report. Contact: accommodations@depi.gov.eg",
+        "keywords": ["accommodation", "disability", "extra time", "assistive", "interpreter", "medical"]
+    },
+    {
+        "category": "depi_training_feedback",
+        "question_ar": "كيف يمكنني تقديم ملاحظات أو شكوى عن جودة التدريب؟",
+        "answer_ar": "تقديم ملاحظات وشكاوى جودة التدريب:\n- استمارة التقييم بعد كل مسار تدريبي عبر البوصة.\n- تقديم شكوى جودة عبر: quality@depi.gov.eg\n- الاجتماعات التقييمية الدورية مع المرشدين.\n- مدة الاستجابة: 72 ساعة عمل.\n- يمكن طلب جلسة استشارية فردية مع فريق الجودة.",
+        "keywords_ar": ["ملاحظات", "جودة", "تدريب", "شكوى", "تقييم", "مرشد", "استشارة", "استجابة"],
+        "question": "How can I provide feedback or file a training quality complaint?",
+        "answer": "Feedback channels: Post-track evaluation form via portal, quality emails at quality@depi.gov.eg, periodic review meetings with mentors. Response within 72 hours. Individual consultation available from quality team.",
+        "keywords": ["feedback", "quality", "training", "complaint", "evaluation", "mentor"]
+    },
+    {
+        "category": "depi_training_schedule",
+        "question_ar": "كيف يتم التعامل مع تعارض المواعيد أو الغياب من التدريب؟",
+        "answer_ar": "سياسة التعارض والغياب:\n- تعارض المواعيد: تقديم طلب مسبق عبر البوابة مع المستندات.\n- الغياب المبرر (مواعيد طبية، عائلية): تقديم إشعار قبل 48 ساعة مع تقرير طبي أو مستند رسمي.\n- الغياب غير المبرر: يُحتسب من نسبة الحضور الإلزامية (85%).\n- التغيب المتكرر يعرض الطالب للإيقاف مؤقتاً.",
+        "keywords_ar": ["تعارض", "مواعيد", "غياب", "حضور", "إلزامي", "مبرر", "غير مبرر", "إيقاف"],
+        "question": "How are schedule conflicts and training absences handled?",
+        "answer": "Conflicts: submit advance request via portal. Justified absence (medical/family): notify 48 hours before with documentation. Unjustified absence counts toward mandatory 85% attendance. Repeated absence leads to temporary suspension.",
+        "keywords": ["conflict", "schedule", "absence", "attendance", "justified", "suspension"]
+    },
+    {
+        "category": "depi_platform_bug",
+        "question_ar": "كيف أبلغ عن خلل فني أو خطأ في المنصة الإلكترونية؟",
+        "answer_ar": "الإبلاغ عن الأخطاء التقنية:\n- الإبلاغ عبر زر 'بلغ عن خطأ' الموجود في كل صفحة من البوابة.\n- البريد التقني: support@digilians.gov.eg\n- وصف الخطأ بوضوح مع لقطات شاشة إن أمكن.\n- تحديد المتصفح ونظام التشغيل المستخدم.\n- الاستجابة خلال 24 ساعة عمل.\n- تتبع حالة البلاغ عبر رقم التتبع المرفق.",
+        "keywords_ar": ["خطأ", "خلل", "عطل", "تقني", "بلاغ", "دعم", "سcreenshot", "متتبع", "حالة"],
+        "question": "How do I report a technical bug or error in the online platform?",
+        "answer": "Report bugs: Use 'Report Error' button on every page. Email: support@digilians.gov.eg. Describe clearly with screenshots if possible. Specify browser and OS. Response within 24 hours. Track status via reference number.",
+        "keywords": ["bug", "error", "technical", "report", "support", "track", "screenshot"]
+    },
+    {
+        "category": "depi_platform_login_issues",
+        "question_ar": "لا أستطيع تسجيل الدخول أو رفع المستندات على المنصة، ماذا أفعل؟",
+        "answer_ar": "حلول مشاكل تسجيل الدخول والرفع:\n- كلمة المرور المنسية: اضغط 'نسيت كلمة المرور' وأدخل البريد الإلكتروني المسجل.\n- انتهاء الجلسة: أعد تسجيل الدخول وتأكد من استقرار الإنترنت.\n- عدم قبول الرفع: تأكد من صيغة PDF وحجم الملف أقل من 2 ميجابايت.\n- حاول استخدام متصفح Chrome أو Firefox أحدث إصدار.\n- إذا استمرت المشكلة: contact@digilians.gov.eg",
+        "keywords_ar": ["تسجيل دخول", "دخول", "رفع", "مستندات", "كلمة مرور", "PDF", "حجم", "Chrome", "Firefox", "مشكلة"],
+        "question": "I can't log in or upload documents on the platform, what should I do?",
+        "answer": "Login issues: Use 'Forgot Password' with registered email. Session expired: re-login with stable internet. Upload not accepted: ensure PDF format and under 2MB. Try latest Chrome or Firefox. Persistent issues: contact@digilians.gov.eg",
+        "keywords": ["login", "upload", "password", "PDF", "Chrome", "Firefox", "troubleshoot"]
     }
 ]
 

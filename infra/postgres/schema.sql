@@ -1,8 +1,9 @@
 -- ==============================================================================
--- Customer Service AI Platform - Database Schema
+-- Customer Service AI Platform - Database Schema (DEPI Professional Support)
 -- Database: customerservice
 -- Owner: cs_app_user
--- Enterprise MCIT Compliant Specification
+-- DEPI/Egyptian Data Protection Compliant Specification
+-- Includes: Core schema (v1) + Professional Support extensions (v2)
 -- ==============================================================================
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";

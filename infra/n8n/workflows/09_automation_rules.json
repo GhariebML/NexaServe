@@ -1,0 +1,140 @@
+{
+  "id": "CSWF000000000011",
+  "name": "09_Automation Rules Engine",
+  "active": true,
+  "nodes": [
+    {
+      "id": "n1",
+      "name": "Cron Trigger",
+      "type": "n8n-nodes-base.cronTrigger",
+      "typeVersion": 2,
+      "position": [
+        100,
+        300
+      ],
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "mode": "everyXMinutes",
+              "minutes": 15
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "n2",
+      "name": "Load Rules",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        340,
+        300
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM automation_rules WHERE is_active = TRUE;",
+        "credentials": {
+          "postgres": {
+            "id": "CS_PG_CRED_01",
+            "name": "CustomerService Postgres"
+          }
+        }
+      }
+    },
+    {
+      "id": "n3",
+      "name": "Evaluate Rules",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        580,
+        300
+      ],
+      "parameters": {
+        "jsCode": "return $input.all().map(n => ({ json: { ...n.json, evaluated: true } }));"
+      }
+    },
+    {
+      "id": "n4",
+      "name": "Execute Actions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        820,
+        300
+      ],
+      "parameters": {
+        "jsCode": "return $input.all().map(n => ({ json: { ...n.json, action_executed: n.json.action_type || \"none\" } }));"
+      }
+    },
+    {
+      "id": "n5",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 2,
+      "position": [
+        1060,
+        300
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ $json }"
+      }
+    }
+  ],
+  "connections": {
+    "Cron Trigger": {
+      "main": [
+        [
+          {
+            "node": "Load Rules",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Rules": {
+      "main": [
+        [
+          {
+            "node": "Evaluate Rules",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluate Rules": {
+      "main": [
+        [
+          {
+            "node": "Execute Actions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Actions": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "pinData": {},
+  "versionId": "",
+  "triggerCount": 1
+}

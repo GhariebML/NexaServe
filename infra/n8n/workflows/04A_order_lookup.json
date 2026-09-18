@@ -1,6 +1,7 @@
 {
   "id": "CSWF000000000004",
   "name": "SubWF 04A - Order Lookup & Tracking",
+  "active": true,
   "nodes": [
     {
       "parameters": {},
@@ -73,7 +74,9 @@
       ]
     }
   },
-  "settings": {
-    "executionOrder": "v1"
-  }
+  "settings": {},
+  "staticData": null,
+  "pinData": {},
+  "versionId": "",
+  "triggerCount": 0
 }

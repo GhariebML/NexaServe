@@ -1,0 +1,300 @@
+{
+  "id": "CSWF000000000010",
+  "name": "08_CSAT Survey",
+  "active": true,
+  "nodes": [
+    {
+      "id": "node-csat-webhook",
+      "name": "CSAT Ingress Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        140,
+        300
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "csat-submit",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "cs-csat-webhook"
+    },
+    {
+      "id": "node-validate-input",
+      "name": "Validate CSAT Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        360,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const body = $input.first()?.json?.body || $input.first()?.json || {};\nconst ticketNumber = (body.ticket_number || '').trim();\nconst rawRating = parseInt(body.rating, 10);\nconst feedback = (body.feedback || '').replace(/'/g, \"''\").slice(0, 1000);\n\nif (!ticketNumber) {\n  return [{ json: { is_valid: false, error: 'ticket_number is required' } }];\n}\n\nif (isNaN(rawRating) || rawRating < 1 || rawRating > 5) {\n  return [{ json: { is_valid: false, error: 'rating must be an integer between 1 and 5' } }];\n}\n\nreturn [{\n  json: {\n    is_valid: true,\n    ticket_number: ticketNumber,\n    rating: rawRating,\n    feedback: feedback\n  }\n}];"
+      }
+    },
+    {
+      "id": "node-check-valid",
+      "name": "Check Valid",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        580,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.is_valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "node-invalid-response",
+      "name": "Respond Validation Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        480
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'error', message: $json.error }) }}",
+        "options": {
+          "responseCode": 400
+        }
+      }
+    },
+    {
+      "id": "node-check-duplicate",
+      "name": "Check Ticket & Duplicate Survey",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        800,
+        220
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=WITH ticket_check AS (\n  SELECT t.id AS ticket_id, t.ticket_number, t.status, t.customer_id, t.conversation_id\n  FROM tickets t\n  WHERE t.ticket_number = '{{ $json.ticket_number }}'\n  LIMIT 1\n),\nsurvey_check AS (\n  SELECT COUNT(*) AS survey_count\n  FROM csat_surveys\n  WHERE ticket_number = '{{ $json.ticket_number }}'\n)\nSELECT tc.*, COALESCE(sc.survey_count, 0) AS existing_surveys\nFROM ticket_check tc\nCROSS JOIN survey_check sc;"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_CRED_01",
+          "name": "CustomerService Postgres"
+        }
+      }
+    },
+    {
+      "id": "node-evaluate-eligibility",
+      "name": "Evaluate Survey Eligibility",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        220
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.existing_surveys }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "node-duplicate-response",
+      "name": "Respond Duplicate Prevented",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1260,
+        380
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'ignored', message: 'CSAT survey already submitted for this ticket', ticket_number: $('Validate CSAT Input').first().json.ticket_number }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "node-persist-csat",
+      "name": "Persist CSAT & Update Customer Avg",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1260,
+        140
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=WITH inserted_survey AS (\n  INSERT INTO csat_surveys (ticket_number, conversation_id, customer_id, rating, feedback, channel)\n  VALUES (\n    '{{ $('Validate CSAT Input').first().json.ticket_number }}',\n    '{{ $json.conversation_id || \"a0000000-0000-0000-0000-000000000001\" }}'::uuid,\n    '{{ $json.customer_id || \"a0000000-0000-0000-0000-000000000001\" }}'::uuid,\n    {{ $('Validate CSAT Input').first().json.rating }},\n    '{{ $('Validate CSAT Input').first().json.feedback }}',\n    'webchat'\n  )\n  RETURNING id, rating, created_at, customer_id, ticket_number\n),\nupdated_ticket AS (\n  UPDATE tickets\n  SET csat_score = {{ $('Validate CSAT Input').first().json.rating }},\n      updated_at = CURRENT_TIMESTAMP\n  WHERE ticket_number = '{{ $('Validate CSAT Input').first().json.ticket_number }}'\n  RETURNING ticket_number\n),\nupdated_customer AS (\n  UPDATE customers\n  SET csat_avg = (\n        SELECT ROUND(AVG(s.rating)::numeric, 2)\n        FROM csat_surveys s\n        WHERE s.customer_id = (SELECT customer_id FROM inserted_survey)\n      ),\n      total_tickets = (\n        SELECT COUNT(*)\n        FROM tickets t\n        WHERE t.customer_id = (SELECT customer_id FROM inserted_survey)\n      ),\n      last_activity_at = CURRENT_TIMESTAMP\n  WHERE id = (SELECT customer_id FROM inserted_survey)\n  RETURNING id, csat_avg, total_tickets\n)\nSELECT isrv.id AS survey_id,\n       isrv.rating,\n       isrv.ticket_number,\n       uc.csat_avg AS customer_csat_avg,\n       uc.total_tickets\nFROM inserted_survey isrv\nLEFT JOIN updated_customer uc ON uc.id = isrv.customer_id;"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_CRED_01",
+          "name": "CustomerService Postgres"
+        }
+      }
+    },
+    {
+      "id": "node-audit-csat",
+      "name": "Audit CSAT Action",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1480,
+        140
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO audit_logs (workflow_name, event_type, channel, payload)\nVALUES (\n  '08_csat_survey',\n  'csat_recorded',\n  'webchat',\n  json_build_object(\n    'survey_id', '{{ $json.survey_id }}',\n    'ticket_number', '{{ $json.ticket_number }}',\n    'rating', {{ $json.rating }},\n    'customer_csat_avg', '{{ $json.customer_csat_avg }}'\n  )\n);"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_CRED_01",
+          "name": "CustomerService Postgres"
+        }
+      }
+    },
+    {
+      "id": "node-respond-csat",
+      "name": "Respond CSAT Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1700,
+        140
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"success\",\n  \"survey_id\": \"{{ $('Persist CSAT & Update Customer Avg').first().json.survey_id }}\",\n  \"ticket_number\": \"{{ $('Persist CSAT & Update Customer Avg').first().json.ticket_number }}\",\n  \"rating\": {{ $('Persist CSAT & Update Customer Avg').first().json.rating }},\n  \"customer_csat_avg\": {{ $('Persist CSAT & Update Customer Avg').first().json.customer_csat_avg || 0 }},\n  \"message\": \"Thank you for your feedback on DEPI citizen support.\"\n}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "CSAT Ingress Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate CSAT Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate CSAT Input": {
+      "main": [
+        [
+          {
+            "node": "Check Valid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Valid": {
+      "main": [
+        [
+          {
+            "node": "Check Ticket & Duplicate Survey",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Ticket & Duplicate Survey": {
+      "main": [
+        [
+          {
+            "node": "Evaluate Survey Eligibility",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluate Survey Eligibility": {
+      "main": [
+        [
+          {
+            "node": "Persist CSAT & Update Customer Avg",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Duplicate Prevented",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist CSAT & Update Customer Avg": {
+      "main": [
+        [
+          {
+            "node": "Audit CSAT Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Audit CSAT Action": {
+      "main": [
+        [
+          {
+            "node": "Respond CSAT Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "pinData": {},
+  "versionId": "",
+  "triggerCount": 1
+}

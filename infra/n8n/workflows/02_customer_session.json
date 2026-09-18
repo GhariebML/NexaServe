@@ -1,0 +1,113 @@
+{
+  "id": "CSWF000000000002",
+  "name": "SubWF 02 - Customer Profile & Session Manager",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "node-trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        160,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=WITH matched AS (\n  SELECT id, phone_number, email, telegram_id, whatsapp_id, full_name, preferred_language, metadata\n  FROM customers\n  WHERE (phone_number IS NOT NULL AND phone_number = '{{ ($json.phone_number || '').replace(/'/g, \"''\") }}' AND '{{ ($json.phone_number || '').replace(/'/g, \"''\") }}' != '')\n     OR (telegram_id IS NOT NULL AND telegram_id = '{{ ($json.telegram_id || '').replace(/'/g, \"''\") }}' AND '{{ ($json.telegram_id || '').replace(/'/g, \"''\") }}' != '')\n     OR (whatsapp_id IS NOT NULL AND whatsapp_id = '{{ ($json.whatsapp_id || $json.phone_number || '').replace(/'/g, \"''\") }}' AND '{{ ($json.whatsapp_id || $json.phone_number || '').replace(/'/g, \"''\") }}' != '')\n     OR (email IS NOT NULL AND email = '{{ ($json.email || '').replace(/'/g, \"''\") }}' AND '{{ ($json.email || '').replace(/'/g, \"''\") }}' != '')\n  LIMIT 1\n),\nupserted AS (\n  INSERT INTO customers (phone_number, email, telegram_id, whatsapp_id, full_name, preferred_language)\n  SELECT \n    NULLIF('{{ ($json.phone_number || '').replace(/'/g, \"''\") }}', ''),\n    NULLIF('{{ ($json.email || '').replace(/'/g, \"''\") }}', ''),\n    NULLIF('{{ ($json.telegram_id || '').replace(/'/g, \"''\") }}', ''),\n    NULLIF('{{ ($json.whatsapp_id || $json.phone_number || '').replace(/'/g, \"''\") }}', ''),\n    '{{ ($json.full_name || 'Valued Citizen').replace(/'/g, \"''\") }}',\n    '{{ $json.locale || 'ar' }}'\n  WHERE NOT EXISTS (SELECT 1 FROM matched)\n  ON CONFLICT (phone_number) DO UPDATE\n    SET updated_at = CURRENT_TIMESTAMP\n  RETURNING id, phone_number, email, telegram_id, whatsapp_id, full_name, preferred_language, metadata\n),\nfallback AS (\n  SELECT id, phone_number, email, telegram_id, whatsapp_id, full_name, preferred_language, metadata\n  FROM customers\n  WHERE id = 'a0000000-0000-0000-0000-000000000001'\n)\nSELECT * FROM matched\nUNION ALL\nSELECT * FROM upserted\nUNION ALL\nSELECT * FROM fallback WHERE NOT EXISTS (SELECT 1 FROM matched) AND NOT EXISTS (SELECT 1 FROM upserted)\nLIMIT 1;"
+      },
+      "id": "node-upsert-customer",
+      "name": "Find or Upsert Customer",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        380,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_CRED_01",
+          "name": "CustomerService Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=WITH existing AS (\n  SELECT id, customer_id, channel, status, language, created_at\n  FROM conversations\n  WHERE customer_id = '{{ $('Find or Upsert Customer').first().json.id }}' AND status IN ('active', 'handed_off')\n  ORDER BY created_at DESC\n  LIMIT 1\n),\ninserted AS (\n  INSERT INTO conversations (customer_id, channel, status, language)\n  SELECT '{{ $('Find or Upsert Customer').first().json.id }}', '{{ $('Execute Workflow Trigger').first().json.channel || 'webchat' }}', 'active', '{{ $('Execute Workflow Trigger').first().json.locale || 'ar' }}'\n  WHERE NOT EXISTS (SELECT 1 FROM existing)\n  RETURNING id, customer_id, channel, status, language, created_at\n),\nconv AS (\n  SELECT * FROM existing\n  UNION ALL\n  SELECT * FROM inserted\n)\nSELECT conv.*,\n       COALESCE((\n         SELECT json_agg(json_build_object('sender_type', m.sender_type, 'content', m.content))\n         FROM (\n           SELECT sender_type, content\n           FROM messages\n           WHERE conversation_id = conv.id\n           ORDER BY created_at DESC\n           LIMIT 4\n         ) m\n       ), '[]'::json) AS recent_history\nFROM conv\nLIMIT 1;"
+      },
+      "id": "node-get-conv",
+      "name": "Get or Start Conversation",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        600,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_CRED_01",
+          "name": "CustomerService Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "/* ==========================================================================\n   🐍 PYTHON ALTERNATIVE / البديل البرمجي بلغة بايثون لنفس المهمة\n   --------------------------------------------------------------------------\n   This node is documented in both Python and JavaScript.\n   Below is the production-grade Python function equivalent:\n\ndef compile_session_context(\n    customer: dict, conversation: dict, trigger_data: dict\n) -> dict:\n    \"\"\"\n    تجميع بيانات الجلسة والعميل والمحادثة في كائن موحد.\n\n    Merges customer profile, conversation record, and history into a\n    single context payload for the AI Intent Engine.\n\n    Args:\n        customer: Row from the `customers` table.\n        conversation: Row from the `conversations` table with recent_history.\n        trigger_data: Original normalized ingress data.\n\n    Returns:\n        Unified session context dictionary.\n    \"\"\"\n    history = conversation.get(\"recent_history\", [])\n\n    return {\n        \"customer\": customer,\n        \"conversation\": {\n            \"id\": conversation.get(\"id\"),\n            \"customer_id\": conversation.get(\"customer_id\"),\n            \"channel\": conversation.get(\"channel\"),\n            \"status\": conversation.get(\"status\"),\n            \"language\": conversation.get(\"language\"),\n            \"created_at\": conversation.get(\"created_at\"),\n        },\n        \"conversation_history\": history,\n        \"customer_message\": trigger_data.get(\"customer_message\", \"\"),\n        \"sanitized_message\": trigger_data.get(\"sanitized_message\")\n        or trigger_data.get(\"customer_message\", \"\"),\n        \"pii_detected\": trigger_data.get(\"pii_detected\", False),\n        \"channel\": trigger_data.get(\"channel\")\n        or conversation.get(\"channel\", \"webchat\"),\n        \"channel_user_id\": trigger_data.get(\"channel_user_id\")\n        or customer.get(\"phone_number\")\n        or customer.get(\"telegram_id\", \"anonymous\"),\n        \"locale\": trigger_data.get(\"locale\")\n        or conversation.get(\"language\")\n        or customer.get(\"preferred_language\", \"ar\"),\n    }\n\n\n# ==============================================================================\n# 3. WORKFLOW 03 — Guardrails & Safety Filter\n# Node: \"Guardrails & Safety Filter\"\n# Purpose: Detects prompt injection attempts and harmful inputs in both\n#          Arabic and English before sending to the LLM.\n# ==============================================================================\n   ========================================================================== */\n\n/* === ACTIVE JAVASCRIPT IMPLEMENTATION === */\nconst customer = $('Find or Upsert Customer').first()?.json || {};\nconst conv = $('Get or Start Conversation').first()?.json || {};\nconst trigger = $('Execute Workflow Trigger').first()?.json || {};\nconst history = conv.recent_history || [];\n\nreturn [{\n  json: {\n    customer: customer,\n    conversation: {\n      id: conv.id,\n      customer_id: conv.customer_id,\n      channel: conv.channel,\n      status: conv.status,\n      language: conv.language,\n      created_at: conv.created_at\n    },\n    conversation_history: history,\n    customer_message: trigger.customer_message || '',\n    sanitized_message: trigger.sanitized_message || trigger.customer_message || '',\n    pii_detected: trigger.pii_detected || false,\n    channel: trigger.channel || conv.channel || 'webchat',\n    channel_user_id: trigger.channel_user_id || customer.phone_number || customer.telegram_id || 'anonymous',\n    locale: trigger.locale || conv.language || customer.preferred_language || 'ar'\n  }\n}];"
+      },
+      "id": "node-package-session",
+      "name": "Compile Session Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        820,
+        300
+      ],
+      "notesInFlow": true,
+      "notes": "🐍 Python & ⚡ JS Dual-Language Node\nEquivalent: compile_session_context()"
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Find or Upsert Customer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find or Upsert Customer": {
+      "main": [
+        [
+          {
+            "node": "Get or Start Conversation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get or Start Conversation": {
+      "main": [
+        [
+          {
+            "node": "Compile Session Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {},
+  "staticData": null,
+  "pinData": {},
+  "versionId": "",
+  "triggerCount": 0
+}

@@ -1,0 +1,250 @@
+{
+  "id": "CSWF000000000012",
+  "name": "10_Agent Management API",
+  "active": true,
+  "nodes": [
+    {
+      "id": "n1",
+      "name": "Webhook: Agent APIs",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        100,
+        300
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agent-manage",
+        "responseMode": "responseNode"
+      }
+    },
+    {
+      "id": "n2",
+      "name": "Route Action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 2,
+      "position": [
+        340,
+        300
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body?.action }}",
+                    "rightValue": "register"
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body?.action }}",
+                    "rightValue": "status"
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body?.action }}",
+                    "rightValue": "assign"
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body?.action }}",
+                    "rightValue": "performance"
+                  }
+                ]
+              }
+            }
+          ],
+          "fallbackOutput": 4
+        }
+      }
+    },
+    {
+      "id": "n3a",
+      "name": "AGENT - Register",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        580,
+        50
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO agents (name, email, role, team) VALUES ('{{ $json.body?.name }}', '{{ $json.body?.email }}', '{{ $json.body?.role || \"tier1\" }}', 'DEPI Support') RETURNING *;",
+        "credentials": {
+          "postgres": {
+            "id": "CS_PG_CRED_01",
+            "name": "CustomerService Postgres"
+          }
+        }
+      }
+    },
+    {
+      "id": "n3b",
+      "name": "AGENT - Update Status",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        580,
+        200
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE agents SET status = '{{ $json.body?.status }}', updated_at = NOW() WHERE email = '{{ $json.body?.email }}';",
+        "credentials": {
+          "postgres": {
+            "id": "CS_PG_CRED_01",
+            "name": "CustomerService Postgres"
+          }
+        }
+      }
+    },
+    {
+      "id": "n3c",
+      "name": "AGENT - Get Available",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        580,
+        350
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM agents WHERE status = 'available' ORDER BY RANDOM() LIMIT 1;",
+        "credentials": {
+          "postgres": {
+            "id": "CS_PG_CRED_01",
+            "name": "CustomerService Postgres"
+          }
+        }
+      }
+    },
+    {
+      "id": "n4",
+      "name": "Respond Agent",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 2,
+      "position": [
+        820,
+        300
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ $json }"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook: Agent APIs": {
+      "main": [
+        [
+          {
+            "node": "Route Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Action": {
+      "main": [
+        [
+          {
+            "node": "AGENT - Register",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AGENT - Update Status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AGENT - Get Available",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AGENT - Register": {
+      "main": [
+        [
+          {
+            "node": "Respond Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AGENT - Update Status": {
+      "main": [
+        [
+          {
+            "node": "Respond Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AGENT - Get Available": {
+      "main": [
+        [
+          {
+            "node": "Respond Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "pinData": {},
+  "versionId": "",
+  "triggerCount": 1
+}

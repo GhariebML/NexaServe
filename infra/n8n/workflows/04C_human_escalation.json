@@ -1,9 +1,9 @@
 {
   "id": "CSWF000000000006",
   "name": "SubWF 04C - Human in the Loop Escalation",
+  "active": true,
   "nodes": [
     {
-      "parameters": {},
       "id": "node-trigger",
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
@@ -11,41 +11,37 @@
       "position": [
         160,
         300
-      ]
+      ],
+      "parameters": {}
     },
     {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "=INSERT INTO tickets (ticket_number, customer_id, conversation_id, priority, status, reason, assigned_team, escalation_channel, sla_due_at)\nVALUES (\n  'TICK-' || floor(random() * 90000 + 10000)::text,\n  '{{ ($json.customer && $json.customer.id && $json.customer.id !== \"null\") ? $json.customer.id : \"a0000000-0000-0000-0000-000000000001\" }}'::uuid,\n  '{{ ($json.conversation && $json.conversation.id && $json.conversation.id !== \"null\") ? $json.conversation.id : \"a0000000-0000-0000-0000-000000000001\" }}'::uuid,\n  '{{ $json.ai_output?.sentiment === 'angry' ? 'urgent' : 'high' }}',\n  'open',\n  '{{ ($json.customer_message || 'Citizen requested specialist assistance').replace(/'/g, \"''\") }}',\n  'MCIT Citizen Escalations Team',\n  '{{ $json.channel || 'webchat' }}',\n  CURRENT_TIMESTAMP + (CASE WHEN '{{ $json.ai_output?.sentiment }}' = 'angry' THEN INTERVAL '30 minutes' ELSE INTERVAL '2 hours' END)\n)\nRETURNING ticket_number, priority, status, sla_due_at, created_at;"
-      },
-      "id": "node-create-ticket",
-      "name": "Create SLA Ticket in Postgres",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.5,
+      "id": "node-categorize-ticket",
+      "name": "Categorize Ticket",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
         380,
         300
       ],
-      "credentials": {
-        "postgres": {
-          "id": "CS_PG_CRED_01",
-          "name": "CustomerService Postgres"
-        }
+      "parameters": {
+        "jsCode": "// Categorize ticket based on customer message keywords\nconst triggerData = $input.first().json;\nconst message = (triggerData.customer_message || triggerData.message || '').toLowerCase();\n\nconst categoryKeywords = {\n  enrollment: ['تسجيل', 'register', 'enroll', 'sign up', 'قبول', 'admission', 'كيفية التسجيل', 'رابط التسجيل', 'apply'],\n  training: ['تدريب', 'training', 'course', 'program', 'المسار', 'track', 'المسارات', 'learn', 'skills'],\n  lms: ['lms', 'platform', 'تعلم', 'e-learning', 'المنصة', 'course access', 'dashboard', 'login platform'],\n  exams: ['exam', 'امتحان', 'test', 'seb', 'الامتحانات', 'quiz', 'exam schedule', 'exam date'],\n  certificates: ['certificate', 'شهادة', 'accreditation', 'certification', 'الشهادات', 'certificate download', 'print certificate'],\n  technical: ['technical', 'bug', 'issue', 'technical support', 'تقني', 'infrastructure', 'error', 'not working'],\n  account: ['account', 'profile', 'حساب', 'username', 'password', 'reset', 'update profile', 'account settings'],\n  payments: ['payment', 'fee', 'مدفوعات', 'cost', 'price', 'fees', 'billing', 'invoice', 'دفع'],\n  complaint: ['complaint', 'شكوى', 'angry', 'frustrated', 'problem', 'مشكلة', 'موظف', 'سيئة', 'unsatisfied'],\n  partnership: ['partner', 'partnership', 'collaboration', 'شراكة', 'university', 'academic', 'جامعة'],\n  general: ['hello', 'hi', 'help', 'عام', 'general', 'about', 'ما هو', 'what is', 'info', 'معلومات']\n};\n\nlet bestCategory = 'general';\nlet bestScore = 0;\nfor (const [cat, keywords] of Object.entries(categoryKeywords)) {\n  let score = 0;\n  for (const kw of keywords) {\n    if (message.includes(kw)) score++;\n  }\n  if (score > bestScore) {\n    bestScore = score;\n    bestCategory = cat;\n  }\n}\n\nreturn [{\n  json: {\n    category_id: bestCategory,\n    category_name: bestCategory,\n    confidence: Math.min(1.0, 0.3 + bestScore * 0.2),\n    keywords_matched: bestScore,\n    customer_message: triggerData.customer_message || triggerData.message || ''\n  }\n}];\n",
+        "notesInFlow": true,
+        "notes": "Categorizes ticket based on customer message keywords. Maps to ticket_categories table."
       }
     },
     {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "=UPDATE conversations\nSET status = 'handed_off', current_intent = 'human_escalation'\nWHERE id = '{{ ($('Execute Workflow Trigger').first().json.conversation && $('Execute Workflow Trigger').first().json.conversation.id && $('Execute Workflow Trigger').first().json.conversation.id !== \"null\") ? $('Execute Workflow Trigger').first().json.conversation.id : \"a0000000-0000-0000-0000-000000000001\" }}'::uuid;"
-      },
-      "id": "node-update-conv",
-      "name": "Mark Conversation Handed Off",
+      "id": "node-create-ticket",
+      "name": "Create SLA Ticket in Postgres",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
         600,
         300
       ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO tickets (ticket_number, customer_id, conversation_id, priority, status, reason, assigned_team, escalation_channel, sla_due_at, category_id)\nVALUES (\n  'TICK-' || floor(random() * 90000 + 10000)::text,\n  '{{ ($json.customer && $json.customer.id && $json.customer.id !== \"null\") ? $json.customer.id : \"a0000000-0000-0000-0000-000000000001\" }}'::uuid,\n  '{{ ($json.conversation && $json.conversation.id && $json.conversation.id !== \"null\") ? $json.conversation.id : \"a0000000-0000-0000-0000-000000000001\" }}'::uuid,\n  '{{ $json.ai_output?.sentiment === 'angry' ? 'urgent' : 'high' }}',\n  'open',\n  '{{ ($json.customer_message || 'Citizen requested specialist assistance').replace(/'/g, \"''\") }}',\n  'DEPI Citizen Escalations Team',\n  '{{ $json.channel || 'webchat' }}',\n  CURRENT_TIMESTAMP + (CASE WHEN '{{ $json.ai_output?.sentiment }}' = 'angry' THEN INTERVAL '30 minutes' ELSE INTERVAL '2 hours' END),\n  (SELECT id FROM ticket_categories WHERE name = '{{ ($('Categorize Ticket').first().json.category_id || 'general') }}' LIMIT 1)\n)\nRETURNING ticket_number, priority, status, sla_due_at, created_at, category_id;"
+      },
       "credentials": {
         "postgres": {
           "id": "CS_PG_CRED_01",
@@ -54,18 +50,18 @@
       }
     },
     {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "=INSERT INTO audit_logs (workflow_name, event_type, channel, payload)\nVALUES (\n  'SubWF 04C - Escalation',\n  'hitl_escalated',\n  '{{ $('Execute Workflow Trigger').first().json.channel || 'webchat' }}',\n  json_build_object(\n    'ticket_number', '{{ $('Create SLA Ticket in Postgres').first().json.ticket_number }}',\n    'priority', '{{ $('Create SLA Ticket in Postgres').first().json.priority }}',\n    'sla_due_at', '{{ $('Create SLA Ticket in Postgres').first().json.sla_due_at }}',\n    'customer', '{{ $('Execute Workflow Trigger').first().json.customer?.full_name }}',\n    'channel_user_id', '{{ $('Execute Workflow Trigger').first().json.channel_user_id }}'\n  )\n);"
-      },
-      "id": "node-agent-notify-audit",
-      "name": "Dispatch Agent Notification & Audit",
+      "id": "node-update-conv",
+      "name": "Mark Conversation Handed Off",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
         820,
         300
       ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=UPDATE conversations\nSET status = 'handed_off', current_intent = 'human_escalation'\nWHERE id = '{{ ($('Execute Workflow Trigger').first().json.conversation && $('Execute Workflow Trigger').first().json.conversation.id && $('Execute Workflow Trigger').first().json.conversation.id !== \"null\") ? $('Execute Workflow Trigger').first().json.conversation.id : \"a0000000-0000-0000-0000-000000000001\" }}'::uuid;"
+      },
       "credentials": {
         "postgres": {
           "id": "CS_PG_CRED_01",
@@ -74,23 +70,54 @@
       }
     },
     {
-      "parameters": {
-        "jsCode": "/* ==========================================================================\n   🐍 PYTHON ALTERNATIVE / البديل البرمجي بلغة بايثون لنفس المهمة\n   --------------------------------------------------------------------------\n   This node is documented in both Python and JavaScript.\n   Below is the production-grade Python function equivalent:\n\ndef format_escalation_notice(ticket: dict, trigger_data: dict) -> dict:\n    \"\"\"\n    تنسيق إشعار التصعيد مع رقم التذكرة ودرجة الأولوية.\n\n    Formats a professional bilingual escalation notice with the\n    generated ticket number and SLA priority level.\n\n    Args:\n        ticket: Row returned from the tickets INSERT.\n        trigger_data: Original trigger data with locale.\n\n    Returns:\n        Dict with escalation status, ticket info, and reply.\n    \"\"\"\n    locale = trigger_data.get(\"locale\", \"ar\")\n    is_ar = locale == \"ar\"\n    ticket_num = ticket.get(\"ticket_number\", \"TICK-NEW\")\n    priority = ticket.get(\"priority\", \"high\")\n\n    if is_ar:\n        priority_text = \"عاجلة\" if priority == \"urgent\" else \"عالية\"\n        sla_text = \"30 دقيقة\" if priority == \"urgent\" else \"ساعتين\"\n        reply = (\n            f\"أفهم إنك تحتاج مساعدة متخصصة، وحنا هنا عشانك. 👋\\n\\n\"\n            f\"فتحنا لك تذكرة دعم بأولوية {priority_text} رقم **#{ticket_num}**.\\n\"\n            f\"ال متوقع نرد عليك خلال {sla_text}.\\n\\n\"\n            \"فريق خدمة العملاء راح يراجع تفاصيل استفسارك ويتواصل معك في أقرب وقت.\"\n        )\n    else:\n        sla_text = \"30 minutes\" if priority == \"urgent\" else \"2 hours\"\n        reply = (\n            f\"I understand you need specialized help, and we're here for you. 👋\\n\\n\"\n            f\"I've opened priority support ticket **#{ticket_num}** (Priority: {priority.upper()}).\\n\"\n            f\"Our team will respond within {sla_text}.\\n\\n\"\n            \"A customer support representative is reviewing your request and will contact you shortly.\"\n        )\n\n    return {\n        \"status\": \"escalated\",\n        \"intent_handled\": \"human_escalation\",\n        \"ticket_number\": ticket_num,\n        \"priority\": priority,\n        \"sla_due_at\": ticket.get(\"sla_due_at\"),\n        \"reply\": reply,\n    }\n\n\n# ==============================================================================\n# 12. WORKFLOW 05 — Return Log Confirmation\n# Node: \"Return Log Confirmation\"\n# Purpose: Simple confirmation return after all logging operations complete.\n# ==============================================================================\n   ========================================================================== */\n\n/* === ACTIVE JAVASCRIPT IMPLEMENTATION === */\nconst ticket = $('Create SLA Ticket in Postgres').first()?.json || {};\nconst trigger = $('Execute Workflow Trigger').first()?.json || {};\nconst locale = trigger.locale || 'ar';\nconst isAr = locale === 'ar';\nconst ticketNum = ticket.ticket_number || 'TICK-NEW';\nconst priority = ticket.priority || 'high';\n\nlet reply = '';\nif (isAr) {\n  reply = `تم استلام طلبك وتصعيده إلى الفريق المختص. تم فتح تذكرة دعم ذات أولوية برقم **#${ticketNum}** (درجة الأولوية: ${priority === 'urgent' ? 'عاجلة' : 'عالية'}).\\nيقوم أحد مسؤولي خدمة العملاء بمراجعة تفاصيل استفسارك حالياً وسيتواصل معك مباشرة.`;\n} else {\n  reply = `I understand this requires specialist attention. I have opened priority support ticket **#${ticketNum}** for you (Priority: ${priority.toUpperCase()}).\\nA customer support representative has been assigned and is reviewing your request to assist you directly.`;\n}\n\nreturn [{\n  json: {\n    status: 'escalated',\n    intent_handled: 'human_escalation',\n    ticket_number: ticketNum,\n    priority: priority,\n    sla_due_at: ticket.sla_due_at,\n    reply: reply\n  }\n}];"
-      },
-      "id": "node-format-ticket",
-      "name": "Format Escalation Notice",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "id": "node-agent-notify-audit",
+      "name": "Dispatch Agent Notification & Audit",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
       "position": [
         1040,
         300
       ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO audit_logs (workflow_name, event_type, channel, payload)\nVALUES (\n  'SubWF 04C - Escalation',\n  'hitl_escalated',\n  '{{ $('Execute Workflow Trigger').first().json.channel || 'webchat' }}',\n  json_build_object(\n    'ticket_number', '{{ $('Create SLA Ticket in Postgres').first().json.ticket_number }}',\n    'priority', '{{ $('Create SLA Ticket in Postgres').first().json.priority }}',\n    'sla_due_at', '{{ $('Create SLA Ticket in Postgres').first().json.sla_due_at }}',\n    'category_id', '{{ $('Create SLA Ticket in Postgres').first().json.category_id }}',\n    'customer', '{{ $('Execute Workflow Trigger').first().json.customer?.full_name }}',\n    'channel_user_id', '{{ $('Execute Workflow Trigger').first().json.channel_user_id }}'\n  )\n);"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_CRED_01",
+          "name": "CustomerService Postgres"
+        }
+      }
+    },
+    {
+      "id": "node-format-ticket",
+      "name": "Format Escalation Notice",
       "notesInFlow": true,
-      "notes": "🐍 Python & ⚡ JS Dual-Language Node\nEquivalent: format_escalation_notice()"
+      "notes": "🐍 Python & ⚡ JS Dual-Language Node\nEquivalent: format_escalation_notice()",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1260,
+        300
+      ],
+      "parameters": {
+        "jsCode": "/* ==========================================================================\n   🐍 PYTHON ALTERNATIVE / البديل البرمجي بلغة بايثون لنفس المهمة\n   --------------------------------------------------------------------------\n   This node is documented in both Python and JavaScript.\n   Below is the production-grade Python function equivalent:\n\ndef format_escalation_notice(ticket: dict, trigger_data: dict) -> dict:\n    \"\"\"\n    تنسيق إشعار التصعيد مع رقم التذكرة ودرجة الأولوية.\n\n    Formats a professional bilingual escalation notice with the\n    generated ticket number and SLA priority level.\n\n    Args:\n        ticket: Row returned from the tickets INSERT.\n        trigger_data: Original trigger data with locale.\n\n    Returns:\n        Dict with escalation status, ticket info, and reply.\n    \"\"\"\n    locale = trigger_data.get(\"locale\", \"ar\")\n    is_ar = locale == \"ar\"\n    ticket_num = ticket.get(\"ticket_number\", \"TICK-NEW\")\n    priority = ticket.get(\"priority\", \"high\")\n\n    if is_ar:\n        priority_text = \"عاجلة\" if priority == \"urgent\" else \"عالية\"\n        sla_text = \"30 دقيقة\" if priority == \"urgent\" else \"ساعتين\"\n        reply = (\n            f\"أفهم إنك تحتاج مساعدة متخصصة، وحنا هنا عشانك. 👋\\n\\n\"\n            f\"فتحنا لك تذكرة دعم بأولوية {priority_text} رقم **#{ticket_num}**.\\n\"\n            f\"ال متوقع نرد عليك خلال {sla_text}.\\n\\n\"\n            \"فريق خدمة العملاء راح يراجع تفاصيل استفسارك ويتواصل معك في أقرب وقت.\"\n        )\n    else:\n        sla_text = \"30 minutes\" if priority == \"urgent\" else \"2 hours\"\n        reply = (\n            f\"I understand you need specialized help, and we're here for you. 👋\\n\\n\"\n            f\"I've opened priority support ticket **#{ticket_num}** (Priority: {priority.upper()}).\\n\"\n            f\"Our team will respond within {sla_text}.\\n\\n\"\n            \"A customer support representative is reviewing your request and will contact you shortly.\"\n        )\n\n    return {\n        \"status\": \"escalated\",\n        \"intent_handled\": \"human_escalation\",\n        \"ticket_number\": ticket_num,\n        \"priority\": priority,\n        \"sla_due_at\": ticket.get(\"sla_due_at\"),\n        \"reply\": reply,\n    }\n\n\n# ==============================================================================\n# 12. WORKFLOW 05 — Return Log Confirmation\n# Node: \"Return Log Confirmation\"\n# Purpose: Simple confirmation return after all logging operations complete.\n# ==============================================================================\n   ========================================================================== */\n\n/* === ACTIVE JAVASCRIPT IMPLEMENTATION === */\nconst ticket = $('Create SLA Ticket in Postgres').first()?.json || {};\nconst trigger = $('Execute Workflow Trigger').first()?.json || {};\nconst locale = trigger.locale || 'ar';\nconst isAr = locale === 'ar';\nconst ticketNum = ticket.ticket_number || 'TICK-NEW';\nconst priority = ticket.priority || 'high';\n\nlet reply = '';\nif (isAr) {\n  reply = `تم استلام طلبك وتصعيده إلى الفريق المختص. تم فتح تذكرة دعم ذات أولوية برقم **#${ticketNum}** (درجة الأولوية: ${priority === 'urgent' ? 'عاجلة' : 'عالية'}).\\nيقوم أحد مسؤولي خدمة العملاء بمراجعة تفاصيل استفسارك حالياً وسيتواصل معك مباشرة.`;\n} else {\n  reply = `I understand this requires specialist attention. I have opened priority support ticket **#${ticketNum}** for you (Priority: ${priority.toUpperCase()}).\\nA customer support representative has been assigned and is reviewing your request to assist you directly.`;\n}\n\nreturn [{\n  json: {\n    status: 'escalated',\n    intent_handled: 'human_escalation',\n    ticket_number: ticketNum,\n    priority: priority,\n    sla_due_at: ticket.sla_due_at,\n    reply: reply\n  }\n}];"
+      }
     }
   ],
   "connections": {
     "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Categorize Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Categorize Ticket": {
       "main": [
         [
           {
@@ -135,7 +162,9 @@
       ]
     }
   },
-  "settings": {
-    "executionOrder": "v1"
-  }
+  "settings": {},
+  "staticData": null,
+  "pinData": {},
+  "versionId": "",
+  "triggerCount": 0
 }

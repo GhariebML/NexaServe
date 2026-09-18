@@ -40,11 +40,35 @@ function isRecentlyDispatched(key) {
     return true;
   }
   recentDispatches.set(key, now);
-  // Cleanup old keys
   for (const [k, ts] of recentDispatches.entries()) {
     if (now - ts > 30000) recentDispatches.delete(k);
   }
   return false;
+}
+
+// Response cache for AI generation (TTL: 60s) — prevents duplicate Ollama calls
+const responseCache = new Map();
+function getCachedReply(msg) {
+  const key = (msg || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  if (responseCache.has(key)) {
+    const entry = responseCache.get(key);
+    if (Date.now() - entry.timestamp < 60000) return entry.reply;
+    responseCache.delete(key);
+  }
+  return null;
+}
+function setCachedReply(msg, reply) {
+  const key = (msg || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  responseCache.set(key, { reply, timestamp: Date.now() });
+}
+function detectLanguage(text) {
+  const arChars = (text || '').match(/[\u0600-\u06FF]/g);
+  const latinChars = (text || '').match(/[a-zA-Z]/g);
+  if (arChars && arChars.length > (latinChars ? latinChars.length * 0.3 : 0)) return 'ar';
+  return 'en';
+}
+function replyBilingual(ar, en, lang) {
+  return (lang === 'en' && en) ? en : ar + '\n---\n' + en;
 }
 
 const JID_CACHE_FILE = path.join(AUTH_DIR, 'jid_cache.json');
@@ -65,64 +89,93 @@ function saveJidMap() {
 const LOCAL_FAQ_ITEMS = [
   {
     keys: ['شروط', 'تقديم', 'قبول', 'سن', 'عمر', 'مؤهل', 'تجنيد', 'متطلبات'],
-    reply: `*شروط التقديم والقبول في مبادرة الرواد الرقميون (DEPI):* 🏛️\n\n1. *الجنسية:* مصري / مصرية.\n2. *السن:* من 18 حتى 32 عاماً.\n3. *المؤهل الدراسي:* مؤهل مناسب لمسار التدريب (خريجو الكليات والمعاهد العليا والمتوسطة)، ويُقبل طلاب السنة النهائية بإفادة رسمية.\n4. *الموقف التجنيدي:* أدى الخدمة العسكرية أو معفى نهائياً أو مؤجل تأجيلاً سارياً.\n5. *اللغة:* إلمام بأساسيات اللغة الإنجليزية (B1 كحد أدنى).\n6. *التفرغ:* تفرغ كامل للمسار التدريبي.\n\n🔗 *رابط التقديم الرسمي:* https://www.digilians.gov.eg/login`
+    reply: "*شروط التقديم والقبول في مبادرة الرواد الرقميون (DEPI):* 🏛️\n\n1. *الجنسية:* مصري / مصرية.\n2. *السن:* من 18 حتى 32 عاماً.\n3. *المؤهل الدراسي:* مؤهل مناسب لمسار التدريب (خريجو الكليات والمعاهد العليا والمتوسطة)، ويُقبل طلاب السنة النهائية بإفادة رسمية.\n4. *الموقف التجنيدي:* أدى الخدمة العسكرية أو معفى نهائياً أو مؤجل تأجيلاً سارياً.\n5. *اللغة:* إلمام بأساسيات اللغة الإنجليزية (B1 كحد أدنى).\n6. *التفرغ:* تفرغ كامل للمسار التدريبي.\n\n🔗 *رابط التقديم الرسمي:* https://www.digilians.gov.eg/login",
+    reply_en: "*Admission Requirements for DEPI (Digital Pioneers Initiative):* 🏛️\n\n1. *Nationality:* Egyptian.\n2. *Age:* 18 to 32 years old.\n3. *Education:* Suitable qualification for the training track (graduates of universities, institutes, and secondary schools; final-year students accepted with official enrollment letter).\n4. *Military Status:* Completed military service or permanently exempted.\n5. *Language:* Basic English proficiency (B1 minimum).\n6. *Commitment:* Full-time commitment to the training track.\n\n🔗 *Official Registration Link:* https://www.digilians.gov.eg/login"
   },
   {
     keys: ['مزايا', 'مميزات', 'منحة', 'شهادة', 'ماجستير', 'اقامة', 'وجبات'],
-    reply: `*مزايا ومنح مبادرة الرواد الرقميون (DEPI):* 🌟\n\n- شهادة معتمدة مشتركة من وزارة الاتصالات والأكاديمية العسكرية.\n- شهادات دولية معتمدة لكل محور تدريبي ومهارة تقنية.\n- فرصة الحصول على ماجستير معتمد من جامعة أجنبية مرموقة.\n- تدريب عملي مجاني بالكامل مع مسابقات وجوائز للمتميزين.\n- إقامة فندقية مجانية شاملة الوجبات طوال فترة التدريب بالأكاديمية.\n\nيسعدنا انضمامك لرواد المستقبل! 🚀`
+    reply: "*مزايا ومنح مبادرة الرواد الرقميون (DEPI):* 🌟\n\n- شهادة معتمدة مشتركة من وزارة الاتصالات والأكاديمية العسكرية.\n- شهادات دولية معتمدة لكل محور تدريبي ومهارة تقنية.\n- فرصة الحصول على ماجستير معتمد من جامعة أجنبية مرموقة.\n- تدريب عملي مجاني بالكامل مع مسابقات وجوائز للمتميزين.\n- إقامة فندقية مجانية شاملة الوجبات طوال فترة التدريب بالأكاديمية.\n\nيسعدنا انضمامك لرواد المستقبل! 🚀",
+    reply_en: "*Benefits & Grants of DEPI (Digital Pioneers Initiative):* 🌟\n\n- Joint accredited certificate from the Ministry of Communications and the Military Academy.\n- International accredited certificates for each training track and technical skill.\n- Opportunity to obtain an accredited master's degree from a prestigious foreign university.\n- Fully free practical training with competitions and awards for top performers.\n- Free hotel accommodation including meals throughout the training period at the academy.\n\nWe look forward to your joining! 🚀"
   },
   {
     keys: ['تخصصات', 'مسارات', 'تراك', 'تراكات', 'مجالات', 'ذكاء', 'امن سيبراني'],
-    reply: `*المسارات والتخصصات المتاحة في مبادرة الرواد الرقميون:* 💻\n\n1. الذكاء الاصطناعي وعلوم البيانات (AI & Data Science)\n2. الأمن السيبراني (Cybersecurity)\n3. تطوير البرمجيات وهندسة النظم (Software Development)\n4. البنية التحتية الرقمية والحوسبة السحابية (Cloud & Infrastructure)\n5. الفنون والوسائط الرقمية (Digital Arts & Design)\n6. النظم المدمجة وتصميم الدوائر (Embedded Systems & VLSI)\n\n📌 *ملاحظة:* يختار المتقدم مساراً تدريبياً واحداً للتركيز على التميز الاحترافي.`
+    reply: "*المسارات والتخصصات المتاحة في مبادرة الرواد الرقميون:* 💻\n\n1. الذكاء الاصطناعي وعلوم البيانات (AI & Data Science)\n2. الأمن السيبراني (Cybersecurity)\n3. تطوير البرمجيات وهندسة النظم (Software Development)\n4. البنية التحتية الرقمية والحوسبة السحابية (Cloud & Infrastructure)\n5. الفنون والوسائط الرقمية (Digital Arts & Design)\n6. النظم المدمجة وتصميم الدوائر (Embedded Systems & VLSI)\n\n📌 *ملاحظة:* يختار المتقدم مساراً تدريبياً واحداً للتركيز على التميز الاحترافي.",
+    reply_en: "*Available Tracks & Specializations in DEPI:* 💻\n\n1. Artificial Intelligence & Data Science\n2. Cybersecurity\n3. Software Development & Systems Engineering\n4. Digital Infrastructure & Cloud Computing\n5. Digital Arts & Design\n6. Embedded Systems & VLSI Design\n\n📌 *Note:* The applicant chooses one training track to focus on professional excellence."
   },
   {
     keys: ['تسجيل', 'رابط', 'موقع', 'لينك', 'ازاي اقدم', 'طريقة التسجيل'],
-    reply: `*طريقة ورابط التسجيل في مبادرة الرواد الرقميون:* 📝\n\nالتسجيل مجاني تماماً وبشكل إلكتروني عبر البوابة الرسمية:\n🔗 https://www.digilians.gov.eg/login\n\n💡 *نصيحة:* استخدم جهاز كمبيوتر أثناء التسجيل لضمان وضوح رفع المستندات بصيغة PDF.`
+    reply: "*طريقة ورابط التسجيل في مبادرة الرواد الرقميون:* 📝\n\nالتسجيل مجاني تماماً وبشكل إلكتروني عبر البوابة الرسمية:\n🔗 https://www.digilians.gov.eg/login\n\n💡 *نصيحة:* استخدم جهاز كمبيوتر أثناء التسجيل لضمان وضوح رفع المستندات بصيغة PDF.",
+    reply_en: "*How to Register & Registration Link for DEPI:* 📝\n\nRegistration is completely free and done online through the official portal:\n🔗 https://www.digilians.gov.eg/login\n\n💡 *Tip:* Use a computer during registration to ensure smooth document uploads in PDF format."
   },
   {
     keys: ['أوراق', 'مستندات', 'مطلوبة', 'رفع', 'فيش', 'شهادة'],
-    reply: `*الأوراق والمستندات المطلوبة للتقديم:* 📂\n\n1. صورة بطاقة الرقم القومي سارية.\n2. أصل شهادة التخرج (أو إفادة قيد بالسنة النهائية).\n3. شهادة الموقف التجنيدي للذكور.\n4. شهادة إتقان اللغة الإنجليزية (إن وجدت).\n5. صحيفة الحالة الجنائية (فيش وتشبيه ساري).\n\n⚠️ تُرفع المستندات بصيغة PDF بحد أقصى 2 ميجابايت للملف.`
+    reply: "*الأوراق والمستندات المطلوبة للتقديم:* 📂\n\n1. صورة بطاقة الرقم القومي سارية.\n2. أصل شهادة التخرج (أو إفادة قيد بالسنة النهائية).\n3. شهادة الموقف التجنيدي للذكور.\n4. شهادة إتقان اللغة الإنجليزية (إن وجدت).\n5. صحيفة الحالة الجنائية (فيش وتشبيه ساري).\n\n⚠️ تُرفع المستندات بصيغة PDF بحد أقصى 2 ميجابايت للملف.",
+    reply_en: "*Required Documents for Application:* 📂\n\n1. Valid national ID card photo.\n2. Original graduation certificate (or final-year enrollment letter).\n3. Military status certificate (for males).\n4. English proficiency certificate (if available).\n5. Criminal record extract (feh and tasheeh, valid).\n\n⚠️ Documents must be uploaded in PDF format, max 2 MB per file."
   }
 ];
 
 async function generateAutonomousResponse(customerMessage, senderName) {
+  const lang = detectLanguage(customerMessage);
   const msg = (customerMessage || '').toLowerCase();
-  
+
   // 1. Check for Service/Order Tracking (SRV- / ORD-)
   const srvMatch = customerMessage.match(/(?:srv|ord)-\d+/i);
   if (srvMatch) {
     const srvNum = srvMatch[0].toUpperCase();
-    return `أهلاً بك ${senderName || 'عزيزنا العميل'}،\nحالة طلبك/معاملتك رقم *${srvNum}* هي: *قيد المراجعة والتدقيق والاعتماد*. 📋\n\nيتم حالياً استكمال الإجراءات الرسمية، والتاريخ المتوقع لإشعارك بالنتيجة هو خلال 48 ساعة عمل.\nنسعد بخدمتك دائماً في منصة خدمة العملاء الذكية! 🏛️`;
+    const ar = `أهلاً بك ${senderName || 'عزيزنا العميل'},\nحالة طلبك/معاملتك رقم *${srvNum}* هي: *قيد المراجعة والتدقيق والاعتماد*. 📋\n\nيتم حالياً استكمال الإجراءات الرسمية، والتاريخ المتوقع لإشعارك بالنتيجة هو خلال 48 ساعة عمل.\nنسعد بخدمتك دائماً في منصة خدمة العملاء الذكية! 🏛️`;
+    const en = `Hello ${senderName || 'valued customer'},\nyour request/transaction *${srvNum}* is currently: *Under review, audit, and approval*. 📋\n\nOfficial procedures are being completed. Expected notification within 48 business hours.\nWe're always happy to serve you! 🏛️`;
+    const finalReply = replyBilingual(ar, en, lang);
+    setCachedReply(customerMessage, finalReply);
+    return finalReply;
   }
 
   // 2. Check for Human Escalation / Frustration
   if (msg.includes('موظف') || msg.includes('شكوى') || msg.includes('انسان') || msg.includes('سيئة') || msg.includes('مشكلة')) {
     const ticketId = 'TICK-' + Math.floor(1000 + Math.random() * 9000);
-    return `تم استلام طلبك وتصعيده بعناية إلى الفريق المختص. تم فتح تذكرة دعم ذات أولوية برقم *#${ticketId}* (درجة الأولوية: عالية). ⏱️\n\nيقوم أحد مسؤولي خدمة العملاء بمراجعة تفاصيل استفسارك وسيتواصل معك مباشرة. شكرًا لصبرك معنا!`;
+    const ar = `تم استلام طلبك وتصعيده بعناية إلى الفريق المختص. تم فتح تذكرة دعم ذات أولوية برقم *#${ticketId}* (درجة الأولوية: عالية). ⏱️\n\nيقوم أحد مسؤولي خدمة العملاء بمراجعة تفاصيل استفسارك وسيتواصل معك مباشرة. شكرًا لصبرك معنا!`;
+    const en = `Your request has been received and escalated to the appropriate team. A priority support ticket *#${ticketId}* has been opened (Priority: High). ⏱️\n\nA customer service representative will review your details and contact you directly. Thank you for your patience!`;
+    const finalReply = replyBilingual(ar, en, lang);
+    setCachedReply(customerMessage, finalReply);
+    return finalReply;
   }
 
   // 3. Check for Quick FAQ match
   for (const item of LOCAL_FAQ_ITEMS) {
     if (item.keys.some(k => msg.includes(k))) {
-      return item.reply;
+      const finalReply = replyBilingual(item.reply, item.reply_en, lang);
+      setCachedReply(customerMessage, finalReply);
+      return finalReply;
     }
   }
 
   // 3b. Direct details/info request
   if (msg.includes('تفاصيل') || msg.includes('معلومات') || msg.includes('المبادرة') || msg.includes('عن المبادرة')) {
-    return `*مبادرة الرواد الرقميون (DEPI) - وزارة الاتصالات:* 🏛️✨\n\nهي مبادرة وطنية مجانية ممولة بالكامل تهدف لتدريب الشباب المصري (18-32 سنة) وبناء كوادر احترافية في مجالات التكنولوجيا المتقدمة بشراكة مع الأكاديمية العسكرية وجامعات عالمية.\n\n📌 *المزايا:* شهادات دولية معتمدة + إقامة فندقية شاملة مجانية + فرص ماجستير للمتفوقين.\n💻 *المسارات:* ذكاء اصطناعي، أمن سيبراني، برمجيات، سحابيات، فنون رقمية، نظم مدمجة.\n🔗 *رابط التسجيل الرسمي:* https://www.digilians.gov.eg/login\n\nهل تود الاستفسار عن الشروط، الأوراق، أو التخصصات؟`;
+    const ar = `*مبادرة الرواد الرقميون (DEPI) - وزارة الاتصالات:* 🏛️✨\n\nهي مبادرة وطنية مجانية ممولة بالكامل تهدف لتدريب الشباب المصري (18-32 سنة) وبناء كوادر احترافية في مجالات التكنولوجيا المتقدمة بشراكة مع الأكاديمية العسكرية وجامعات عالمية.\n\n📌 *المزايا:* شهادات دولية معتمدة + إقامة فندقية شاملة مجانية + فرص ماجستير للمتفوقين.\n💻 *المسارات:* ذكاء اصطناعي، أمن سيبراني، برمجيات، سحابيات، فنون رقمية، نظم مدمجة.\n🔗 *رابط التسجيل الرسمي:* https://www.digilians.gov.eg/login\n\nهل تود الاستفسار عن الشروط، الأوراق، أو التخصصات؟`;
+    const en = `*Digital Pioneers Initiative (DEPI) - Ministry of Communications:* 🏛️✨\n\nA fully funded national initiative to train Egyptian youth (18-32) and build professional capabilities in advanced technology fields, in partnership with the military academy and global universities.\n\n📌 *Benefits:* Accredited international certificates + free comprehensive hotel stay + master's opportunities for top performers.\n💻 *Tracks:* AI, Cybersecurity, Software, Cloud, Digital Arts, Embedded Systems.\n🔗 *Official Registration:* https://www.digilians.gov.eg/login\n\nWould you like to know about requirements, documents, or tracks?`;
+    const finalReply = replyBilingual(ar, en, lang);
+    setCachedReply(customerMessage, finalReply);
+    return finalReply;
   }
 
   // 4. Greetings
   if (msg.includes('سلام') || msg.includes('مرحبا') || msg.includes('أهلا') || msg.includes('صباح') || msg.includes('مساء')) {
-    return `أهلاً وسهلاً بك ${senderName || ''} في منصة خدمة العملاء الذكية لمبادرة الرواد الرقميون (DEPI)! 🏛️✨\n\nيسعدني مساعدتك في الإجابة عن أي استفسار حول:\n📌 *شروط التقديم والقبول*\n📝 *خطوات ورابط التسجيل*\n🏆 *المسارات والتخصصات المتاحة*\n🌟 *المزايا والشهادات المعتمدة*\n\nكيف يمكنني مساعدتك اليوم؟`;
+    const ar = `أهلاً وسهلاً بك ${senderName || ''} في منصة خدمة العملاء الذكية لمبادرة الرواد الرقميون (DEPI)! 🏛️✨\n\nيسعدني مساعدتك في الإجابة عن أي استفسار حول:\n📌 *شروط التقديم والقبول*\n📝 *خطوات ورابط التسجيل*\n🏆 *المسارات والتخصصات المتاحة*\n🌟 *المزايا والشهادات المعتمدة*\n\nكيف يمكنني مساعدتك اليوم؟`;
+    const en = `Welcome ${senderName || ''} to the DEPI AI Customer Service Platform! 🏛️✨\n\nI'm happy to help with any inquiries about:\n📌 *Admission requirements*\n📝 *Steps and registration link*\n🏆 *Available tracks & specializations*\n🌟 *Benefits & accredited certificates*\n\nHow can I help you today?`;
+    const finalReply = replyBilingual(ar, en, lang);
+    setCachedReply(customerMessage, finalReply);
+    return finalReply;
   }
 
   // 5. Query Local Ollama LLM for Intelligent Grounded Answer
   try {
+    const cacheReply = getCachedReply(customerMessage);
+    if (cacheReply) return cacheReply;
+
     const prompt = `أنت المساعد الذكي الرسمي لخدمة عملاء مبادرة الرواد الرقميون (DEPI) التابعة لوزارة الاتصالات وتكنولوجيا المعلومات المصرية.
-تعليمات هامة جداً للتنسيق:
-- اكتب باللغة العربية الفصحى السليمة بدون أي رموز غريبة وبدون استخدام نجوم متكررة بين الحروف.
+
+Important: Respond in the SAME LANGUAGE as the customer's question. If the question is in Arabic, respond in Arabic. If in English, respond in English.
+
+تعليمات مهمة جداً للتنسيق:
 - استخدم التنسيق النقطي البسيط والواضح.
 - اجعل الإجابة موجزة، مهنية ومباشرة في حدود 3 إلى 5 أسطر فقط.
 - رابط التسجيل هو: https://www.digilians.gov.eg/login
@@ -130,7 +183,7 @@ async function generateAutonomousResponse(customerMessage, senderName) {
 رسالة العميل: "${customerMessage}"`;
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 12000);
+    const timeout = setTimeout(() => controller.abort(), 8000);
     const ollamaResp = await fetch(OLLAMA_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -152,9 +205,10 @@ async function generateAutonomousResponse(customerMessage, senderName) {
       const data = await ollamaResp.json();
       if (data.response && data.response.trim()) {
         let cleaned = data.response
-          .replace(/\*\*/g, '*') // Convert markdown bold from ** to single *
-          .replace(/#+\s*/g, '') // Remove markdown headers
+          .replace(/\*\*/g, '*')
+          .replace(/#+\s*/g, '')
           .trim();
+        setCachedReply(customerMessage, cleaned);
         return cleaned;
       }
     }
@@ -163,7 +217,11 @@ async function generateAutonomousResponse(customerMessage, senderName) {
   }
 
   // 6. Universal Default Safe Fallback
-  return `أهلاً بك في منصة خدمة العملاء الذكية (DEPI) 🏛️\n\nتم استلام استفسارك: "${customerMessage}".\nيمكنك الاستفسار عن شروط التقديم، رابط التسجيل، المسارات، أو طلب التحدث مع ممثل الدعم وسنكون سعداء بمساعدتك فوراً!`;
+  const ar = `أهلاً بك في منصة خدمة العملاء الذكية (DEPI) 🏛️\n\nتم استلام استفسارك: "${customerMessage}".\nيمكنك الاستفسار عن شروط التقديم، رابط التسجيل، المسارات، أو طلب التحدث مع ممثل الدعم وسنكون سعداء بمساعدتك فوراً!`;
+  const en = `Welcome to the DEPI AI Customer Service Platform! 🏛️\n\nWe received your inquiry: "${customerMessage}".\nYou can ask about admission requirements, registration link, tracks, or request to speak with a support representative. We're happy to help!`;
+  const finalReply = replyBilingual(ar, en, lang);
+  setCachedReply(customerMessage, finalReply);
+  return finalReply;
 }
 
 const logger = pino({ level: process.env.LOG_LEVEL || 'warn' });
@@ -312,23 +370,33 @@ async function initWhatsApp() {
 
         // 1. Attempt dispatch to n8n workflow
         try {
-          const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 6000); // 6s timeout before intelligent fallback
-          const response = await fetch(N8N_WEBHOOK_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-            signal: controller.signal
-          });
-          clearTimeout(timeout);
+          // Check response cache first
+          const cached = getCachedReply(text);
+          if (cached) {
+            replyText = cached;
+            replySource = 'cache';
+          } else {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout for n8n pipeline
+            const startTime = Date.now();
+            const response = await fetch(N8N_WEBHOOK_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+              signal: controller.signal
+            });
+            clearTimeout(timeout);
 
-          const result = await response.json().catch(() => ({ status: response.statusText }));
-          console.log(`[WhatsApp Dispatch -> n8n] Status ${response.status}:`, JSON.stringify(result).slice(0, 150));
+            const result = await response.json().catch(() => ({ status: response.statusText }));
+            const elapsed = Date.now() - startTime;
+            console.log(`[WhatsApp Dispatch -> n8n] Status ${response.status} (${elapsed}ms):`, JSON.stringify(result).slice(0, 150));
 
-          // Extract response string if returned synchronously from n8n webhook
-          if (result && (result.response || result.final_reply || result.reply || result.message)) {
-            replyText = result.response || result.final_reply || result.reply || result.message;
-            replySource = 'n8n';
+            // Extract response string if returned synchronously from n8n webhook
+            if (result && (result.response || result.final_reply || result.reply || result.message)) {
+              replyText = result.response || result.final_reply || result.reply || result.message;
+              replySource = 'n8n';
+              setCachedReply(text, replyText);
+            }
           }
         } catch (webhookErr) {
           console.warn('[WhatsApp Bridge] n8n webhook unreachable or timed out (' + webhookErr.message + '). Switching to autonomous AI engine...');
@@ -348,7 +416,7 @@ async function initWhatsApp() {
 
         // 3. Dispatch the response directly back to the WhatsApp sender!
         if (replyText && sock) {
-          const dispatchKey = `${senderJid}_${replyText.slice(0, 30)}`;
+          const dispatchKey = `${senderJid}_${msg.key.id || text.slice(0, 30)}`;
           if (!isRecentlyDispatched(dispatchKey)) {
             console.log(`[WhatsApp Live Reply (${replySource})] -> ${senderJid}: "${replyText.slice(0, 60)}..."`);
             try {
@@ -649,6 +717,17 @@ app.post('/simulate', async (req, res) => {
     const name = req.body.full_name || req.body.name || 'Citizen';
     const phone = req.body.phone_number || req.body.phone || '+966500000000';
 
+    // Check cache first
+    const cached = getCachedReply(message);
+    if (cached) {
+      return res.json({
+        success: true,
+        source: 'cache',
+        reply: cached,
+        timestamp: new Date().toISOString()
+      });
+    }
+
     const payload = {
       channel: 'whatsapp',
       customer_message: message,
@@ -663,7 +742,8 @@ app.post('/simulate', async (req, res) => {
 
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 2000);
+      const timeout = setTimeout(() => controller.abort(), 10000);
+      const startTime = Date.now();
       const n8nResp = await fetch(N8N_WEBHOOK_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -671,10 +751,15 @@ app.post('/simulate', async (req, res) => {
         signal: controller.signal
       });
       clearTimeout(timeout);
+      const elapsed = Date.now() - startTime;
       if (n8nResp.ok) {
         const json = await n8nResp.json();
         replyText = json.response || json.final_reply || json.reply || json.message;
-        if (replyText) source = 'n8n';
+        if (replyText) {
+          source = 'n8n';
+          setCachedReply(message, replyText);
+        }
+        console.log(`[Simulate -> n8n] Status ${n8nResp.status} (${elapsed}ms)`);
       }
     } catch (e) {}
 
@@ -713,9 +798,34 @@ app.post('/logout', async (req, res) => {
   }
 });
 
+// Ollama model pre-warming — fires a dummy request at startup to reduce first-request latency
+async function prewarmOllama() {
+  try {
+    console.log('[Ollama] Pre-warming model...');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    await fetch(OLLAMA_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: OLLAMA_MODEL,
+        prompt: 'Hello',
+        stream: false,
+        options: { num_ctx: 1024, num_predict: 10, temperature: 0.2 }
+      }),
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+    console.log('[Ollama] Pre-warming complete.');
+  } catch (err) {
+    console.warn('[Ollama] Pre-warming failed (non-fatal):', err.message);
+  }
+}
+
 app.listen(PORT, () => {
   console.log(`[WhatsApp Bridge] HTTP Server listening on port ${PORT}`);
   console.log(`[WhatsApp Bridge] Web UI available at: http://localhost:${PORT}/qr`);
+  prewarmOllama();
   initWhatsApp().catch((err) => {
     console.error('[WhatsApp Bridge] Initialization error:', err);
   });

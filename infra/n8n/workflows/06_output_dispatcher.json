@@ -1,6 +1,7 @@
 {
   "id": "F7kjakLJXmzBDsvS",
   "name": "SubWF 06 - Output Channel Dispatcher",
+  "active": true,
   "nodes": [
     {
       "parameters": {},
@@ -277,7 +278,9 @@
       ]
     }
   },
-  "settings": {
-    "executionOrder": "v1"
-  }
+  "settings": {},
+  "staticData": null,
+  "pinData": {},
+  "versionId": "",
+  "triggerCount": 0
 }

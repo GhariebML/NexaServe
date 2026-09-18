@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🏛️ NexaServe - MCIT Enterprise AI Customer Service Platform
+# 🏛️ NexaServe - DEPI AI Customer Service Platform
 ### Sovereign • Local-First • Omnichannel • SLA-Governed Human-in-the-Loop
 
 [![n8n](https://img.shields.io/badge/Orchestrator-n8n_v2.38.1-EA4B71?logo=n8n&logoColor=white)](https://n8n.io)
@@ -8,17 +8,17 @@
 [![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL_16-336791?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Redis](https://img.shields.io/badge/Cache-Redis_7-DC382D?logo=redis&logoColor=white)](https://redis.io)
 [![Docker](https://img.shields.io/badge/Infrastructure-Docker_Compose-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
-[![Saudi PDPL](https://img.shields.io/badge/Compliance-Saudi_PDPL_PII_Shield-006C35?logo=shield&logoColor=white)](https://sdaia.gov.sa)
-[![Bilingual](https://img.shields.io/badge/Language-Arabic_%26_English-blue)](https://mcit.gov.sa)
+[![DEPI Data Protection](https://img.shields.io/badge/Compliance-DEPI_Data_Protection_PII_Shield-006C35?logo=shield&logoColor=white)](https://depi.gov.eg)
+[![Bilingual](https://img.shields.io/badge/Language-Arabic_%26_English-blue)](https://digilians.gov.eg)
 [![Tests](https://img.shields.io/badge/Verification-23%2F23_Passed-success)](https://github.com/GhariebML/NexaServe)
 
 <p align="center">
-  <b>A 100% air-gapped, sovereign AI Customer Service automation platform tailored for the Ministry of Communications and Information Technology (MCIT). Engineered with modular n8n workflow pipelines, local Ollama cognitive inference, bilingual RAG knowledge retrieval, and SLA-governed Human-in-the-Loop (HITL) resolution.</b>
+  <b>A 100% air-gapped, sovereign AI Customer Service automation platform tailored for the Ministry of Communications and Information Technology (DEPI). Engineered with modular n8n workflow pipelines, local Ollama cognitive inference, bilingual RAG knowledge retrieval, and SLA-governed Human-in-the-Loop (HITL) resolution.</b>
 </p>
 
 ---
 
-![MCIT Enterprise Architecture](docs/images/mcit_enterprise_architecture.png)
+![DEPI Enterprise Architecture](docs/images/depi_enterprise_architecture.png)
 
 </div>
 
@@ -29,7 +29,7 @@
 2. [Target Architecture & Reference Blueprint](#2-target-architecture--reference-blueprint)
 3. [End-to-End Pipeline Workflow](#3-end-to-end-pipeline-workflow)
 4. [Deployed Workflow Suite (10 Workflows)](#4-deployed-workflow-suite-10-workflows)
-5. [Enterprise Security & Saudi PDPL Compliance](#5-enterprise-security--saudi-pdpl-compliance)
+5. [Enterprise Security & DEPI Data Protection Compliance](#5-enterprise-security--saudi-pdpl-compliance)
 6. [Multi-Channel Omnichannel Hub](#6-multi-channel-omnichannel-hub)
 7. [Bidirectional Human-in-the-Loop (HITL)](#7-bidirectional-human-in-the-loop-hitl)
 8. [Relational Data Layer & PostgreSQL Schema](#8-relational-data-layer--postgresql-schema)
@@ -41,12 +41,12 @@
 
 ## 1. Executive Overview
 
-The **NexaServe MCIT Enterprise AI Customer Service Platform** replaces cloud-dependent customer support bots with a fully private, sovereign, on-premises automation solution. 
+The **NexaServe DEPI AI Customer Service Platform** replaces cloud-dependent customer support bots with a fully private, sovereign, on-premises automation solution. 
 
 ### 🌟 Key Value Propositions:
 - **🔒 100% Local & Air-Gapped**: Runs entirely on local infrastructure with zero calls to external cloud AI APIs (OpenAI, Anthropic, AWS, etc.). Zero data leakage.
-- **🛡️ Saudi PDPL Data Privacy Shield**: Automatically scans and anonymizes citizen personal data (Saudi National ID numbers, Saudi IBANs, Credit Cards) before database persistence or model processing.
-- **🇸🇦 Native Bilingual Modern Standard Arabic & English**: Comprehensive dual-language understanding and response generation with domain context for MCIT initiatives (Future Skills *مهارات المستقبل*, digital licensing, ICT regulation).
+- **🛡️ DEPI Data Protection Data Privacy Shield**: Automatically scans and anonymizes citizen personal data (Egyptian National ID numbers, Egyptian IBANs, Credit Cards) before database persistence or model processing.
+- **🇸🇦 Native Bilingual Modern Standard Arabic & English**: Comprehensive dual-language understanding and response generation with domain context for DEPI initiatives (Digital Pioneers Initiative (DEPI) *مهارات المستقبل*, digital licensing, ICT regulation).
 - **⏱️ SLA-Governed Priority Escalation**: Intelligently detects angry or complex citizen issues, auto-generates priority support tickets (`urgent` with 30m SLA, `high` with 2h SLA), and notifies Tier-2 specialists.
 - **🔄 Live Bidirectional Agent Bridge**: Provides a live webhook (`POST /webhook/agent-response`) allowing human support agents to resolve tickets and reply directly to citizen messaging channels.
 
@@ -71,7 +71,7 @@ The platform implements the official 5-tier enterprise customer service pipeline
 
 ## 3. End-to-End Pipeline Workflow
 
-![Pipeline Workflow](docs/images/mcit_pipeline_flow.png)
+![Pipeline Workflow](docs/images/depi_pipeline_flow.png)
 
 ```mermaid
 sequenceDiagram
@@ -86,7 +86,7 @@ sequenceDiagram
     participant DB as 🗄️ PostgreSQL & Audit
 
     Citizen->>GW: Inbound message (WhatsApp / Telegram / Webchat)
-    GW->>GW: Scans & masks PII (Saudi National ID / IBAN)
+    GW->>GW: Scans & masks PII (Egyptian National ID / IBAN)
     GW->>SM: Resolves customer & retrieves recent conversation history
     SM->>GW: Returns session memory context
     GW->>AI: Prompts local Ollama (llama3.1:8b) with structured schema
@@ -94,7 +94,7 @@ sequenceDiagram
     
     alt Intent: Knowledge Base FAQ (RAG)
         GW->>Core: Queries bilingual knowledge base in PostgreSQL
-        Core->>GW: Returns official MCIT initiative answer & source attribution
+        Core->>GW: Returns official DEPI initiative answer & source attribution
     else Intent: Service / Order Tracking
         GW->>Core: Queries orders / citizen services (SRV-1001)
         Core->>GW: Returns carrier status & estimated completion date
@@ -125,7 +125,7 @@ All 10 workflows are actively published and running in the local n8n instance (`
 | [`CSWF000000000002`](infra/n8n/workflows/02_customer_session_manager.json) | **SubWF 02: Session Manager** | Identity resolution (WhatsApp, Telegram, Phone, Email) & conversation history memory | **Active** |
 | [`CSWF000000000003`](infra/n8n/workflows/03_ai_intent_engine.json) | **SubWF 03: AI Cognitive Engine** | Prompt injection security filter + Ollama `llama3.1:8b` classifier with JSON schema | **Active** |
 | [`CSWF000000000004`](infra/n8n/workflows/04A_order_lookup.json) | **SubWF 04A: Order Lookup & Tracking** | Citizen e-service tracking (`SRV-1001`, `ORD-1001`) with carrier status | **Active** |
-| [`CSWF000000000005`](infra/n8n/workflows/04B_knowledge_base_faq.json) | **SubWF 04B: Knowledge Base & FAQ** | Bilingual hybrid RAG search over MCIT knowledge repository | **Active** |
+| [`CSWF000000000005`](infra/n8n/workflows/04B_knowledge_base_faq.json) | **SubWF 04B: Knowledge Base & FAQ** | Bilingual hybrid RAG search over DEPI knowledge repository | **Active** |
 | [`CSWF000000000006`](infra/n8n/workflows/04C_human_escalation.json) | **SubWF 04C: Human Escalation** | SLA ticket generation (`TICK-XXXXX`) and escalation notification dispatch | **Active** |
 | [`RWLCadRzOPjTHXVo`](infra/n8n/workflows/04D_agent_response_bridge.json) | **SubWF 04D: Agent Response Bridge** | Live agent callback webhook (`POST /webhook/agent-response`) for ticket resolution | **Active** |
 | [`CSWF000000000007`](infra/n8n/workflows/05_conversation_logger.json) | **SubWF 05: Conversation Logger** | PII-masked message persistence, execution telemetry, and audit trail | **Active** |
@@ -134,7 +134,7 @@ All 10 workflows are actively published and running in the local n8n instance (`
 
 ---
 
-## 5. Enterprise Security & Saudi PDPL Compliance
+## 5. Enterprise Security & DEPI Data Protection Compliance
 
 Under the **Saudi Personal Data Protection Law (PDPL)**, citizen personal identification information must be strictly safeguarded. 
 
@@ -142,11 +142,11 @@ Under the **Saudi Personal Data Protection Law (PDPL)**, citizen personal identi
 Implemented in JavaScript inside Master 01 before storing messages or submitting text to the LLM:
 
 ```javascript
-// Saudi National ID (10 digits starting with 1)
-sanitized = sanitized.replace(/\b1\d{9}\b/g, '[SAUDI_NATIONAL_ID_MASKED]');
+// Egyptian National ID (10 digits starting with 1)
+sanitized = sanitized.replace(/\b1\d{9}\b/g, '[EGYPTIAN_NATIONAL_ID_MASKED]');
 
-// Saudi IBAN (SA followed by 22 digits)
-sanitized = sanitized.replace(/\bSA\d{22}\b/gi, '[SAUDI_IBAN_MASKED]');
+// Egyptian IBAN (SA followed by 22 digits)
+sanitized = sanitized.replace(/\bSA\d{22}\b/gi, '[EGYPTIAN_IBAN_MASKED]');
 
 // Credit Card Numbers (13 to 19 digits)
 sanitized = sanitized.replace(/\b(?:\d[ -]*?){13,19}\b/g, '[CARD_NUMBER_MASKED]');
@@ -203,7 +203,7 @@ Content-Type: application/json
 
 {
   "ticket_number": "TICK-22701",
-  "agent_name": "Fahad Al-Harbi (MCIT Tier-2 Support)",
+  "agent_name": "Karim Hassan (DEPI Tier-2 Support)",
   "agent_message": "تمت مراجعة طلبكم والتحقق من حسابكم، تم تفعيل الخدمة المطلوبة بنجاح.",
   "action": "resolve"
 }
@@ -269,17 +269,17 @@ powershell -ExecutionPolicy Bypass -File .\scripts\chat-cli.ps1
 
 ```
 ================================================================
-  MCIT Enterprise AI Customer Service - Local Interactive CLI
+  DEPI Enterprise AI Customer Service - Local Interactive CLI
   Endpoint: http://localhost:5678/webhook/customer-service
 ================================================================
-Enter your message: ما هي شروط التقديم على مبادرة مهارات المستقبل؟
+Enter your message: ما هي شروط التقديم على مبادرة الرواد الرقميون (DEPI)؟
 
 ------------------------ Response ------------------------
 Intent:      faq_query (Confidence: 95%)
 Channel:     webchat | Locale: ar
 
 Reply:
-مبادرة مهارات المستقبل التابعة لوزارة الاتصالات وتقنية المعلومات تهدف إلى تأهيل الكوادر الوطنية في مجالات التقنية الحديثة كالمعلوماتية والذكاء الاصطناعي والأمن السيبراني. يمكنك التقديم مباشرة عبر المنصة الوطنية الموحدة.
+مبادرة الرواد الرقميون (DEPI) التابعة لوزارة الاتصالات وتقنية المعلومات تهدف إلى تأهيل الكوادر الوطنية في مجالات التقنية الحديثة كالمعلوماتية والذكاء الاصطناعي والأمن السيبراني. يمكنك التقديم مباشرة عبر المنصة الوطنية الموحدة.
 Latency:     1420 ms
 ----------------------------------------------------------
 ```
@@ -289,12 +289,12 @@ Latency:     1420 ms
 ### 🧪 Option 2: Automated Enterprise Verification Suite
 Run the full 23-assertion validation suite:
 ```powershell
-python .\scripts\test-mcit-enterprise.py
+python .\scripts\test-depi-enterprise.py
 ```
 
 ```
 ======================================================================
- 🚀 MCIT Enterprise AI Customer Service - Verification Suite
+ 🚀 DEPI Enterprise AI Customer Service - Verification Suite
 ======================================================================
 
 [1] Testing WhatsApp Ingress: Arabic Knowledge Base RAG Query...
@@ -302,7 +302,7 @@ python .\scripts\test-mcit-enterprise.py
   [PASS] Detected Channel is WhatsApp
   [PASS] Language detected as Arabic ('ar')
   [PASS] Intent classified as faq_query (Confidence: 0.95)
-  [PASS] Response contains official MCIT Future Skills information
+  [PASS] Response contains official DEPI Digital Pioneers Initiative (DEPI) information
 
 [2] Testing Telegram Ingress: Citizen E-Service Tracking (SRV-1001)...
   [PASS] Telegram Ingress returns HTTP 200 & success status
@@ -312,7 +312,7 @@ python .\scripts\test-mcit-enterprise.py
 
 [3] Testing Webchat Ingress: PII Masking & Human Escalation...
   [PASS] Webchat Ingress returns HTTP 200
-  [PASS] MCIT PII Masking triggered on Saudi National ID
+  [PASS] DEPI PII Masking triggered on Egyptian National ID
   [PASS] Intent classified as human_escalation
   [PASS] SLA Support Ticket generated (TICK-22701)
   [PASS] Reassuring bilingual escalation response returned
@@ -348,5 +348,5 @@ For an exhaustive, node-by-node architectural breakdown of every expression, SQL
 ---
 
 <div align="center">
-  <sub>Built for the Ministry of Communications and Information Technology (MCIT) • 100% Sovereign Local AI</sub>
+  <sub>Built for the Digital Pioneers Initiative (DEPI) • Ministry of Communications and Information Technology (DEPI) Egypt • 100% Sovereign Local AI</sub>
 </div>

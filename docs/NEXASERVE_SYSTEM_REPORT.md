@@ -1,6 +1,6 @@
 <div align="center">
 
-# NexaServe MCIT Enterprise AI Customer Service Platform
+# NexaServe DEPI AI Customer Service Platform
 
 ### Complete System Documentation & Technical Specification Report
 
@@ -11,8 +11,8 @@
 [![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL_16-336791?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Redis](https://img.shields.io/badge/Cache-Redis_7-DC382D?logo=redis&logoColor=white)](https://redis.io)
 [![Docker](https://img.shields.io/badge/Infrastructure-Docker_Compose-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
-[![Saudi PDPL](https://img.shields.io/badge/Compliance-Saudi_PDPL_PII_Shield-006C35?logo=shield&logoColor=white)](https://sdaia.gov.sa)
-[![Bilingual](https://img.shields.io/badge/Language-Arabic_%26_English-blue)](https://mcit.gov.sa)
+[![DEPI Data Protection](https://img.shields.io/badge/Compliance-Saudi_PDPL_PII_Shield-006C35?logo=shield&logoColor=white)](https://depi.gov.eg)
+[![Bilingual](https://img.shields.io/badge/Language-Arabic_%26_English-blue)](https://digilians.gov.eg)
 [![Tests](https://img.shields.io/badge/Verification-23%2F23_Passed-success)](https://github.com/GhariebML/NexaServe)
 
 ---
@@ -23,11 +23,11 @@
 
 | Document Property | Value |
 | :--- | :--- |
-| **Document Title** | NexaServe MCIT Enterprise AI Customer Service Platform -- System Specification Report |
+| **Document Title** | NexaServe DEPI AI Customer Service Platform -- System Specification Report |
 | **Version** | 1.0.0 |
 | **Date** | September 14, 2026 |
-| **Classification** | Internal -- MCIT Confidential |
-| **Prepared For** | Ministry of Communications and Information Technology (MCIT), Kingdom of Saudi Arabia |
+| **Classification** | Internal -- DEPI Confidential |
+| **Prepared For** | Ministry of Communications and Information Technology, Egypt |
 | **Platform Status** | 23/23 Verification Tests Passed |
 
 ---
@@ -56,7 +56,7 @@
 | 5.9 | [SubWF 06: Output Channel Dispatcher](#59-subwf-06-output-channel-dispatcher) | 23 |
 | 5.10 | [SubWF 00: Global Error Handler & Dead Letter Queue](#510-subwf-00-global-error-handler--dead-letter-queue) | 24 |
 | 6 | [Database Schema & Data Sovereignty Layer](#6-database-schema--data-sovereignty-layer) | 25 |
-| 7 | [Security & Saudi PDPL Compliance](#7-security--saudi-pdpl-compliance) | 29 |
+| 7 | [Security & DEPI Data Protection Compliance](#7-security--saudi-pdpl-compliance) | 29 |
 | 8 | [Omnichannel Integration](#8-omnichannel-integration) | 31 |
 | 9 | [Human-in-the-Loop (HITL)](#9-human-in-the-loop-hitl) | 33 |
 | 10 | [Testing & Verification](#10-testing--verification) | 35 |
@@ -75,7 +75,7 @@
 
 ### 1.2 Document Classification
 
-This document is classified as **Internal -- MCIT Confidential**. It contains proprietary architecture details, database schemas, API endpoints, and security configurations for the NexaServe MCIT Enterprise AI Customer Service Platform. Distribution is restricted to authorized MCIT technical personnel and deployment teams.
+This document is classified as **Internal -- DEPI Confidential**. It contains proprietary architecture details, database schemas, API endpoints, and security configurations for the NexaServe DEPI AI Customer Service Platform. Distribution is restricted to authorized DEPI technical personnel and deployment teams.
 
 ### 1.3 Purpose
 
@@ -93,17 +93,17 @@ This report serves as the definitive technical reference for the NexaServe platf
 
 ### 2.1 Platform Overview
 
-The **NexaServe MCIT Enterprise AI Customer Service Platform** is an air-gapped, sovereign, intelligent customer engagement system developed for the **Ministry of Communications and Information Technology (MCIT)**, Kingdom of Saudi Arabia.
+The **NexaServe DEPI AI Customer Service Platform** is an air-gapped, sovereign, intelligent customer engagement system developed for the **Ministry of Communications and Information Technology (DEPI)**, Arab Republic of Egypt.
 
-The platform replaces cloud-dependent customer support bots with a fully private, on-premises automation solution that operates entirely within MCIT's sovereign infrastructure, ensuring zero data leakage to external cloud services.
+The platform replaces cloud-dependent customer support bots with a fully private, on-premises automation solution that operates entirely within DEPI's sovereign infrastructure, ensuring zero data leakage to external cloud services.
 
 ### 2.2 Key Value Propositions
 
 | Capability | Description |
 | :--- | :--- |
 | **100% Local & Air-Gapped** | Runs entirely on local infrastructure with zero calls to external cloud AI APIs (OpenAI, Anthropic, AWS, etc.). Zero data leakage outside the sovereign perimeter. |
-| **Saudi PDPL Data Privacy Shield** | Automatically scans and anonymizes citizen personal data (Saudi National ID numbers, Saudi IBANs, Credit Cards) before database persistence or model processing, ensuring compliance with the Saudi Personal Data Protection Law. |
-| **Native Bilingual Arabic & English** | Comprehensive dual-language understanding and response generation with domain context for MCIT initiatives (Future Skills, digital licensing, ICT regulation). |
+| **DEPI Data Protection Data Privacy Shield** | Automatically scans and anonymizes citizen personal data (Egyptian National ID numbers, Egyptian IBANs, Credit Cards) before database persistence or model processing, ensuring compliance with the DEPI Data Protection Shield. |
+| **Native Bilingual Arabic & English** | Comprehensive dual-language understanding and response generation with domain context for DEPI initiatives (Digital Pioneers Initiative (DEPI), digital licensing, ICT regulation). |
 | **SLA-Governed Priority Escalation** | Intelligently detects angry or complex citizen issues, auto-generates priority support tickets (`urgent` with 30m SLA, `high` with 2h SLA), and notifies Tier-2 specialists. |
 | **Live Bidirectional Agent Bridge** | Provides a live webhook (`POST /webhook/agent-response`) allowing human support agents to resolve tickets and reply directly to citizen messaging channels. |
 
@@ -126,7 +126,7 @@ The complete platform has been validated through an automated enterprise verific
 
 The platform implements a **5-tier enterprise customer service pipeline** with clear separation of concerns, enabling independent scaling and maintenance of each layer.
 
-![MCIT Enterprise Architecture](images/mcit_enterprise_architecture.png)
+![DEPI Enterprise Architecture](images/depi_enterprise_architecture.png)
 
 ### 3.2 Five-Tier Architecture
 
@@ -151,7 +151,7 @@ The platform implements a **5-tier enterprise customer service pipeline** with c
                                     v
 +-----------------------------------------------------------------------------------+
 | TIER 4: HUMAN-IN-THE-LOOP LAYER                                                   |
-|   SLA Ticket Generator | Live Agent Bridge | MCIT Tier-2 Support Specialists       |
+|   SLA Ticket Generator | Live Agent Bridge | DEPI Tier-2 Support Specialists       |
 +-----------------------------------------------------------------------------------+
                                     |
                                     v
@@ -163,7 +163,7 @@ The platform implements a **5-tier enterprise customer service pipeline** with c
 
 ### 3.3 End-to-End Pipeline Flow
 
-![Pipeline Flow](images/mcit_pipeline_flow.png)
+![Pipeline Flow](images/depi_pipeline_flow.png)
 
 The following sequence diagram illustrates the complete request lifecycle:
 
@@ -180,7 +180,7 @@ sequenceDiagram
     participant DB as PostgreSQL & Audit
 
     Citizen->>GW: Inbound message (WhatsApp / Telegram / Webchat)
-    GW->>GW: Scans & masks PII (Saudi National ID / IBAN)
+    GW->>GW: Scans & masks PII (Egyptian National ID / IBAN)
     GW->>SM: Resolves customer & retrieves recent conversation history
     SM->>GW: Returns session memory context
     GW->>AI: Prompts local Ollama (llama3.1:8b) with structured schema
@@ -188,7 +188,7 @@ sequenceDiagram
 
     alt Intent: Knowledge Base FAQ (RAG)
         GW->>Core: Queries bilingual knowledge base in PostgreSQL
-        Core->>GW: Returns official MCIT initiative answer & source attribution
+        Core->>GW: Returns official DEPI initiative answer & source attribution
     else Intent: Service / Order Tracking
         GW->>Core: Queries orders / citizen services (SRV-1001)
         Core->>GW: Returns carrier status & estimated completion date
@@ -335,7 +335,7 @@ The platform comprises **10 actively deployed n8n workflows** forming the comple
 | Node Name | Node Type | Version | Technical Function & Logic |
 | :--- | :--- | :---: | :--- |
 | **Webhook Ingress** | `n8n-nodes-base.webhook` | `2.0` | Listens at `POST /webhook/customer-service`. Accepts synchronous payloads in JSON or form format. Configured with `responseMode: responseNode` for controlled response management. |
-| **Channel Ingress & PII Sanitizer** | `n8n-nodes-base.code` | `2.0` | **Multi-channel Normalizer**: Detects whether incoming payload is WhatsApp Cloud API (`entry[0].changes[0].value`), Telegram Bot (`message.chat.id`), Webchat, or Email.<br/>**Saudi PDPL PII Filter**: Applies regular expressions to detect and mask Saudi National IDs (`10\d{8}` to `[SAUDI_NATIONAL_ID_MASKED]`), Saudi IBANs (`SA\d{22}` to `[SAUDI_IBAN_MASKED]`), and Credit Cards.<br/>**Language Detector**: Inspects Arabic character presence (`/[\u0600-\u06FF]/`) to set locale to `'ar'` or `'en'`. |
+| **Channel Ingress & PII Sanitizer** | `n8n-nodes-base.code` | `2.0` | **Multi-channel Normalizer**: Detects whether incoming payload is WhatsApp Cloud API (`entry[0].changes[0].value`), Telegram Bot (`message.chat.id`), Webchat, or Email.<br/>**DEPI Data Protection PII Filter**: Applies regular expressions to detect and mask Egyptian National IDs (`10\d{8}` to `[EGYPTIAN_NATIONAL_ID_MASKED]`), Egyptian IBANs (`SA\d{22}` to `[EGYPTIAN_IBAN_MASKED]`), and Credit Cards.<br/>**Language Detector**: Inspects Arabic character presence (`/[\u0600-\u06FF]/`) to set locale to `'ar'` or `'en'`. |
 | **Call SubWF 02 - Session Manager** | `n8n-nodes-base.executeWorkflow` | `1.1` | Invokes `CSWF000000000002`. Passes normalized customer profile and channel IDs to retrieve the customer record, active conversation UUID, and recent history memory. |
 | **Call SubWF 03 - AI Cognitive Engine** | `n8n-nodes-base.executeWorkflow` | `1.1` | Invokes `CSWF000000000003`. Submits conversation history and sanitized message to Ollama `llama3.1:8b` to obtain intent classification, confidence score, sentiment, and extracted entities. |
 | **Switch on Intent** | `n8n-nodes-base.switch` | `3.2` | Inspects `$json.ai_output.intent`. Routes across 4 deterministic branches:<br/>Output 0: `order_lookup`<br/>Output 1: `faq_query` / `knowledge_base`<br/>Output 2: `human_escalation`<br/>Output 3: `general_support` (Fallback) |
@@ -387,7 +387,7 @@ The platform comprises **10 actively deployed n8n workflows** forming the comple
 | :--- | :--- | :---: | :--- |
 | **Execute Workflow Trigger** | `executeWorkflowTrigger` | `1.0` | Ingests normalized text, conversation history, customer profile, and locale. |
 | **Guardrails & Safety Filter** | `code` (v2.0) | `2.0` | **Enterprise Security Shield**: Scans input against prompt injection patterns (`"ignore previous instructions"`, `"system prompt"`, `"jailbreak"`, `"bypass"`). If detected, triggers immediate bypass returning a safe defensive response without wasting LLM compute. |
-| **Build Prompt Payload** | `code` (v2.0) | `2.0` | Formats a strict system prompt embedding MCIT enterprise rules, conversation history, and an explicit JSON schema (`intent`, `confidence`, `entities`, `sentiment`, `requires_human`). |
+| **Build Prompt Payload** | `code` (v2.0) | `2.0` | Formats a strict system prompt embedding DEPI enterprise rules, conversation history, and an explicit JSON schema (`intent`, `confidence`, `entities`, `sentiment`, `requires_human`). |
 | **Ollama Cognitive Classifier** | `httpRequest` (v4.2) | `4.2` | Executes `POST http://host.docker.internal:11434/api/generate` requesting model `llama3.1:8b` with `stream: false` and `format: "json"`. Zero cloud transmission. |
 | **Parse & Validate AI Schema** | `code` (v2.0) | `2.0` | Parses JSON from Ollama. Validates intent schema. Features a robust bilingual heuristic fallback that guarantees classification even in the event of LLM syntax anomalies. Extracts order/service numbers (`SRV-xxxx`, `ORD-xxxx`). |
 
@@ -432,7 +432,7 @@ The platform comprises **10 actively deployed n8n workflows** forming the comple
 | :--- | :--- |
 | **Workflow ID** | `CSWF000000000005` |
 | **File** | `infra/n8n/workflows/04B_knowledge_base_faq.json` |
-| **Role** | Implements hybrid retrieval-augmented generation over MCIT policies, digital initiatives, and official regulations. |
+| **Role** | Implements hybrid retrieval-augmented generation over DEPI policies, digital initiatives, and official regulations. |
 | **Node Count** | 3 |
 | **Status** | Active |
 
@@ -442,7 +442,7 @@ The platform comprises **10 actively deployed n8n workflows** forming the comple
 | :--- | :--- | :---: | :--- |
 | **Execute Workflow Trigger** | `executeWorkflowTrigger` | `1.0` | Receives citizen inquiry, language, and AI context. |
 | **Query Bilingual Knowledge Base** | `postgres` (v2.5) | `2.5` | Performs full-text matching (`ILIKE`) on `question`, `answer`, `question_ar`, and `answer_ar`, as well as keyword array unnesting (`keywords` and `keywords_ar`). Returns top matched articles. |
-| **Format RAG Knowledge Response** | `code` (v2.0) | `2.0` | Selects the language-appropriate answer (`answer_ar` vs `answer`). Injects official source attribution (e.g., `MCIT Official Knowledge Base - Future Skills`). Returns graceful guidance fallback if query is unmatched. |
+| **Format RAG Knowledge Response** | `code` (v2.0) | `2.0` | Selects the language-appropriate answer (`answer_ar` vs `answer`). Injects official source attribution (e.g., `DEPI Official Knowledge Base - Digital Pioneers Initiative (DEPI)`). Returns graceful guidance fallback if query is unmatched. |
 
 ---
 
@@ -461,7 +461,7 @@ The platform comprises **10 actively deployed n8n workflows** forming the comple
 | Node Name | Node Type | Version | Technical Function & Logic |
 | :--- | :--- | :---: | :--- |
 | **Execute Workflow Trigger** | `executeWorkflowTrigger` | `1.0` | Receives escalation trigger, sentiment, customer data, and message context. |
-| **Create SLA Ticket in Postgres** | `postgres` (v2.5) | `2.5` | Generates `TICK-XXXXX`. Evaluates sentiment: if `angry`, assigns `urgent` priority with 30-minute SLA (`sla_due_at = NOW() + 30m`); otherwise `high` with 2-hour SLA. Assigns to `MCIT Citizen Escalations Team`. |
+| **Create SLA Ticket in Postgres** | `postgres` (v2.5) | `2.5` | Generates `TICK-XXXXX`. Evaluates sentiment: if `angry`, assigns `urgent` priority with 30-minute SLA (`sla_due_at = NOW() + 30m`); otherwise `high` with 2-hour SLA. Assigns to `DEPI Citizen Escalations Team`. |
 | **Mark Conversation Handed Off** | `postgres` (v2.5) | `2.5` | Updates `conversations.status = 'handed_off'` to prevent automatic AI intervention until an agent releases the ticket. |
 | **Dispatch Agent Notification & Audit** | `postgres` (v2.5) | `2.5` | Logs `hitl_escalated` audit event containing ticket number, customer contact details, and priority. |
 | **Format Escalation Notice** | `code` (v2.0) | `2.0` | Returns an empathetic, reassuring message to the citizen in their preferred language containing their ticket number and priority tier. |
@@ -470,9 +470,9 @@ The platform comprises **10 actively deployed n8n workflows** forming the comple
 
 | Sentiment | Priority | SLA Window | Assignment |
 | :--- | :--- | :--- | :--- |
-| `angry` | `urgent` | 30 minutes | MCIT Citizen Escalations Team |
-| `frustrated` | `high` | 2 hours | MCIT Citizen Escalations Team |
-| Other | `high` | 2 hours | MCIT Citizen Escalations Team |
+| `angry` | `urgent` | 30 minutes | DEPI Citizen Escalations Team |
+| `frustrated` | `high` | 2 hours | DEPI Citizen Escalations Team |
+| Other | `high` | 2 hours | DEPI Citizen Escalations Team |
 
 ---
 
@@ -506,7 +506,7 @@ Content-Type: application/json
 
 {
   "ticket_number": "TICK-22701",
-  "agent_name": "Fahad Al-Harbi (MCIT Tier-2 Support)",
+  "agent_name": "Karim Hassan (DEPI Tier-2 Support)",
   "agent_message": "Service has been activated successfully.",
   "action": "resolve"
 }
@@ -551,7 +551,7 @@ Content-Type: application/json
 | Node Name | Node Type | Version | Technical Function & Logic |
 | :--- | :--- | :---: | :--- |
 | **Execute Workflow Trigger** | `executeWorkflowTrigger` | `1.0` | Ingests final reply, channel name, recipient ID, and locale. |
-| **Format Egress Payload** | `code` (v2.0) | `2.0` | Generates exact protocol payload:<br/>**WhatsApp**: `{ messaging_product: 'whatsapp', to: phone, text: { body } }`<br/>**Telegram**: `{ chat_id: id, text: body, parse_mode: 'Markdown' }`<br/>**Webchat**: `{ recipient_id: id, message: body, locale }`<br/>**Email**: `{ to: email, subject: 'MCIT Customer Support', body }` |
+| **Format Egress Payload** | `code` (v2.0) | `2.0` | Generates exact protocol payload:<br/>**WhatsApp**: `{ messaging_product: 'whatsapp', to: phone, text: { body } }`<br/>**Telegram**: `{ chat_id: id, text: body, parse_mode: 'Markdown' }`<br/>**Webchat**: `{ recipient_id: id, message: body, locale }`<br/>**Email**: `{ to: email, subject: 'DEPI Customer Support', body }` |
 | **Egress Audit Record** | `postgres` (v2.5) | `2.5` | Records `channel_egress_dispatched` in audit log for delivery accountability. |
 | **Return Dispatch Result** | `code` (v2.0) | `2.0` | Confirms dispatch readiness back to caller. |
 
@@ -712,7 +712,7 @@ erDiagram
 | `full_name` | `VARCHAR(255)` | | Customer's full name |
 | `email` | `VARCHAR(255)` | | Email address |
 | `phone_number` | `VARCHAR(50)` | UNIQUE | Phone number (primary identifier) |
-| `national_id_masked` | `VARCHAR(255)` | | Masked Saudi National ID |
+| `national_id_masked` | `VARCHAR(255)` | | Masked Egyptian National ID |
 | `telegram_id` | `VARCHAR(100)` | | Telegram chat ID |
 | `whatsapp_id` | `VARCHAR(100)` | | WhatsApp phone number |
 | `preferred_language` | `VARCHAR(5)` | DEFAULT 'ar' | Preferred language (`ar` or `en`) |
@@ -808,11 +808,11 @@ erDiagram
 
 ---
 
-## 7. Security & Saudi PDPL Compliance
+## 7. Security & DEPI Data Protection Compliance
 
-### 7.1 Saudi Personal Data Protection Law (PDPL) Framework
+### 7.1 DEPI Data Protection Shield (PDPL) Framework
 
-Under the Saudi Personal Data Protection Law (PDPL), citizen personal identification information must be strictly safeguarded. The NexaServe platform implements a comprehensive PII sanitization engine to ensure full compliance.
+Under the DEPI Data Protection Shield (PDPL), citizen personal identification information must be strictly safeguarded. The NexaServe platform implements a comprehensive PII sanitization engine to ensure full compliance.
 
 ### 7.2 PII Sanitization Engine
 
@@ -820,18 +820,18 @@ The PII detection and masking is implemented in JavaScript within Master 01, ope
 
 | PII Type | Regex Pattern | Replacement |
 | :--- | :--- | :--- |
-| **Saudi National ID** | `\b1\d{9}\b` | `[SAUDI_NATIONAL_ID_MASKED]` |
-| **Saudi IBAN** | `\bSA\d{22}\b` (case-insensitive) | `[SAUDI_IBAN_MASKED]` |
+| **Egyptian National ID** | `\b1\d{9}\b` | `[EGYPTIAN_NATIONAL_ID_MASKED]` |
+| **Egyptian IBAN** | `\bSA\d{22}\b` (case-insensitive) | `[EGYPTIAN_IBAN_MASKED]` |
 | **Credit Card Number** | `\b(?:\d[ -]*?){13,19}\b` | `[CARD_NUMBER_MASKED]` |
 
 #### Implementation Code
 
 ```javascript
-// Saudi National ID (10 digits starting with 1)
-sanitized = sanitized.replace(/\b1\d{9}\b/g, '[SAUDI_NATIONAL_ID_MASKED]');
+// Egyptian National ID (10 digits starting with 1)
+sanitized = sanitized.replace(/\b1\d{9}\b/g, '[EGYPTIAN_NATIONAL_ID_MASKED]');
 
-// Saudi IBAN (SA followed by 22 digits)
-sanitized = sanitized.replace(/\bSA\d{22}\b/gi, '[SAUDI_IBAN_MASKED]');
+// Egyptian IBAN (SA followed by 22 digits)
+sanitized = sanitized.replace(/\bSA\d{22}\b/gi, '[EGYPTIAN_IBAN_MASKED]');
 
 // Credit Card Numbers (13 to 19 digits)
 sanitized = sanitized.replace(/\b(?:\d[ -]*?){13,19}\b/g, '[CARD_NUMBER_MASKED]');
@@ -911,7 +911,7 @@ SubWF 06 Output Dispatcher translates internal responses into channel-specific f
 | **WhatsApp** | `{ messaging_product: 'whatsapp', to: phone, text: { body } }` |
 | **Telegram** | `{ chat_id: id, text: body, parse_mode: 'Markdown' }` |
 | **Webchat** | `{ recipient_id: id, message: body, locale }` |
-| **Email** | `{ to: email, subject: 'MCIT Customer Support', body }` |
+| **Email** | `{ to: email, subject: 'DEPI Customer Support', body }` |
 
 ---
 
@@ -959,7 +959,7 @@ Content-Type: application/json
 
 {
   "ticket_number": "TICK-22701",
-  "agent_name": "Fahad Al-Harbi (MCIT Tier-2 Support)",
+  "agent_name": "Karim Hassan (DEPI Tier-2 Support)",
   "agent_message": "Your request has been reviewed and the service has been activated successfully.",
   "action": "resolve"
 }
@@ -1000,7 +1000,7 @@ The complete pipeline has been verified using an automated enterprise verificati
 | Detected channel is WhatsApp | PASS |
 | Language detected as Arabic (`ar`) | PASS |
 | Intent classified as `faq_query` (Confidence: 0.95) | PASS |
-| Response contains official MCIT Future Skills information | PASS |
+| Response contains official DEPI Digital Pioneers Initiative (DEPI) information | PASS |
 
 #### Scenario 2: Telegram E-Service Tracking
 
@@ -1016,7 +1016,7 @@ The complete pipeline has been verified using an automated enterprise verificati
 | Assertion | Result |
 | :--- | :---: |
 | Returns HTTP 200 | PASS |
-| MCIT PII Masking triggered on Saudi National ID | PASS |
+| DEPI PII Masking triggered on Egyptian National ID | PASS |
 | Intent classified as `human_escalation` | PASS |
 | SLA Support Ticket generated (`TICK-22701`) | PASS |
 | Reassuring bilingual escalation response returned | PASS |
@@ -1049,7 +1049,7 @@ The complete pipeline has been verified using an automated enterprise verificati
 
 ```powershell
 # Run the full 23-assertion verification suite
-python .\scripts\test-mcit-enterprise.py
+python .\scripts\test-depi-enterprise.py
 
 # Run the interactive terminal client
 powershell -ExecutionPolicy Bypass -File .\scripts\chat-cli.ps1
@@ -1191,8 +1191,8 @@ docker compose logs -f --tail 20
 
 ---
 
-*Built for the Ministry of Communications and Information Technology (MCIT)*
-*Kingdom of Saudi Arabia*
+*Built for the Ministry of Communications and Information Technology (DEPI)*
+*Arab Republic of Egypt*
 
 *100% Sovereign Local AI -- Zero Cloud Dependencies*
 

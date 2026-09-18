@@ -1,6 +1,7 @@
 {
   "id": "CSWF000000000007",
   "name": "SubWF 05 - Conversation & Audit Logger",
+  "active": true,
   "nodes": [
     {
       "parameters": {},
@@ -135,7 +136,9 @@
       ]
     }
   },
-  "settings": {
-    "executionOrder": "v1"
-  }
+  "settings": {},
+  "staticData": null,
+  "pinData": {},
+  "versionId": "",
+  "triggerCount": 0
 }

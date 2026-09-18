@@ -1,88 +1,89 @@
 {
   "id": "CSWF000000000005",
   "name": "SubWF 04B - Knowledge Base & FAQ",
+  "active": true,
   "nodes": [
     {
-      "parameters": {},
       "id": "node-trigger",
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
-      "typeVersion": 1,
       "position": [
         160,
         300
-      ]
+      ],
+      "parameters": {},
+      "typeVersion": 1
     },
     {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "=WITH words AS (\n  SELECT lower(w) AS word\n  FROM unnest(string_to_array('{{ ($json.customer_message || '').replace(/'/g, \"''\") }}', ' ')) w\n  WHERE length(w) > 2\n)\nSELECT id, category, question, answer, question_ar, answer_ar,\n  (SELECT count(*) FROM words WHERE question_ar ILIKE '%' || word || '%' OR answer_ar ILIKE '%' || word || '%' OR question ILIKE '%' || word || '%' OR answer ILIKE '%' || word || '%' OR EXISTS (SELECT 1 FROM unnest(keywords_ar) kw WHERE kw ILIKE '%' || word || '%') OR EXISTS (SELECT 1 FROM unnest(keywords) kw WHERE kw ILIKE '%' || word || '%')) AS relevance_score\nFROM knowledge_base\nWHERE is_active = TRUE\nORDER BY relevance_score DESC, id ASC\nLIMIT 3;"
-      },
       "id": "node-query-kb",
       "name": "Query Bilingual Knowledge Base",
       "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.5,
       "position": [
         380,
         300
       ],
+      "parameters": {
+        "query": "=WITH words AS (\n  SELECT lower(w) AS word\n  FROM unnest(string_to_array('{{ ($json.customer_message || '').replace(/'/g, \"''\") }}', ' ')) w\n  WHERE length(w) > 2\n)\nSELECT id, category, question, answer, question_ar, answer_ar,\n  (SELECT count(*) FROM words WHERE question_ar ILIKE '%' || word || '%' OR answer_ar ILIKE '%' || word || '%' OR question ILIKE '%' || word || '%' OR answer ILIKE '%' || word || '%' OR EXISTS (SELECT 1 FROM unnest(keywords_ar) kw WHERE kw ILIKE '%' || word || '%') OR EXISTS (SELECT 1 FROM unnest(keywords) kw WHERE kw ILIKE '%' || word || '%')) AS relevance_score\nFROM knowledge_base\nWHERE is_active = TRUE\nORDER BY relevance_score DESC, id ASC\nLIMIT 3;",
+        "operation": "executeQuery"
+      },
       "credentials": {
         "postgres": {
           "id": "CS_PG_CRED_01",
           "name": "CustomerService Postgres"
         }
-      }
+      },
+      "typeVersion": 2.5
     },
     {
-      "parameters": {
-        "jsCode": "/* ==========================================================================\n   🐍 PYTHON ALTERNATIVE / البديل البرمجي بلغة بايثون لنفس المهمة\n   --------------------------------------------------------------------------\n   This node is documented in both Python and JavaScript.\n   Below is the production-grade Python function equivalent:\n\ndef format_rag_knowledge_response(\n    db_results: list, trigger_data: dict\n) -> dict:\n    \"\"\"\n    تنسيق نتائج قاعدة المعرفة في سياق RAG لتوليد الرد المبني على الحقائق.\n\n    Processes knowledge base query results into RAG context for the\n    grounded LLM response generation step.\n\n    Args:\n        db_results: Rows from the knowledge_base table with relevance scores.\n        trigger_data: Original trigger data with customer message and locale.\n\n    Returns:\n        Dict with rag_context, status, and metadata.\n    \"\"\"\n    locale = trigger_data.get(\"locale\", \"ar\")\n    is_ar = locale == \"ar\"\n    customer_msg = trigger_data.get(\"customer_message\") or trigger_data.get(\"sanitized_message\", \"\")\n\n    relevant = [r for r in db_results if r and r.get(\"relevance_score\", 0) > 0]\n\n    if relevant:\n        context_parts = []\n        for kb in relevant:\n            q = (kb.get(\"question_ar\") or kb.get(\"question\", \"\")) if is_ar else (kb.get(\"question\") or kb.get(\"question_ar\", \"\"))\n            a = (kb.get(\"answer_ar\") or kb.get(\"answer\", \"\")) if is_ar else (kb.get(\"answer\") or kb.get(\"answer_ar\", \"\"))\n            context_parts.append(f\"سؤال: {q}\\nإجابة: {a}\")\n        context = \"\\n---\\n\".join(context_parts)\n\n        return {\n            \"status\": \"rag_context_found\",\n            \"intent_handled\": \"faq_query\",\n            \"rag_context\": context,\n            \"customer_message\": customer_msg,\n            \"locale\": locale,\n            \"top_category\": relevant[0].get(\"category\"),\n            \"relevance_score\": relevant[0].get(\"relevance_score\"),\n        }\n    else:\n        return {\n            \"status\": \"no_context\",\n            \"intent_handled\": \"faq_query\",\n            \"rag_context\": \"\",\n            \"customer_message\": customer_msg,\n            \"locale\": locale,\n            \"relevance_score\": 0,\n        }\n\n\n# ==============================================================================\n# 10. WORKFLOW 04B — Guardrail & Professional Formatter\n# Node: \"Guardrail & Professional Formatter\"\n# Purpose: Final formatting of the RAG-grounded LLM response. Applies hard\n#          guardrails when no relevant FAQ was found (out-of-scope deflection).\n# ==============================================================================\n   ========================================================================== */\n\n/* === ACTIVE JAVASCRIPT IMPLEMENTATION === */\nconst results = ($input.first()?.json || []);\nconst rows = Array.isArray(results) ? results : (results.results || [results]);\nconst triggerData = $('Execute Workflow Trigger').first()?.json || {};\nconst locale = triggerData.locale || 'ar';\nconst isAr = locale === 'ar';\nconst customerMsg = triggerData.customer_message || triggerData.sanitized_message || '';\n\n// Filter results with relevance > 0\nconst relevant = rows.filter(r => r && r.relevance_score > 0);\n\nif (relevant.length > 0) {\n  // Build context from top matching FAQ entries\n  const contextParts = relevant.map(kb => {\n    const q = isAr ? (kb.question_ar || kb.question) : (kb.question || kb.question_ar);\n    const a = isAr ? (kb.answer_ar || kb.answer) : (kb.answer || kb.answer_ar);\n    return `سؤال: ${q}\\nإجابة: ${a}`;\n  });\n  const context = contextParts.join('\\n---\\n');\n\n  return [{\n    json: {\n      status: 'rag_context_found',\n      intent_handled: 'faq_query',\n      rag_context: context,\n      customer_message: customerMsg,\n      locale: locale,\n      top_category: relevant[0].category,\n      relevance_score: relevant[0].relevance_score\n    }\n  }];\n} else {\n  // No relevant FAQ found - will trigger guardrail\n  return [{\n    json: {\n      status: 'no_context',\n      intent_handled: 'faq_query',\n      rag_context: '',\n      customer_message: customerMsg,\n      locale: locale,\n      relevance_score: 0\n    }\n  }];\n}"
-      },
       "id": "node-format-rag",
       "name": "Format RAG Knowledge Response",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "notes": "🐍 Python & ⚡ JS Dual-Language Node\nEquivalent: format_rag_knowledge_response()",
       "position": [
         600,
         300
       ],
+      "parameters": {
+        "jsCode": "/* ==========================================================================\n   🐍 PYTHON ALTERNATIVE / البديل البرمجي بلغة بايثون لنفس المهمة\n   --------------------------------------------------------------------------\n   This node is documented in both Python and JavaScript.\n   Below is the production-grade Python function equivalent:\n\ndef format_rag_knowledge_response(\n    db_results: list, trigger_data: dict\n) -> dict:\n    \"\"\"\n    تنسيق نتائج قاعدة المعرفة في سياق RAG لتوليد الرد المبني على الحقائق.\n\n    Processes knowledge base query results into RAG context for the\n    grounded LLM response generation step.\n\n    Args:\n        db_results: Rows from the knowledge_base table with relevance scores.\n        trigger_data: Original trigger data with customer message and locale.\n\n    Returns:\n        Dict with rag_context, status, and metadata.\n    \"\"\"\n    locale = trigger_data.get(\"locale\", \"ar\")\n    is_ar = locale == \"ar\"\n    customer_msg = trigger_data.get(\"customer_message\") or trigger_data.get(\"sanitized_message\", \"\")\n\n    relevant = [r for r in db_results if r and r.get(\"relevance_score\", 0) > 0]\n\n    if relevant:\n        context_parts = []\n        for kb in relevant:\n            q = (kb.get(\"question_ar\") or kb.get(\"question\", \"\")) if is_ar else (kb.get(\"question\") or kb.get(\"question_ar\", \"\"))\n            a = (kb.get(\"answer_ar\") or kb.get(\"answer\", \"\")) if is_ar else (kb.get(\"answer\") or kb.get(\"answer_ar\", \"\"))\n            context_parts.append(f\"سؤال: {q}\\nإجابة: {a}\")\n        context = \"\\n---\\n\".join(context_parts)\n\n        return {\n            \"status\": \"rag_context_found\",\n            \"intent_handled\": \"faq_query\",\n            \"rag_context\": context,\n            \"customer_message\": customer_msg,\n            \"locale\": locale,\n            \"top_category\": relevant[0].get(\"category\"),\n            \"relevance_score\": relevant[0].get(\"relevance_score\"),\n        }\n    else:\n        return {\n            \"status\": \"no_context\",\n            \"intent_handled\": \"faq_query\",\n            \"rag_context\": \"\",\n            \"customer_message\": customer_msg,\n            \"locale\": locale,\n            \"relevance_score\": 0,\n        }\n\n\n# ==============================================================================\n# 10. WORKFLOW 04B — Guardrail & Professional Formatter\n# Node: \"Guardrail & Professional Formatter\"\n# Purpose: Final formatting of the RAG-grounded LLM response. Applies hard\n#          guardrails when no relevant FAQ was found (out-of-scope deflection).\n# ==============================================================================\n   ========================================================================== */\n\n/* === ACTIVE JAVASCRIPT IMPLEMENTATION === */\nconst results = ($input.first()?.json || []);\nconst rows = Array.isArray(results) ? results : (results.results || [results]);\nconst triggerData = $('Execute Workflow Trigger').first()?.json || {};\nconst locale = triggerData.locale || 'ar';\nconst isAr = locale === 'ar';\nconst customerMsg = triggerData.customer_message || triggerData.sanitized_message || '';\n\n// Filter results with relevance > 0\nconst relevant = rows.filter(r => r && r.relevance_score > 0);\n\nif (relevant.length > 0) {\n  // Build context from top matching FAQ entries\n  const contextParts = relevant.map(kb => {\n    const q = isAr ? (kb.question_ar || kb.question) : (kb.question || kb.question_ar);\n    const a = isAr ? (kb.answer_ar || kb.answer) : (kb.answer || kb.answer_ar);\n    return `سؤال: ${q}\\nإجابة: ${a}`;\n  });\n  const context = contextParts.join('\\n---\\n');\n\n  return [{\n    json: {\n      status: 'rag_context_found',\n      intent_handled: 'faq_query',\n      rag_context: context,\n      customer_message: customerMsg,\n      locale: locale,\n      top_category: relevant[0].category,\n      relevance_score: relevant[0].relevance_score\n    }\n  }];\n} else {\n  // No relevant FAQ found - will trigger guardrail\n  return [{\n    json: {\n      status: 'no_context',\n      intent_handled: 'faq_query',\n      rag_context: '',\n      customer_message: customerMsg,\n      locale: locale,\n      relevance_score: 0\n    }\n  }];\n}"
+      },
       "notesInFlow": true,
-      "notes": "🐍 Python & ⚡ JS Dual-Language Node\nEquivalent: format_rag_knowledge_response()"
+      "typeVersion": 2
     },
     {
-      "parameters": {
-        "method": "POST",
-        "url": "http://cs-ollama:11434/api/generate",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  model: 'qwen2.5:3b',\n  prompt: `أنت مساعد ذكي وودود لخدمة عملاء مبادرة الرواد الرقميون (DEPI).\n\nImportant: Respond in the SAME LANGUAGE as the customer's question. If the question is in Arabic, respond in Arabic. If in English, respond in English.\n\nطريقة الكلام:\n- تكلم بشكل طبيعي وودود مثل موظف خدمة عملاء محترف.\n- إذا كان السؤال بالعربي، رد بالعربي فقط.\n- إذا كان السؤال بالإنجليزي، رد بالإنجليزي فقط.\n- لا تستخدم الصينية مطلقاً.\n\nالقواعد:\n1. أجب فقط من المعلومات في السياق المرفق. لا تختلق معلومات.\n2. إذا السياق ما فيه إجابة، قل: عذراً، ما عندي معلومات عن هذا الموضوع.\n3. استخدم نقاط بسيطة لتنظيم المعلومات.\n\nالسياق:\n${$json.rag_context || 'لا يوجد سياق'}\n\nسؤال العميل: ${$json.customer_message}`,\n  stream: false,\n  options: {\n    num_ctx: 2048,\n    num_predict: 300,\n    temperature: 0.7,\n    top_p: 0.9\n  }\n}) }}",
-        "options": {
-          "timeout": 60000
-        }
-      },
-      "onError": "continueRegularOutput",
       "id": "node-qwen-rag",
       "name": "Qwen RAG Grounded Response",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
       "position": [
         820,
         300
-      ]
+      ],
+      "parameters": {
+        "url": "http://host.docker.internal:11434/api/generate",
+        "method": "POST",
+        "options": {
+          "timeout": 60000
+        },
+        "jsonBody": "={{ JSON.stringify({\n  model: 'qwen2.5:3b',\n  prompt: `أنت مساعد ذكي وودود لخدمة عملاء مبادرة الرواد الرقميون (DEPI).\n\nImportant: Respond in the SAME LANGUAGE as the customer's question. If the question is in Arabic, respond in Arabic. If in English, respond in English.\n\nطريقة الكلام:\n- تكلم بشكل طبيعي وودود مثل موظف خدمة عملاء محترف.\n- إذا كان السؤال بالعربي، رد بالعربي فقط.\n- إذا كان السؤال بالإنجليزي، رد بالإنجليزي فقط.\n- لا تستخدم الصينية مطلقاً.\n\nالقواعد:\n1. أجب فقط من المعلومات في السياق المرفق. لا تختلق معلومات.\n2. إذا السياق ما فيه إجابة مباشرة، استخدم معرفتك العامة لمساعدة العميل بشكل محترف. إذا لم تكن متأكداً، اقترح على العميل التواصل مع فريق الدعم.\n3. استخدم نقاط بسيطة لتنظيم المعلومات.\n\nالسياق:\n${$json.rag_context || 'لا يوجد سياق'}\n\nسؤال العميل: ${$json.customer_message}`,\n  stream: false,\n  options: {\n    num_ctx: 4096,\n    num_predict: 500,\n    temperature: 0.7,\n    top_p: 0.9\n  }\n}) }}",
+        "sendBody": true,
+        "specifyBody": "json"
+      },
+      "typeVersion": 4.2
     },
     {
-      "parameters": {
-        "jsCode": "/* ==========================================================================\n   🐍 PYTHON ALTERNATIVE / البديل البرمجي بلغة بايثون لنفس المهمة\n   --------------------------------------------------------------------------\n   This node is documented in both Python and JavaScript.\n   Below is the production-grade Python function equivalent:\n\ndef guardrail_and_professional_formatter(\n    rag_data: dict, qwen_output: dict\n) -> dict:\n    \"\"\"\n    التنسيق النهائي للرد المبني على قاعدة المعرفة مع حماية ضد الخروج عن النطاق.\n\n    Final formatting with hard guardrails for out-of-scope deflection\n    and WhatsApp-friendly markdown cleanup.\n\n    Args:\n        rag_data: Output from the RAG knowledge formatting step.\n        qwen_output: Raw output from the Qwen RAG LLM call.\n\n    Returns:\n        Dict with formatted reply, status, and sources.\n    \"\"\"\n    locale = rag_data.get(\"locale\", \"ar\")\n    is_ar = locale == \"ar\"\n\n    if rag_data.get(\"status\") == \"no_context\" or rag_data.get(\"relevance_score\", 0) == 0:\n        final_reply = (\n            \"عذراً، هذا الاستفسار خارج نطاق خدماتنا المعتمدة حالياً.\\n\\n\"\n            \"يسعدني مساعدتك في الاستفسار عن:\\n\"\n            \"📌 مبادرة الرواد الرقميون (DEPI)\\n\"\n            \"📝 شروط التقديم والتسجيل\\n\"\n            \"🎓 نظام الدراسة والامتحانات\\n\"\n            \"🏆 التخصصات المتاحة\\n\"\n            \"⏱️ الدعم الفني\\n\\n\"\n            \"أو يمكنك طلب التحدث مع ممثل خدمة العملاء.\"\n            if is_ar\n            else \"Sorry, this inquiry is outside our current service scope.\"\n        )\n        status = \"out_of_scope\"\n        sources = [\"Guardrail: Out of Scope\"]\n    else:\n        final_reply = qwen_output.get(\"response\") or rag_data.get(\"rag_context\", \"\")\n        final_reply = re.sub(r\"\\*\\*\", \"*\", final_reply)\n        final_reply = re.sub(r\"^#+\\s*\", \"\", final_reply, flags=re.MULTILINE)\n        final_reply = final_reply.strip()\n        status = \"success\"\n        sources = [f\"MCIT Official Knowledge Base - {rag_data.get('top_category', 'General')}\"]\n\n    return {\n        \"status\": status,\n        \"intent_handled\": \"faq_query\",\n        \"category\": rag_data.get(\"top_category\", \"general\"),\n        \"reply\": final_reply,\n        \"sources\": sources,\n    }\n\n\n# ==============================================================================\n# 11. WORKFLOW 04C — Format Escalation Notice\n# Node: \"Format Escalation Notice\"\n# Purpose: Formats a professional bilingual escalation notification with\n#          the generated ticket number and SLA priority.\n# ==============================================================================\n   ========================================================================== */\n\n/* === ACTIVE JAVASCRIPT IMPLEMENTATION === */\nconst ragData = $('Format RAG Knowledge Response').first()?.json || {};\nconst qwenOutput = $input.first()?.json || {};\nconst locale = ragData.locale || 'ar';\nconst isAr = locale === 'ar';\n\nlet finalReply = '';\n\nif (ragData.status === 'no_context' || ragData.relevance_score === 0) {\n  // Hard guardrail: no relevant FAQ found\n  finalReply = isAr\n    ? 'عذراً، هذا الاستفسار خارج نطاق خدماتنا المعتمدة حالياً.\\n\\nيسعدني مساعدتك في الاستفسار عن:\\n📌 مبادرة الرواد الرقميون (DEPI)\\n📝 شروط التقديم والتسجيل\\n🎓 نظام الدراسة والامتحانات\\n🏆 التخصصات المتاحة\\n⏱️ الدعم الفني\\n\\nأو يمكنك طلب التحدث مع ممثل خدمة العملاء.'\n    : 'Sorry, this inquiry is outside our current service scope.\\n\\nI can help you with:\\n📌 Digital Pioneers Initiative (DEPI)\\n📝 Admissions & Registration\\n🎓 Study & Exams System\\n🏆 Available Tracks\\n⏱️ Support\\n\\nOr you may request to speak with a human specialist.';\n} else {\n  // Use Qwen's grounded response\n  finalReply = qwenOutput.response || ragData.rag_context || '';\n  \n  // Clean up any markdown artifacts that don't render well in WhatsApp\n  finalReply = finalReply.replace(/\\*\\*/g, '*').replace(/^#+\\s*/gm, '').trim();\n}\n\nreturn [{\n  json: {\n    status: ragData.status === 'no_context' ? 'out_of_scope' : 'success',\n    intent_handled: 'faq_query',\n    category: ragData.top_category || 'general',\n    reply: finalReply,\n    sources: ragData.status === 'no_context' ? ['Guardrail: Out of Scope'] : ['MCIT Official Knowledge Base - ' + (ragData.top_category || 'General')]\n  }\n}];"
-      },
       "id": "node-guardrail-formatter",
       "name": "Guardrail & Professional Formatter",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "notes": "🐍 Python & ⚡ JS Dual-Language Node\nEquivalent: guardrail_and_professional_formatter()",
       "position": [
         1040,
         300
       ],
+      "parameters": {
+        "jsCode": "const ragData = $('Format RAG Knowledge Response').first()?.json || {};\nconst qwenOutput = $input.first()?.json || {};\nconst locale = ragData.locale || 'ar';\nconst isAr = locale === 'ar';\n\nlet finalReply = '';\n\nif (ragData.status === 'no_context' || ragData.relevance_score === 0) {\n  // No RAG match - use LLM response to answer the question directly\n  finalReply = qwenOutput.response || (isAr\n    ? 'شكراً على استفسارك! يمكنني مساعدتك في الاستفسارات المتعلقة بمبادرة الرواد الرقميون (DEPI). يرجى توضيح سؤالك أكثر.'\n    : 'Thank you for your question! I can help you with inquiries related to the Digital Pioneers Initiative (DEPI). Please clarify your question.');\n} else {\n  // RAG match found - use LLM's grounded response\n  finalReply = qwenOutput.response || ragData.rag_context || '';\n}\n\n// Clean up markdown artifacts for WhatsApp\nfinalReply = finalReply.replace(/\\*\\*/g, '*').replace(/^#+\\s*/gm, '').trim();\n\nreturn [{\n  json: {\n    status: ragData.status === 'no_context' ? 'general_faq' : 'success',\n    intent_handled: 'faq_query',\n    category: ragData.top_category || 'general',\n    reply: finalReply,\n    sources: ragData.status === 'no_context' ? ['LLM General Response'] : ['DEPI Official Knowledge Base - ' + (ragData.top_category || 'General')]\n  }\n}];"
+      },
       "notesInFlow": true,
-      "notes": "🐍 Python & ⚡ JS Dual-Language Node\nEquivalent: guardrail_and_professional_formatter()"
+      "typeVersion": 2
     }
   ],
   "connections": {
@@ -131,7 +132,9 @@
       ]
     }
   },
-  "settings": {
-    "executionOrder": "v1"
-  }
+  "settings": {},
+  "staticData": null,
+  "pinData": {},
+  "versionId": "",
+  "triggerCount": 0
 }

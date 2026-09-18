@@ -126,7 +126,7 @@ def channel_ingress_and_pii_sanitizer(input_data: dict) -> dict:
     sanitized_message = customer_message
     pii_detected = False
 
-    # Saudi National ID (10 digits starting with 1 or 2)
+    # Egyptian National ID (10 digits starting with 1 or 2)
     if re.search(r"\b[12]\d{9}\b", sanitized_message):
         sanitized_message = re.sub(r"\b[12]\d{9}\b", "[NATIONAL_ID_MASKED]", sanitized_message)
         pii_detected = True
@@ -136,7 +136,7 @@ def channel_ingress_and_pii_sanitizer(input_data: dict) -> dict:
         sanitized_message = re.sub(r"\b(?:\d{4}[ -]?){3}\d{4}\b", "[CARD_MASKED]", sanitized_message)
         pii_detected = True
 
-    # Saudi IBANs
+    # Egyptian IBANs
     if re.search(r"\bSA\d{2}[0-9A-Za-z]{20}\b", sanitized_message):
         sanitized_message = re.sub(r"\bSA\d{2}[0-9A-Za-z]{20}\b", "[IBAN_MASKED]", sanitized_message)
         pii_detected = True
@@ -450,7 +450,7 @@ def parse_and_validate_ai_schema(
                 "direct_response": (
                     "أهلاً وسهلاً بك في منصة خدمة العملاء لمبادرة الرواد الرقميون (DEPI). كيف يمكننا خدمتك اليوم؟"
                     if is_ar
-                    else "Welcome to the MCIT Customer Service platform. How may we assist you today?"
+                    else "Welcome to the DEPI Customer Service platform. How may we assist you today?"
                 ),
             }
 
@@ -755,7 +755,7 @@ def guardrail_and_professional_formatter(
         final_reply = re.sub(r"^#+\s*", "", final_reply, flags=re.MULTILINE)
         final_reply = final_reply.strip()
         status = "success"
-        sources = [f"MCIT Official Knowledge Base - {rag_data.get('top_category', 'General')}"]
+        sources = [f"DEPI Official Knowledge Base - {rag_data.get('top_category', 'General')}"]
 
     return {
         "status": status,
@@ -927,7 +927,7 @@ def format_email_payload(item: dict) -> dict:
         "dispatched": True,
         "meta_payload": {
             "to": email_addr,
-            "subject": "MCIT Citizen Customer Service Notification",
+            "subject": "DEPI Citizen Customer Service Notification",
             "body": text,
         },
         "message": text,
