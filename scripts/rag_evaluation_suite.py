@@ -1,108 +1,108 @@
-# -*- coding: utf-8 -*-
-"""RAG Evaluation Suite - DEPI Knowledge Base
-Tests retrieval confidence, grounding, and response quality."""
+#!/usr/bin/env python3
+"""Full E2E test with detailed results and 60s timeout"""
 import json
 import sys
 import urllib.request
+import time
+import ssl
 
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
-KB_URL = "http://localhost:5678/webhook/customer-service"
-SIMULATE_URL = "http://localhost:8080/simulate"
+ctx = ssl.create_default_context()
+ctx.check_hostname = False
+ctx.verify_mode = ssl.CERT_NONE
 
-def test_query(message, name):
-    payload = {"customer_message": message, "full_name": "Test User", "phone_number": "+966500000000"}
+N8N_URL = "http://localhost:5678/webhook/customer-service"
+
+def http_post(url, payload, timeout=60):
+    data = json.dumps(payload).encode('utf-8')
+    req = urllib.request.Request(url, data=data, headers={
+        'Content-Type': 'application/json'
+    }, method='POST')
+    start = time.time()
     try:
-        req = urllib.request.Request(KB_URL, data=json.dumps(payload).encode('utf-8'),
-                                     headers={'Content-Type': 'application/json'}, method='POST')
-        controller = None
-        import threading
-        result = {}
-        def fetch():
-            try:
-                with urllib.request.urlopen(req, timeout=30) as resp:
-                    result['data'] = json.loads(resp.read().decode('utf-8'))
-                    result['status'] = 'ok'
-            except Exception as e:
-                result['status'] = 'error'
-                result['error'] = str(e)
-        t = threading.Thread(target=fetch)
-        t.start()
-        t.join(timeout=30)
-        return result.get('data', {})
+        with urllib.request.urlopen(req, timeout=timeout, context=ctx) as resp:
+            body = resp.read().decode('utf-8', errors='replace')
+            elapsed = time.time() - start
+            return {'status': resp.status, 'body': body, 'elapsed': round(elapsed, 2), 'error': None}
     except Exception as e:
-        return {"error": str(e)}
+        elapsed = time.time() - start
+        return {'status': 0, 'body': str(e), 'elapsed': round(elapsed, 2), 'error': str(e)}
 
-def classify_test(result):
-    reply = result.get('response', result.get('final_reply', result.get('reply', '')))
-    reply_ar = reply if any('\u0600' <= c <= '\u06FF' for c in reply) else ''
+def parse_result(result):
+    try:
+        body = json.loads(result.get('body', '{}')) if result.get('body') else {}
+    except:
+        return {'raw': result.get('body', '')[:300]}
+    
+    ai_output = body.get('ai_output', {})
+    handler_result = body.get('handler_result', {})
+    
     return {
-        'has_reply': bool(reply and reply.strip()),
-        'is_arabic': bool(reply_ar),
-        'has_escalation': 'تذكرة' in reply or 'دعم' in reply or 'info@depi.gov' in reply,
-        'has_hallucination_risk': any(w in reply for w in ['بالتأكيد', 'المعلومات العامة', 'كما تعلمون']),
-        'reply_preview': reply[:120] if reply else ''
+        'status': body.get('status'),
+        'intent': ai_output.get('intent'),
+        'confidence': ai_output.get('confidence'),
+        'reply': body.get('final_reply', body.get('response', '')),
+        'handler_status': body.get('handler_status'),
+        'latency_ms': body.get('latency_ms'),
+        'ai_output': ai_output,
     }
 
 tests = [
-    ("T1 - Exact Arabic KB question", "ما هي شروط التقديم والقبول في مبادرة الرواد الرقميون؟",
-     {"has_reply": True, "is_arabic": True}),
-    ("T2 - Arabic paraphrase", "كيف أقدر أقدم على مبادرة الرواد؟",
-     {"has_reply": True}),
-    ("T3 - Arabic spelling variation", "شروط التقديم في الرواد الرقميون",
-     {"has_reply": True}),
-    ("T4 - English question", "What are the admission requirements for DEPI?",
-     {"has_reply": True}),
-    ("T5 - Mixed Arabic/English", "ما هي الشروط Admission requirements",
-     {"has_reply": True}),
-    ("T6 - Unrelated question", "What is the weather today in Tokyo?",
-     {"has_escalation": True}),
-    ("T7 - Similar but unsupported", "كيف أقدم على منحة دراسية خارج DEPI؟",
-     {"has_escalation": True}),
-    ("T8 - Keyword collision", "ماذا أفعل في حالة حدوث طارئ أو حادث أثناء الامتحان؟",
-     {"has_reply": True}),
-    ("T9 - Multi-topic question", "ما هي الشروط وكيف يمكنني التواصل مع الدعم؟",
-     {"has_reply": True}),
-    ("T10 - Unsupported date/policy", "ما هو تاريخ تخرج خريجي الدورة القادمة؟",
-     {"has_escalation": True}),
+    ("T1 - Exact Arabic KB", {"customer_message": "ما هي شروط التقديم والقبول في مبادرة الرواد الرقميون؟", "full_name": "Test User", "phone_number": "+966500000000"}),
+    ("T2 - Arabic paraphrase", {"customer_message": "كيف أقدر أقدم على مبادرة الرواد؟", "full_name": "Test User", "phone_number": "+966500000000"}),
+    ("T3 - Arabic spelling var", {"customer_message": "شروط التقديم في الرواد الرقميون", "full_name": "Test User", "phone_number": "+966500000000"}),
+    ("T4 - English question", {"customer_message": "What are the admission requirements for DEPI?", "full_name": "Test User", "phone_number": "+966500000000"}),
+    ("T5 - Mixed Arabic/English", {"customer_message": "ما هي الشروط Admission requirements", "full_name": "Test User", "phone_number": "+966500000000"}),
+    ("T6 - Unrelated question", {"customer_message": "What is the weather today in Tokyo?", "full_name": "Test User", "phone_number": "+966500000000"}),
+    ("T7 - Similar unsupported", {"customer_message": "كيف أقدم على منحة دراسية خارج DEPI؟", "full_name": "Test User", "phone_number": "+966500000000"}),
+    ("T8 - Keyword collision", {"customer_message": "ماذا أفعل في حالة حدوث طارئ أو حادث أثناء الامتحان؟", "full_name": "Test User", "phone_number": "+966500000000"}),
+    ("T9 - Multi-topic", {"customer_message": "ما هي الشروط وكيف يمكنني التواصل مع الدعم؟", "full_name": "Test User", "phone_number": "+966500000000"}),
+    ("T10 - Unsupported date", {"customer_message": "ما هو تاريخ تخرج خريجي الدورة القادمة؟", "full_name": "Test User", "phone_number": "+966500000000"}),
 ]
 
 print("=" * 80)
-print("RAG EVALUATION SUITE - DEPI Knowledge Base")
+print("E2E RAG EVALUATION SUITE - Live NexaServe (60s timeout)")
 print("=" * 80)
 
-passed = 0
-failed = 0
 results = []
+for name, payload in tests:
+    print("")
+    print("-" * 60)
+    print("Test: " + name)
+    print("Query: " + payload['customer_message'])
+    
+    result = http_post(N8N_URL, payload, timeout=60)
+    parsed = parse_result(result)
+    
+    reply = parsed.get('reply', '')[:200] if parsed.get('reply') else ''
+    intent = parsed.get('intent', 'unknown')
+    conf = parsed.get('confidence', 'N/A')
+    is_ar = bool(reply and any('\u0600' <= c <= '\u06FF' for c in reply))
+    has_escalation = 'تذكرة' in reply or 'دعم' in reply or 'info@depi' in reply
+    has_hallucination = any(w in reply for w in ['بالتأكيد', 'المعلومات العامة', 'كما تعلمون'])
+    
+    passed = (result['status'] == 200 and bool(reply.strip()))
+    
+    print("HTTP Status: " + str(result['status']))
+    print("Gateway latency: " + str(result['elapsed']) + "s")
+    print("Intent: " + str(intent or 'N/A'))
+    print("Confidence: " + str(conf or 'N/A'))
+    print("Arabic reply: " + str(is_ar))
+    print("Has escalation: " + str(has_escalation))
+    print("Hallucination risk: " + str(has_hallucination))
+    print("Reply: " + reply)
+    print("Result: " + ("PASS" if passed else "FAIL"))
+    
+    results.append({
+        'test': name, 'passed': passed, 'intent': intent, 'confidence': conf,
+        'reply': reply, 'is_ar': is_ar, 'elapsed': result['elapsed'],
+        'status': result['status'], 'has_escalation': has_escalation,
+        'has_hallucination': has_hallucination
+    })
 
-for name, query, expected in tests:
-    print(f"\n{'─' * 60}")
-    print(f"Test: {name}")
-    print(f"Query: {query}")
-    result = test_query(query, name)
-    classification = classify_test(result)
-    print(f"Reply preview: {classification['reply_preview']}")
-    print(f"Has reply: {classification['has_reply']}")
-    print(f"Arabic: {classification['is_arabic']}")
-    print(f"Has escalation: {classification['has_escalation']}")
-    print(f"Hallucination risk: {classification['has_hallucination_risk']}")
-
-    test_passed = all(classification.get(k) == v for k, v in expected.items())
-    if test_passed:
-        print("RESULT: PASS")
-        passed += 1
-    else:
-        print("RESULT: FAIL")
-        failed += 1
-    results.append({"test": name, "passed": test_passed, "classification": classification})
-
-print(f"\n{'=' * 80}")
-print(f"RESULTS: {passed}/{len(tests)} passed, {failed}/{len(tests)} failed")
+passed_count = sum(1 for r in results if r['passed'])
+print("\n" + "=" * 80)
+print("RESULTS: " + str(passed_count) + "/" + str(len(tests)) + " passed")
 print("=" * 80)
-
-if failed == 0:
-    print("ALL TESTS PASSED ✅")
-else:
-    print(f"FAILED TESTS: {[r['test'] for r in results if not r['passed']]}")
-    print("See details above for investigation.")

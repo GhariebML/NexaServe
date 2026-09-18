@@ -388,7 +388,7 @@ async function initWhatsApp() {
             replySource = 'cache';
           } else {
             const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout for n8n pipeline
+            const timeout = setTimeout(() => controller.abort(), 50000); // 50s timeout for RAG pipeline
             const startTime = Date.now();
             const response = await fetch(N8N_WEBHOOK_URL, {
               method: 'POST',
@@ -753,7 +753,7 @@ app.post('/simulate', async (req, res) => {
 
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 10000);
+      const timeout = setTimeout(() => controller.abort(), 50000); // 50s timeout for RAG pipeline
       const startTime = Date.now();
       const n8nResp = await fetch(N8N_WEBHOOK_URL, {
         method: 'POST',
