@@ -8,22 +8,35 @@
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "position": [
-        160,
+        120,
         300
       ],
       "parameters": {},
       "typeVersion": 1
     },
     {
+      "id": "node-detect-program",
+      "name": "Program Detector & Query Normalizer",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        320,
+        300
+      ],
+      "parameters": {
+        "jsCode": "/* === PROGRAM DETECTOR & QUERY NORMALIZER === */\nconst input = $input.first()?.json || {};\nconst rawMsg = input.customer_message || input.sanitized_message || '';\nconst cleanMsg = rawMsg.replace(/[\\u064B-\\u065F\\u0670]/g, '').trim();\nconst msgLower = cleanMsg.toLowerCase();\nconst isAr = /[\\u0600-\\u06FF]/.test(rawMsg);\nconst locale = input.locale || (isAr ? 'ar' : 'en');\n\n// 1. Comparison detection:\nconst comparisonKw = [\n  'فرق', 'الفرق', 'مقارنة', 'مقارنه', 'بينهم', 'difference', 'compare', 'comparison', 'versus', 'vs'\n];\nconst hasComparison = comparisonKw.some(kw => msgLower.includes(kw));\n\n// 2. Explicit DEBI signals:\nconst debiKw = [\n  'debi', 'رواد مصر الرقمية', 'بناة مصر الرقمية', 'رواد مصر', 'ماجستير دولي', 'جامعة اوتاوا', 'جامعة كوينز', 'ottawa', 'queens'\n];\nconst hasDebi = debiKw.some(kw => msgLower.includes(kw));\n\n// 3. Explicit Digilians signals:\nconst digiliansKw = [\n  'digilians', 'الرواد الرقميون', 'رواد رقميون', 'الرواد', 'depi', 'الأكاديمية العسكرية', 'الاكاديمية العسكرية'\n];\nconst hasDigilians = digiliansKw.some(kw => msgLower.includes(kw));\n\n// 4. Generic Initiative / Admission signals:\nconst initiativeKw = [\n  'شروط', 'التقديم', 'تقديم', 'قبول', 'القبول', 'تسجيل', 'التسجيل', 'مسار', 'مسارات', 'تخصص', 'تخصصات',\n  'منحة', 'تدريب', 'شهادة', 'مبادرة', 'المبادرة', 'المبادرات',\n  'admission', 'requirement', 'requirements', 'apply', 'applying', 'application', 'eligible', 'eligibility',\n  'tracks', 'scholarship', 'initiative', 'initiatives'\n];\nconst hasInitiativeTopic = initiativeKw.some(kw => msgLower.includes(kw));\n\nlet programScope = 'GENERAL';\n\nif (hasComparison || (hasDebi && hasDigilians)) {\n  programScope = 'COMPARISON';\n} else if (hasDebi && !hasDigilians) {\n  programScope = 'DEBI';\n} else if (hasDigilians && !hasDebi) {\n  programScope = 'DIGILIANS';\n} else if (hasInitiativeTopic) {\n  // Query is about initiative topics (admission, tracks, etc.) but didn't state which initiative\n  programScope = 'AMBIGUOUS';\n} else {\n  // General or potentially out-of-scope question\n  programScope = 'GENERAL';\n}\n\nlet programFilter = \"program IN ('DIGILIANS', 'COMMON') AND category != 'disambiguation'\";\nif (programScope === 'DEBI') {\n  programFilter = \"program IN ('DEBI', 'COMMON') AND category != 'disambiguation'\";\n} else if (programScope === 'COMPARISON') {\n  programFilter = \"program IN ('DIGILIANS', 'DEBI', 'COMMON')\";\n} else if (programScope === 'AMBIGUOUS') {\n  programFilter = \"category IN ('disambiguation', 'comparison')\";\n} else if (programScope === 'GENERAL') {\n  programFilter = \"program IN ('DIGILIANS', 'DEBI', 'COMMON')\";\n}\n\nconst disambiguationPromptAr = \"هل تقصد مبادرة الرواد الرقميون (Digilians) أم مبادرة رواد مصر الرقمية (DEBI)؟\";\nconst disambiguationPromptEn = \"Do you mean Digital Pioneers Initiative (Digilians) or Digital Egypt Builders Initiative (DEBI)?\";\nconst disambiguationReply = locale === 'ar' ? disambiguationPromptAr : disambiguationPromptEn;\n\nreturn [{\n  json: {\n    ...input,\n    customer_message: rawMsg,\n    cleaned_message: cleanMsg,\n    locale: locale,\n    program_scope: programScope,\n    program_filter: programFilter,\n    is_ambiguous: programScope === 'AMBIGUOUS',\n    disambiguation_reply: disambiguationReply\n  }\n}];"
+      },
+      "typeVersion": 2
+    },
+    {
       "id": "node-query-kb",
       "name": "Query Bilingual Knowledge Base",
       "type": "n8n-nodes-base.postgres",
       "position": [
-        380,
+        540,
         300
       ],
       "parameters": {
-        "query": "=WITH words AS (\n  SELECT lower(regexp_replace(w, '[،؛؟\\s+]', '', 'g')) AS word\n  FROM unnest(string_to_array('{ ($json.customer_message || '').replace(/'/g, \"''\") }', ' ')) w\n  WHERE length(regexp_replace(w, '[،؛؟\\s+]', '', 'g')) > 2\n), scored AS (\n  SELECT id, category, question, answer, question_ar, answer_ar,\n    (SELECT count(*) * 3 FROM words WHERE EXISTS (SELECT 1 FROM unnest(keywords_ar) kw WHERE kw = word) OR EXISTS (SELECT 1 FROM unnest(keywords) kw WHERE kw = word))\n    + (SELECT count(*) FROM words WHERE question_ar ILIKE '%' || word || '%')\n    + (SELECT count(*) FROM words WHERE answer_ar ILIKE '%' || word || '%')\n    + (SELECT count(*) FROM words WHERE question ILIKE '%' || word || '%')\n    + (SELECT count(*) FROM words WHERE answer ILIKE '%' || word || '%') AS relevance_score,\n    (SELECT count(*) FROM words WHERE EXISTS (SELECT 1 FROM unnest(keywords_ar) kw WHERE kw ILIKE '%' || word || '%') OR EXISTS (SELECT 1 FROM unnest(keywords) kw WHERE kw ILIKE '%' || word || '%')) AS keyword_match_count,\n    (SELECT count(*) FROM words WHERE question_ar ILIKE '%' || word || '%' OR answer_ar ILIKE '%' || word || '%') AS content_match_count\n  FROM knowledge_base\n  WHERE is_active = TRUE\n)\nSELECT id, category, question, answer, question_ar, answer_ar, relevance_score, keyword_match_count, content_match_count\nFROM scored\nWHERE relevance_score > 0\nORDER BY relevance_score DESC, keyword_match_count DESC, id ASC\nLIMIT 5;",
+        "query": "=WITH words AS (\n  SELECT lower(regexp_replace(w, '[[:punct:][:space:]]', '', 'g')) AS word\n  FROM unnest(string_to_array('{{ ($json.cleaned_message || $json.customer_message || \"\").replace(/'/g, \"''\") }}', ' ')) w\n  WHERE length(regexp_replace(w, '[[:punct:][:space:]]', '', 'g')) > 2\n), scored AS (\n  SELECT id, program, category, question, answer, question_ar, answer_ar, source_attribution,\n    (SELECT count(*) * 10 FROM words WHERE question_ar ILIKE '%' || word || '%' OR question ILIKE '%' || word || '%')\n    + (SELECT count(*) * 5 FROM words WHERE EXISTS (SELECT 1 FROM unnest(keywords_ar) kw WHERE kw = word) OR EXISTS (SELECT 1 FROM unnest(keywords) kw WHERE kw = word))\n    + (SELECT count(*) * 2 FROM words WHERE EXISTS (SELECT 1 FROM unnest(keywords_ar) kw WHERE kw ILIKE '%' || word || '%') OR EXISTS (SELECT 1 FROM unnest(keywords) kw WHERE kw ILIKE '%' || word || '%'))\n    + (SELECT count(*) FROM words WHERE answer_ar ILIKE '%' || word || '%' OR answer ILIKE '%' || word || '%') AS relevance_score,\n    (SELECT count(*) FROM words WHERE EXISTS (SELECT 1 FROM unnest(keywords_ar) kw WHERE kw ILIKE '%' || word || '%') OR EXISTS (SELECT 1 FROM unnest(keywords) kw WHERE kw ILIKE '%' || word || '%')) AS keyword_match_count,\n    (SELECT count(*) FROM words WHERE question_ar ILIKE '%' || word || '%' OR answer_ar ILIKE '%' || word || '%') AS content_match_count\n  FROM knowledge_base\n  WHERE is_active = TRUE AND {{ $json.program_filter }}\n)\nSELECT id, program, category, question, answer, question_ar, answer_ar, source_attribution, relevance_score, keyword_match_count, content_match_count\nFROM scored\nWHERE relevance_score > 0\nORDER BY relevance_score DESC, keyword_match_count DESC, id ASC\nLIMIT 5;",
         "operation": "executeQuery"
       },
       "credentials": {
@@ -38,16 +51,34 @@
       "id": "node-format-rag",
       "name": "Format RAG Knowledge Response",
       "type": "n8n-nodes-base.code",
-      "notes": "🐍 Python & ⚡ JS Dual-Language Node\nEquivalent: format_rag_knowledge_response()",
       "position": [
-        600,
+        760,
         300
       ],
       "parameters": {
-        "jsCode": "/* === ACTIVE JAVASCRIPT IMPLEMENTATION === */\nconst results = ($input.first()?.json || []);\nconst rows = Array.isArray(results) ? results : (results.results || [results]);\nconst triggerData = $('Execute Workflow Trigger').first()?.json || {};\nconst locale = triggerData.locale || 'ar';\nconst isAr = locale === 'ar';\nconst customerMsg = triggerData.customer_message || triggerData.sanitized_message || '';\n\n// T7: Normalize query for display (strip Arabic punctuation)\nfunction normalizeAr(text) {\n  return (text || '').replace(/[\\u060c\\u061b\\u061c\\u061d\\u061e\\u061f\\u0621\\u0622\\u0623\\u0624\\u0625\\u0626\\u0627\\u0628\\u0629\\u062a\\u062f\\u0648\\u064a\\u0646\\u0629\\u0647\\u0649]/g, '');\n}\n\n// Filter results with relevance > 0\nconst relevant = rows.filter(r => r && r.relevance_score > 0);\n\n// T3: Confidence classification based on actual score distributions\nfunction classifyConfidence(score) {\n  if (score >= 5) return 'high';\n  if (score >= 3) return 'medium';\n  if (score >= 1) return 'low';\n  return 'none';\n}\n\nfunction confidenceLabel(score) {\n  const c = classifyConfidence(score);\n  return c.toUpperCase();\n}\n\nif (relevant.length > 0) {\n  const sorted = [...relevant].sort((a, b) => (b.relevance_score || 0) - (a.relevance_score || 0));\n  const top = sorted[0];\n  const topScore = top.relevance_score || 0;\n  const confidence = classifyConfidence(topScore);\n\n  // Build context from top matching FAQ entries (prioritize high confidence)\n  const contextParts = sorted.map(kb => {\n    const q = isAr ? (kb.question_ar || kb.question) : (kb.question || kb.question_ar);\n    const a = isAr ? (kb.answer_ar || kb.answer) : (kb.answer || kb.answer_ar);\n    return `سؤال: ${q}\\nإجابة: ${a}`;\n  });\n  const context = contextParts.join('\\n---\\n');\n\n  // T6: Post-generation validation - check for policy-sensitive fields in context\n  const contextText = context.toLowerCase();\n  const policyTerms = ['رسوم', 'fee', 'سعر', 'price', 'مبلغ', 'amount', 'تاريخ', 'date', 'موعد', 'deadline'];\n  const hasPolicyTerm = policyTerms.some(t => contextText.includes(t));\n\n  return [{\n    json: {\n      status: 'rag_context_found',\n      intent_handled: 'faq_query',\n      rag_context: context,\n      customer_message: customerMsg,\n      locale: locale,\n      top_category: top.category || 'general',\n      relevance_score: topScore,\n      confidence_score: topScore,\n      confidence: confidence,\n      confidence_label: confidenceLabel(topScore),\n      retrieval_status: 'context_found',\n      matched_entries: sorted.length,\n      keyword_match_count: top.keyword_match_count || 0,\n      content_match_count: top.content_match_count || 0,\n      top_entry_id: top.id || null,\n      validation: {\n        status: hasPolicyTerm ? 'needs_review' : 'passed',\n        policy_terms_detected: hasPolicyTerm ? policyTerms.filter(t => contextText.includes(t)) : []\n      }\n    }\n  }];\n} else {\n  return [{\n    json: {\n      status: 'no_context',\n      intent_handled: 'faq_query',\n      rag_context: '',\n      customer_message: customerMsg,\n      locale: locale,\n      relevance_score: 0,\n      confidence_score: 0,\n      confidence: 'none',\n      confidence_label: 'NONE',\n      retrieval_status: 'no_context',\n      matched_entries: 0,\n      validation: {\n        status: 'no_context',\n        reason: 'no_relevant_kb_entry'\n      }\n    }\n  }];\n}"
+        "jsCode": "/* === FORMAT RAG KNOWLEDGE RESPONSE WITH PROGRAM ISOLATION === */\nconst results = ($input.first()?.json || []);\nconst rows = Array.isArray(results) ? results : (results.results || [results]);\nconst detectorData = $('Program Detector & Query Normalizer').first()?.json || {};\nconst locale = detectorData.locale || 'ar';\nconst isAr = locale === 'ar';\nconst programScope = detectorData.program_scope || 'AMBIGUOUS';\nconst isAmbiguous = detectorData.is_ambiguous;\nconst customerMsg = detectorData.customer_message || '';\n\n// 1. Ambiguous Question: Return Disambiguation Prompt Immediately\nif (isAmbiguous) {\n  return [{\n    json: {\n      status: 'clarification_required',\n      intent_handled: 'faq_query',\n      program_scope: 'AMBIGUOUS',\n      is_ambiguous: true,\n      rag_context: detectorData.disambiguation_reply,\n      direct_reply: detectorData.disambiguation_reply,\n      customer_message: customerMsg,\n      locale: locale,\n      relevance_score: 10,\n      confidence: 'high',\n      confidence_label: 'HIGH',\n      retrieval_status: 'clarification_needed',\n      sources: ['وزارة الاتصالات وتكنولوجيا المعلومات (MCIT)'],\n      validation: { status: 'passed' }\n    }\n  }];\n}\n\n// 2. Filter relevant rows\nconst relevant = rows.filter(r => r && r.relevance_score > 0);\n\nfunction classifyConfidence(score) {\n  if (score >= 4) return 'high';\n  if (score >= 2) return 'medium';\n  if (score >= 1) return 'low';\n  return 'none';\n}\n\nif (relevant.length > 0) {\n  const sorted = [...relevant].sort((a, b) => (b.relevance_score || 0) - (a.relevance_score || 0));\n  const top = sorted[0];\n  const topScore = top.relevance_score || 0;\n  const confidence = classifyConfidence(topScore);\n\n  let context = '';\n  if (programScope === 'COMPARISON') {\n    const digiliansRows = sorted.filter(r => r.program === 'DIGILIANS');\n    const debiRows = sorted.filter(r => r.program === 'DEBI');\n    const commonRows = sorted.filter(r => r.program === 'COMMON');\n\n    const formatRows = (list) => list.map(kb => {\n      const q = isAr ? (kb.question_ar || kb.question) : (kb.question || kb.question_ar);\n      const a = isAr ? (kb.answer_ar || kb.answer) : (kb.answer || kb.answer_ar);\n      return `Q: ${q}\\nA: ${a}`;\n    }).join('\\n---\\n');\n\n    context = `[PROGRAM: COMMON / COMPARISON]\\n${formatRows(commonRows)}\\n\\n[PROGRAM: DIGILIANS]\\n${formatRows(digiliansRows)}\\n\\n[PROGRAM: DEBI]\\n${formatRows(debiRows)}`;\n  } else {\n    context = sorted.map(kb => {\n      const prog = kb.program || programScope;\n      const q = isAr ? (kb.question_ar || kb.question) : (kb.question || kb.question_ar);\n      const a = isAr ? (kb.answer_ar || kb.answer) : (kb.answer || kb.answer_ar);\n      return `[${prog}] سؤال: ${q}\\nإجابة: ${a}`;\n    }).join('\\n---\\n');\n  }\n\n  const defaultSource = programScope === 'DEBI'\n    ? 'مبادرة رواد مصر الرقمية (DEBI)'\n    : (programScope === 'DIGILIANS' ? 'مبادرة الرواد الرقميون (Digilians)' : 'وزارة الاتصالات وتكنولوجيا المعلومات (MCIT)');\n\n  return [{\n    json: {\n      status: 'rag_context_found',\n      intent_handled: 'faq_query',\n      program_scope: programScope,\n      is_ambiguous: false,\n      rag_context: context,\n      direct_reply: null,\n      customer_message: customerMsg,\n      locale: locale,\n      top_category: top.category || 'general',\n      relevance_score: topScore,\n      confidence: confidence,\n      confidence_label: confidence.toUpperCase(),\n      retrieval_status: 'context_found',\n      matched_entries: sorted.length,\n      top_program: top.program || programScope,\n      source_attribution: top.source_attribution || defaultSource,\n      validation: { status: 'passed' }\n    }\n  }];\n} else {\n  return [{\n    json: {\n      status: 'no_context',\n      intent_handled: 'faq_query',\n      program_scope: programScope,\n      is_ambiguous: false,\n      rag_context: '',\n      direct_reply: null,\n      customer_message: customerMsg,\n      locale: locale,\n      relevance_score: 0,\n      confidence: 'none',\n      confidence_label: 'NONE',\n      retrieval_status: 'no_context',\n      matched_entries: 0,\n      validation: { status: 'no_context', reason: 'no_relevant_kb_entry' }\n    }\n  }];\n}"
       },
-      "notesInFlow": true,
       "typeVersion": 2
+    },
+    {
+      "id": "node-check-llm-needed",
+      "name": "Check if LLM Needed",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        960,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.status === 'rag_context_found' && !$json.is_ambiguous }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "typeVersion": 1
     },
     {
       "id": "node-qwen-rag",
@@ -55,8 +86,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "onError": "continueRegularOutput",
       "position": [
-        820,
-        300
+        1180,
+        220
       ],
       "parameters": {
         "url": "http://host.docker.internal:11434/api/generate",
@@ -65,7 +96,7 @@
           "timeout": 60000
         },
         "jsonBody": [
-          "={{ JSON.stringify({\n  model: 'qwen2.5:3b',\n  prompt: `أنت مساعد ذكي وودود لخدمة عملاء مبادرة الرواد الرقميون (DEPI).\n\nImportant: Respond in the SAME LANGUAGE as the customer's question. If the question is in Arabic, respond in Arabic. If in English, respond in English.\n\nطريقة الكلام:\n- تكلم بشكل طبيعي وودود مثل موظف خدمة عملاء محترف.\n- إذا كان السؤال بالعربي، رد بالعربي فقط.\n- إذا كان السؤال بالإنجليزي، رد بالإنجليزي فقط.\n- لا تستخدم الصينية مطلقاً.\n\nالقواعد:\n1. أجب فقط من المعلومات في السياق المرفق. لا تختلق معلومات تحت أي ظرف.\n2. إذا كان السياق لا يحتوي على إجابة مباشرة ومحددة لسياق العميل، لا تستخدم معرفتك العامة. بدلاً من ذلك، اطرح سؤالاً توضيحياً موجزاً أو اقترح على العميل التواصل مع فريق الدعم الرسمي عبر info@depi.gov.eg.\n3. إذا كان السياق ضعيفاً أو غير كافٍ (ثقة منخفضة)، لا تجب من الأساس - أعد فقط رداً آمناً للاستفسارات خارج النطاق.\n4. استخدم نقاط بسيطة لتنظيم المعلومات.\n5. لا تذكر أرقام أو تواريخ أو سياسات أو إجراءات أو جهات اتصال أو رسوم إلا إذا كانت موجودة صراحة في السياق.\n\nالسياق:\n${$json.rag_context || 'لا يوجد سياق'}\n\nدرجة الثقة: ${$json.confidence_label || 'N/A'}\n\nسؤال العميل: ${$json.customer_message}`,\n  stream: false,\n  options: {\n    num_ctx: 4096,\n    num_predict: 500,\n    temperature: 0.3,\n    top_p: 0.9\n  }\n}) }}"
+          "={{ JSON.stringify({\n  model: 'qwen2.5:3b',\n  prompt: `You are the official customer service AI assistant for Egypt's Ministry of Communications and Information Technology (MCIT). You support two distinct initiatives:\n1. مبادرة الرواد الرقميون (Digilians)\n2. مبادرة رواد مصر الرقمية (DEBI)\n\nCRITICAL RULES:\n1. BILINGUAL ACCURACY: You MUST respond in the EXACT SAME LANGUAGE as the User Question. If the User Question is in English, you MUST TRANSLATE the Context and answer entirely in English. Do NOT answer in Arabic if the user asks in English.\n2. STRICT ISOLATION:\n   - If asking about Digilians: use Digilians context ONLY. Never mention DEBI criteria or foreign master's degrees.\n   - If asking about DEBI: use DEBI context ONLY. Never mention Digilians criteria or Military Academy accommodation.\n   - If asking for a comparison: present both initiatives separately with clear headings.\n3. GROUNDEDNESS: Answer ONLY from the provided context. Do NOT invent dates, requirements, or contact info.\n4. FORMATTING: Use clean, concise bullet points.\n\nContext:\n${$json.rag_context || 'No context'}\n\nUser Question: ${$json.customer_message}`,\n  stream: false,\n  options: {\n    num_ctx: 2048,\n    num_predict: 220,\n    temperature: 0.1,\n    top_p: 0.9\n  }\n}) }}"
         ],
         "sendBody": true,
         "specifyBody": "json"
@@ -76,20 +107,29 @@
       "id": "node-guardrail-formatter",
       "name": "Guardrail & Professional Formatter",
       "type": "n8n-nodes-base.code",
-      "notes": "🐍 Python & ⚡ JS Dual-Language Node\nEquivalent: guardrail_and_professional_formatter()",
       "position": [
-        1040,
+        1420,
         300
       ],
       "parameters": {
-        "jsCode": "const ragData = $('Format RAG Knowledge Response').first()?.json || {};\nconst qwenOutput = $input.first()?.json || {};\nconst locale = ragData.locale || 'ar';\nconst isAr = locale === 'ar';\n\n// T4: Confidence-based guardrail decisions\nconst confidence = ragData.confidence || 'none';\nconst relevanceScore = ragData.relevance_score || 0;\nconst retrievalStatus = ragData.retrieval_status || 'no_context';\n\n// T4: Define safe responses per confidence level\nconst safeFallbackAR = 'شكراً على استفسارك. لا أستطيع الإجابة على هذا الاستفسار بناءً على المعلومات المتاحة لدينا. يرجى التواصل مع فريق الدعم الرسمي عبر info@depi.gov.eg للحصول على مساعدة إضافية.';\nconst safeFallbackEN = 'Thank you for your question. I am unable to answer this based on our available information. Please contact our official support team at info@depi.gov.eg for further assistance.';\nconst clarificationAR = 'شكراً لاستفسارك. هل يمكنك توضيح سؤالك بشكل أكثر تحديداً؟ هل تقصد أحد المواضيع التالية: الشروط، التسجيل، المسارات، الامتحانات، أو المزايا؟';\nconst clarificationEN = 'Thank you for your question. Could you clarify your question more specifically? Are you asking about one of these: admission requirements, registration, tracks, exams, or benefits?';\n\nlet finalReply = '';\nlet guardrailDecision = 'escalation';\n\n// T4: NONE/LOW confidence - hard deflection (no LLM response)\nif (confidence === 'none' || confidence === 'low') {\n  if (isAr) {\n    finalReply = safeFallbackAR;\n  } else {\n    finalReply = safeFallbackEN;\n  }\n  guardrailDecision = 'hard_deflection';\n}\n// T4: MEDIUM confidence - clarification preferred\nelse if (confidence === 'medium') {\n  // If LLM generated a response and validation passed, use it\n  if (qwenOutput.response && ragData.validation && ragData.validation.status === 'passed') {\n    finalReply = qwenOutput.response;\n    guardrailDecision = 'llm_with_review';\n  } else {\n    finalReply = isAr ? clarificationAR : clarificationEN;\n    guardrailDecision = 'clarification';\n  }\n}\n// T4: HIGH confidence - allow grounded answer\nelse if (confidence === 'high') {\n  // Post-generation validation check (T6)\n  const validationStatus = ragData.validation ? ragData.validation.status : 'unknown';\n  if (validationStatus === 'passed') {\n    finalReply = qwenOutput.response || ragData.rag_context || '';\n    guardrailDecision = 'grounded_llm';\n  } else {\n    // Validation failed or needs review - use fallback\n    finalReply = safeFallbackAR;\n    guardrailDecision = 'validation_failed_fallback';\n  }\n}\n// Default fallback\nelse {\n  finalReply = isAr ? safeFallbackAR : safeFallbackEN;\n  guardrailDecision = 'default_fallback';\n}\n\n// Clean up markdown artifacts for WhatsApp\nfinalReply = finalReply.replace(/\\*\\*/g, '*').replace(/^#+\\s*/gm, '').trim();\n\n// T6: Build validation metadata\nconst validationMetadata = {\n  status: guardrailDecision === 'grounded_llm' ? 'passed' : guardrailDecision,\n  confidence: confidence,\n  relevance_score: relevanceScore,\n  guardrail_decision: guardrailDecision,\n  retrieval_status: retrievalStatus\n};\n\nreturn [{\n  json: {\n    status: confidence === 'none' || confidence === 'low' ? 'escalation' : (guardrailDecision === 'grounded_llm' ? 'success' : 'clarification_required'),\n    intent_handled: 'faq_query',\n    category: ragData.top_category || 'general',\n    reply: finalReply,\n    sources: confidence === 'none' || confidence === 'low' ? ['DEPI Official Support - escalation'] : ['DEPI Official Knowledge Base - ' + (ragData.top_category || 'General')],\n    validation: validationMetadata,\n    confidence: confidence,\n    confidence_label: ragData.confidence_label || 'N/A',\n    guardrail_decision: guardrailDecision\n  }\n}];"
+        "jsCode": "/* === GUARDRAILS & CROSS-PROGRAM LEAKAGE PREVENTION === */\nconst ragData = $('Format RAG Knowledge Response').first()?.json || {};\nconst qwenOutput = ($input.first()?.json?.response ? $input.first()?.json : null);\nconst locale = ragData.locale || 'ar';\nconst isAr = locale === 'ar';\nconst programScope = ragData.program_scope || 'COMMON';\nconst confidence = ragData.confidence || 'none';\n\n// 1. Direct Ambiguity clarification bypass:\nif (ragData.is_ambiguous) {\n  return [{\n    json: {\n      status: 'clarification_required',\n      intent_handled: 'faq_query',\n      program: 'COMMON',\n      category: 'disambiguation',\n      reply: ragData.direct_reply,\n      sources: ['وزارة الاتصالات وتكنولوجيا المعلومات (MCIT)'],\n      validation: { status: 'passed', program_scope: 'AMBIGUOUS' },\n      confidence: 'high',\n      confidence_label: 'HIGH',\n      guardrail_decision: 'disambiguation_prompt'\n    }\n  }];\n}\n\n// 2. Safe fallbacks for out-of-scope queries\nconst safeFallbackAR = 'شكراً على استفسارك. لا تتوفر معلومات رسمية حول هذا الموضوع في قاعدة المعرفة المعتمدة لدينا. يرجى التواصل مع فريق الدعم الرسمي لمبادرات وزارة الاتصالات عبر البريد الإلكتروني للحصول على مساعدة إضافية.';\nconst safeFallbackEN = 'Thank you for your inquiry. Official information regarding this topic is not available in our knowledge base. Please contact the official MCIT initiative support team via email for further assistance.';\n\nlet finalReply = '';\nlet guardrailDecision = 'grounded_llm';\n\nif (confidence === 'none' || confidence === 'low') {\n  finalReply = isAr ? safeFallbackAR : safeFallbackEN;\n  guardrailDecision = 'hard_deflection';\n} else {\n  finalReply = (qwenOutput && qwenOutput.response && qwenOutput.response.trim()) || ragData.rag_context || (isAr ? safeFallbackAR : safeFallbackEN);\n  \n  // Clean markdown bold for WhatsApp\n  finalReply = finalReply.replace(/\\*\\*/g, '*').replace(/^#+\\s*/gm, '').trim();\n\n  // 3. Cross-Program Leakage Guardrail:\n  if (programScope === 'DEBI') {\n    const lower = finalReply.toLowerCase();\n    const hasDigiliansLeak = lower.includes('الأكاديمية العسكرية') || lower.includes('الاكاديمية العسكرية') || lower.includes('18 إلى 32') || lower.includes('18-32') || lower.includes('طلاب السنة النهائية') || lower.includes('digilians.gov.eg');\n    if (hasDigiliansLeak) {\n      finalReply = ragData.rag_context.replace(/\\[DEBI\\]\\s*/g, '').replace(/سؤال:.*?\\nإجابة:\\s*/g, '').trim();\n      guardrailDecision = 'leakage_prevented_fallback';\n    }\n  } else if (programScope === 'DIGILIANS') {\n    const lower = finalReply.toLowerCase();\n    const hasDebiLeak = lower.includes('جامعة أوتاوا') || lower.includes('جامعة اوتاوا') || lower.includes('university of ottawa') || lower.includes('queen\\'s') || lower.includes('جيد جداً كحد أدنى') || lower.includes('debi.gov.eg') || lower.includes('بناة مصر الرقمية');\n    if (hasDebiLeak) {\n      finalReply = ragData.rag_context.replace(/\\[DIGILIANS\\]\\s*/g, '').replace(/سؤال:.*?\\nإجابة:\\s*/g, '').trim();\n      guardrailDecision = 'leakage_prevented_fallback';\n    }\n  }\n}\n\n// Determine Source Attribution:\nlet sourceAttribution = 'مبادرة الرواد الرقميون (Digilians)';\nif (programScope === 'DEBI') {\n  sourceAttribution = 'مبادرة رواد مصر الرقمية (DEBI)';\n} else if (programScope === 'COMPARISON') {\n  sourceAttribution = 'مقارنة معتمدة: مبادرة الرواد الرقميون (Digilians) و مبادرة رواد مصر الرقمية (DEBI)';\n} else if (confidence === 'none' || confidence === 'low') {\n  sourceAttribution = 'دعم وزارة الاتصالات وتكنولوجيا المعلومات (MCIT)';\n}\n\nreturn [{\n  json: {\n    status: confidence === 'none' || confidence === 'low' ? 'escalation' : 'success',\n    intent_handled: 'faq_query',\n    program: programScope,\n    category: ragData.top_category || 'general',\n    reply: finalReply,\n    sources: [sourceAttribution],\n    validation: {\n      status: guardrailDecision === 'grounded_llm' ? 'passed' : guardrailDecision,\n      confidence: confidence,\n      relevance_score: ragData.relevance_score || 0,\n      guardrail_decision: guardrailDecision\n    },\n    confidence: confidence,\n    confidence_label: ragData.confidence_label || 'N/A',\n    guardrail_decision: guardrailDecision\n  }\n}];"
       },
-      "notesInFlow": true,
       "typeVersion": 2
     }
   ],
   "connections": {
     "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Program Detector & Query Normalizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Program Detector & Query Normalizer": {
       "main": [
         [
           {
@@ -115,7 +155,25 @@
       "main": [
         [
           {
+            "node": "Check if LLM Needed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if LLM Needed": {
+      "main": [
+        [
+          {
             "node": "Qwen RAG Grounded Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Guardrail & Professional Formatter",
             "type": "main",
             "index": 0
           }

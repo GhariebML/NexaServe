@@ -83,6 +83,7 @@ CREATE INDEX IF NOT EXISTS idx_orders_customer ON orders(customer_id);
 -- 5. Bilingual Knowledge Base (MCIT Services, FAQs & Enterprise Policies)
 CREATE TABLE IF NOT EXISTS knowledge_base (
     id SERIAL PRIMARY KEY,
+    program VARCHAR(20) NOT NULL DEFAULT 'DIGILIANS' CHECK (program IN ('DIGILIANS', 'DEBI', 'COMMON')),
     category VARCHAR(50) NOT NULL, -- 'citizen_services', 'digital_identity', 'policies', 'telecom_complaints', 'technical_support'
     question TEXT NOT NULL,
     answer TEXT NOT NULL,
@@ -90,11 +91,13 @@ CREATE TABLE IF NOT EXISTS knowledge_base (
     question_ar TEXT,
     answer_ar TEXT,
     keywords_ar TEXT[] DEFAULT '{}',
+    source_attribution TEXT,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_kb_category ON knowledge_base(category);
+CREATE INDEX IF NOT EXISTS idx_kb_program_category ON knowledge_base(program, category, is_active);
 
 -- 6. Support Tickets (SLA-governed Human-in-the-Loop Escalation)
 CREATE TABLE IF NOT EXISTS tickets (

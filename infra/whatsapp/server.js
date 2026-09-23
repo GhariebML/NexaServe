@@ -150,6 +150,38 @@ async function generateAutonomousResponse(customerMessage, senderName) {
     return finalReply;
   }
 
+  // 2b. Check for Initiative Comparison
+  const hasDigiliansMention = msg.includes('digilians') || msg.includes('الرواد') || msg.includes('depi');
+  const hasDebiMention = msg.includes('debi') || msg.includes('رواد مصر') || msg.includes('بناة مصر');
+  const isComparison = msg.includes('فرق') || msg.includes('مقارنة') || msg.includes('مقارنه') || msg.includes('difference') || msg.includes('compare') || msg.includes('versus') || msg.includes('vs') || (hasDigiliansMention && hasDebiMention);
+
+  if (isComparison) {
+    const ar = `*المقارنة بين مبادرة الرواد الرقميون (Digilians) ومبادرة رواد مصر الرقمية (DEBI):* 🏛️\n\n1. *مبادرة الرواد الرقميون (Digilians):* للشباب وخريجي الكليات وطلاب السنة النهائية (18-32 سنة)، دبلومات مهنية معتمدة من وزارة الاتصالات والأكاديمية العسكرية المصرية.\n🔗 https://www.digilians.gov.eg\n\n2. *مبادرة رواد مصر الرقمية (DEBI):* منحة ماجستير دولي معتمد من جامعات عالمية (مثل جامعة أوتاوا) لخريجي كليات الهندسة والحاسبات بتقدير لا يقل عن «جيد جداً» (GPA 3.0+).\n🔗 https://debi.gov.eg`;
+    const en = `*Comparison between Digilians and DEBI:* 🏛️\n\n1. *Digital Pioneers Initiative (Digilians):* For university graduates & final-year students (age 18-32), practical training and accredited professional diplomas with MCIT & the Military Academy.\n🔗 https://www.digilians.gov.eg\n\n2. *Digital Egypt Builders Initiative (DEBI):* Fully-funded international Master's degree (e.g. University of Ottawa) exclusively for Engineering and Computer Science graduates with minimum 'Very Good' grade (GPA 3.0+).\n🔗 https://debi.gov.eg`;
+    const finalReply = replyBilingual(ar, en, lang);
+    setCachedReply(customerMessage, finalReply);
+    return finalReply;
+  }
+
+  // 2c. Check for Ambiguous Question (Needs Disambiguation)
+  const isAskingConditions = msg.includes('شروط') || msg.includes('متطلبات') || msg.includes('admission') || msg.includes('requirement') || msg.includes('eligib');
+  if (isAskingConditions && !hasDigiliansMention && !hasDebiMention) {
+    const ar = "هل تقصد مبادرة الرواد الرقميون (Digilians) أم مبادرة رواد مصر الرقمية (DEBI)؟";
+    const en = "Do you mean Digital Pioneers Initiative (Digilians) or Digital Egypt Builders Initiative (DEBI)?";
+    const finalReply = replyBilingual(ar, en, lang);
+    setCachedReply(customerMessage, finalReply);
+    return finalReply;
+  }
+
+  // 2d. Check for DEBI Conditions specifically
+  if (hasDebiMention && isAskingConditions) {
+    const ar = `*شروط التقديم والقبول في مبادرة رواد مصر الرقمية (DEBI):* 🏛️\n\n1. *الجنسية:* مصري / مصرية فقط.\n2. *المؤهل:* خريجو كليات الهندسة (حاسبات، اتصالات، إلكترونيات، ميكاترونكس) أو كليات الحاسبات والذكاء الاصطناعي.\n3. *التقدير التراكمي:* لا يقل عن «جيد جداً» (GPA 3.0+).\n4. *السن:* حتى 26 عاماً (أو 27 عاماً لبعض التخصصات).\n5. *اللغة:* إتقان تام للغة الإنجليزية (TOEFL iBT 80+ أو IELTS 6.5+).\n6. *التفرغ الكامل* لدراسة الماجستير الدولي.\n\n🔗 *رابط التقديم الرسمي:* https://debi.gov.eg`;
+    const en = `*Admission Requirements for DEBI (Digital Egypt Builders Initiative):* 🏛️\n\n1. *Nationality:* Egyptian citizenship only.\n2. *Degree:* Graduates of Faculties of Engineering or Computer Science / AI.\n3. *Minimum Grade:* 'Very Good' (GPA 3.0/4.0 or above).\n4. *Age:* Up to 26-27 years old.\n5. *English:* TOEFL iBT 80+ or Academic IELTS 6.5+.\n6. *Full-time commitment* for the international Master's degree.\n\n🔗 *Official Portal:* https://debi.gov.eg`;
+    const finalReply = replyBilingual(ar, en, lang);
+    setCachedReply(customerMessage, finalReply);
+    return finalReply;
+  }
+
   // 3. Check for Quick FAQ match
   for (const item of LOCAL_FAQ_ITEMS) {
     if (item.keys.some(k => msg.includes(k))) {
@@ -161,17 +193,17 @@ async function generateAutonomousResponse(customerMessage, senderName) {
 
   // 3b. Direct details/info request
   if (msg.includes('تفاصيل') || msg.includes('معلومات') || msg.includes('المبادرة') || msg.includes('عن المبادرة')) {
-    const ar = `*مبادرة الرواد الرقميون (DEPI) - وزارة الاتصالات:* 🏛️✨\n\nهي مبادرة وطنية مجانية ممولة بالكامل تهدف لتدريب الشباب المصري (18-32 سنة) وبناء كوادر احترافية في مجالات التكنولوجيا المتقدمة بشراكة مع الأكاديمية العسكرية وجامعات عالمية.\n\n📌 *المزايا:* شهادات دولية معتمدة + إقامة فندقية شاملة مجانية + فرص ماجستير للمتفوقين.\n💻 *المسارات:* ذكاء اصطناعي، أمن سيبراني، برمجيات، سحابيات، فنون رقمية، نظم مدمجة.\n🔗 *رابط التسجيل الرسمي:* https://www.digilians.gov.eg/login\n\nهل تود الاستفسار عن الشروط، الأوراق، أو التخصصات؟`;
-    const en = `*Digital Pioneers Initiative (DEPI) - Ministry of Communications:* 🏛️✨\n\nA fully funded national initiative to train Egyptian youth (18-32) and build professional capabilities in advanced technology fields, in partnership with the military academy and global universities.\n\n📌 *Benefits:* Accredited international certificates + free comprehensive hotel stay + master's opportunities for top performers.\n💻 *Tracks:* AI, Cybersecurity, Software, Cloud, Digital Arts, Embedded Systems.\n🔗 *Official Registration:* https://www.digilians.gov.eg/login\n\nWould you like to know about requirements, documents, or tracks?`;
+    const ar = `*مبادرة الرواد الرقميون (Digilians) ومبادرة رواد مصر الرقمية (DEBI):* 🏛️✨\n\n1. *Digilians:* مبادرة تدريب مهني وتأهيل لسوق العمل لجميع خريجي الكليات وطلاب السنة النهائية (18-32 سنة).\n🔗 https://www.digilians.gov.eg\n\n2. *DEBI:* منحة ماجستير دولي كاملة لخريجي كليات الهندسة والحاسبات بتقدير جيد جداً.\n🔗 https://debi.gov.eg\n\nعن أي المبادرتين تود الاستفسار؟`;
+    const en = `*Digital Pioneers Initiative (Digilians) & Digital Egypt Builders Initiative (DEBI):* 🏛️✨\n\n1. *Digilians:* Practical tech training and diplomas for graduates and final-year students (age 18-32).\n🔗 https://www.digilians.gov.eg\n\n2. *DEBI:* Fully funded international Master's degree for Engineering and Computer Science graduates with 'Very Good' grade.\n🔗 https://debi.gov.eg\n\nWhich initiative would you like to inquire about?`;
     const finalReply = replyBilingual(ar, en, lang);
     setCachedReply(customerMessage, finalReply);
     return finalReply;
   }
 
-  // 4. Greetings
-  if (msg.includes('سلام') || msg.includes('مرحبا') || msg.includes('أهلا') || msg.includes('صباح') || msg.includes('مساء')) {
-    const ar = `أهلاً وسهلاً بك ${senderName || ''} في منصة خدمة العملاء الذكية لمبادرة الرواد الرقميون (DEPI)! 🏛️✨\n\nيسعدني مساعدتك في الإجابة عن أي استفسار حول:\n📌 *شروط التقديم والقبول*\n📝 *خطوات ورابط التسجيل*\n🏆 *المسارات والتخصصات المتاحة*\n🌟 *المزايا والشهادات المعتمدة*\n\nكيف يمكنني مساعدتك اليوم؟`;
-    const en = `Welcome ${senderName || ''} to the DEPI AI Customer Service Platform! 🏛️✨\n\nI'm happy to help with any inquiries about:\n📌 *Admission requirements*\n📝 *Steps and registration link*\n🏆 *Available tracks & specializations*\n🌟 *Benefits & accredited certificates*\n\nHow can I help you today?`;
+  // 4. Greetings (Arabic and English)
+  if (msg.includes('سلام') || msg.includes('مرحبا') || msg.includes('أهلا') || msg.includes('صباح') || msg.includes('مساء') || msg.includes('hi') || msg.includes('hello') || msg.includes('hey') || msg.includes('welcome') || msg.includes('good morning') || msg.includes('good evening')) {
+    const ar = `أهلاً وسهلاً بك ${senderName || ''} في منصة خدمة العملاء الذكية لمبادرات وزارة الاتصالات وتكنولوجيا المعلومات (MCIT)! 🏛️✨\n\nيسعدني مساعدتك في الإجابة عن أي استفسار حول:\n📌 *1. مبادرة الرواد الرقميون (Digilians)*\n🎓 *2. مبادرة رواد مصر الرقمية (DEBI)*\n\nكيف يمكنني مساعدتك اليوم؟`;
+    const en = `Welcome ${senderName || ''} to the MCIT AI Customer Service Platform! 🏛️✨\n\nI'm happy to assist you with inquiries about:\n📌 *1. Digital Pioneers Initiative (Digilians)*\n🎓 *2. Digital Egypt Builders Initiative (DEBI)*\n\nHow can I help you today?`;
     const finalReply = replyBilingual(ar, en, lang);
     setCachedReply(customerMessage, finalReply);
     return finalReply;
@@ -182,19 +214,19 @@ async function generateAutonomousResponse(customerMessage, senderName) {
     const cacheReply = getCachedReply(customerMessage);
     if (cacheReply) return cacheReply;
 
-    const prompt = `أنت المساعد الذكي الرسمي لخدمة عملاء مبادرة الرواد الرقميون (DEPI) التابعة لوزارة الاتصالات وتكنولوجيا المعلومات المصرية.
+    const prompt = `You are the official customer service AI assistant for Egypt's Ministry of Communications and Information Technology (MCIT) initiatives (Digilians and DEBI).
 
-Important: Respond in the SAME LANGUAGE as the customer's question. If the question is in Arabic, respond in Arabic. If in English, respond in English.
+CRITICAL INSTRUCTION: Respond in the EXACT SAME LANGUAGE as the customer's question. If the user asked in English, reply entirely in English. If in Arabic, reply entirely in Arabic.
 
-تعليمات مهمة جداً للتنسيق:
-- استخدم التنسيق النقطي البسيط والواضح.
-- اجعل الإجابة موجزة، مهنية ومباشرة في حدود 3 إلى 5 أسطر فقط.
-- رابط التسجيل هو: https://www.digilians.gov.eg/login
+Formatting rules:
+- Use clear bullet points.
+- Keep the answer concise, professional, and direct (3-5 lines).
+- Registration link for Digilians is: https://www.digilians.gov.eg/login
 
-رسالة العميل: "${customerMessage}"`;
+Customer Message: "${customerMessage}"`;
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
+    const timeout = setTimeout(() => controller.abort(), 30000);
     const ollamaResp = await fetch(OLLAMA_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
