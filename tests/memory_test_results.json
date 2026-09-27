@@ -1,0 +1,49 @@
+{
+  "test": "memory_continuity",
+  "timestamp": "2026-09-27T17:00:45.941725",
+  "passed": 5,
+  "failed": 0,
+  "verdict": "PASS",
+  "results": [
+    {
+      "test": "memory_schema",
+      "status": "PASS",
+      "columns": [
+        "id",
+        "customer_id",
+        "memory_type",
+        "content",
+        "source",
+        "confidence",
+        "is_active",
+        "created_at",
+        "updated_at",
+        "expires_at"
+      ],
+      "missing": []
+    },
+    {
+      "test": "memory_write_read",
+      "status": "PASS",
+      "content": "Interested in Data Science track",
+      "confidence": 0.9
+    },
+    {
+      "test": "memory_type_filter",
+      "status": "PASS",
+      "preferences": 1,
+      "verified_facts": 1
+    },
+    {
+      "test": "conversation_summary",
+      "status": "PASS",
+      "summary": "User asked about DEPI Data Science track eligibility",
+      "turn_count": 3
+    },
+    {
+      "test": "cross_customer_isolation",
+      "status": "PASS",
+      "other_customer_memory_count": 0
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+# Broken Nodes and Runtime Fixes
+
+| Component | Evidence/root cause | Change | Verification / remaining limitation |
+|---|---|---|---|
+| 04B `Qwen RAG Grounded Response` request body | Live execution 5317 sent JSON array; Ollama rejected the body with HTTP 400. | Changed n8n JSON body expression to serialize a JSON object. Active workflow version reloaded. | Latest execution reached Ollama, confirming the body parse issue is fixed; generation then failed because llama-server was OOM-killed. |
+| 04B `Format RAG Knowledge Response` | `$input.first()` discarded 4 of 5 Postgres items. | Format all `$input.all()` items and carry source URLs. | Execution 6127 shows all 5 rows in prompt context. More irrelevant documents than necessary remain. |
+| 04B `Query Bilingual Knowledge Base` | A zero-row result could stop downstream no-context handling. | `alwaysOutputData=true`; preserve safe deflection path. | JSON/config active. A no-context end-to-end replay is not complete. |
+| 03 intent fallback | Ollama classifier timed out (~45s) and parser defaulted some FAQ requests to general support. | Deterministic FAQ override and `classifier_status=fallback_after_error`. | Workflow version active; corpus-wide classification needs rerun after memory recovery. |
+| Gateway anonymous webchat identity | All visitors defaulted to `web-anon`, creating shared customer/session identity. | Honor sanitized `session_id`/`channel_user_id`; otherwise assign request-scoped ID. Return request and parent execution IDs. | Live ambiguous webchat request returned request ID; database customer/AI messages and audit row all carried it. Client must send stable session ID for cross-turn memory. |
+| Logger request correlation | Message metadata omitted request ID; audit row recorded logger child execution ID rather than master ID. | Save request ID and parent execution ID with both messages and audit. | Execution 6118 test confirmed messages and webhook response match, audit ID `6118`. |
+| 04B formatter duplicate declaration | Final live clarification probe execution 6133 failed with `Identifier 'topicCategory' has already been declared`. An idempotent patch helper had inserted the formatter declaration twice. | Removed the duplicate, created workflow version `d3eb1aec-83c5-4c3f-a778-9c4a60a059ee`, and reloaded n8n. | Retest execution 6134 returned HTTP 200; all nodes through 04B, output, logger and webhook succeeded. |
+| Scraper browser launch | Packaged Playwright Chromium unavailable; requests fallback returned no rendered sections. | Prefer installed Edge on Windows before bundled Chromium. | Fresh crawl produced 7 pages, 29 FAQs, 7 RAG chunks. |
+| Embedding endpoint default | Host `localhost` resolved to host Ollama that lacked `nomic-embed-text`; Compose service was bound on 127.0.0.1. | Use `http://127.0.0.1:11434/api/embed`. | Verified 768-D embedding endpoint; scraped-only ingestion inserted 7 rows and updated 29 source metadata records. |
+
+## Unresolved critical node condition
+
+Ollama advertises `qwen2.5:3b`, but generation fails after model load with `llama-server process has terminated: signal: killed`. Docker Desktop’s reported total memory is about 3.25 GiB; the container showed OOM-kill events. The service health check only lists installed model tags, so it reports healthy despite no working generation process. This is a P0 readiness blocker; model was not changed.

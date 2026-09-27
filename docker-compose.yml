@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: cs-postgres
     restart: unless-stopped
     environment:
@@ -16,6 +16,7 @@ services:
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
       - ./infra/postgres/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh:ro
+      - ./infra/postgres/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     healthcheck:

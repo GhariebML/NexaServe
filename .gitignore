@@ -1,6 +1,8 @@
 # Environment variables and secrets
 .env
 *.env.local
+infra/n8n/credentials.json
+!infra/n8n/credentials.json.template
 
 # Persistent runtime data (stored on Drive E:)
 data/

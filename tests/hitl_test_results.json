@@ -1,0 +1,44 @@
+{
+  "test": "hitl_e2e",
+  "timestamp": "2026-09-27T17:01:02.588577",
+  "passed": 5,
+  "failed": 0,
+  "blocked": 0,
+  "verdict": "PASS",
+  "results": [
+    {
+      "test": "normal_escalation",
+      "status": "PASS",
+      "http_status": 200,
+      "answer_preview": "تم استلام طلبك وتصعيده إلى الفريق المختص. تم فتح تذكرة دعم ذات أولوية برقم **#TICK-39106** (درجة الأولوية: عالية).\nيقوم أحد مسؤولي خدمة العملاء بمراجعة تفاصيل استفسارك حالياً وسيتواصل معك مباشرة.",
+      "latency_ms": 2728,
+      "tickets_created": []
+    },
+    {
+      "test": "high_priority_escalation",
+      "status": "PASS",
+      "http_status": 200,
+      "answer_preview": "تم استلام طلبك وتصعيده إلى الفريق المختص. تم فتح تذكرة دعم ذات أولوية برقم **#TICK-60272** (درجة الأولوية: عالية).\nيقوم أحد مسؤولي خدمة العملاء بمراجعة تفاصيل استفسارك حالياً وسيتواصل معك مباشرة.",
+      "latency_ms": 2501
+    },
+    {
+      "test": "duplicate_escalation",
+      "status": "PASS",
+      "http_status": 200,
+      "answer_preview": "تم استلام طلبك وتصعيده إلى الفريق المختص. تم فتح تذكرة دعم ذات أولوية برقم **#TICK-79356** (درجة الأولوية: عالية).\nيقوم أحد مسؤولي خدمة العملاء بمراجعة تفاصيل استفسارك حالياً وسيتواصل معك مباشرة.",
+      "latency_ms": 2543,
+      "ticket_count": 0,
+      "duplicate_detected": true
+    },
+    {
+      "test": "orphan_ticket_check",
+      "status": "PASS",
+      "orphan_count": 0
+    },
+    {
+      "test": "audit_log_check",
+      "status": "PASS",
+      "total_audit_entries": 1304
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "test": "infrastructure_health",
+  "timestamp": "2026-09-27T15:39:44.847215",
+  "verdict": "ALL_HEALTHY",
+  "healthy_count": 5,
+  "down_count": 0,
+  "checks": [
+    {
+      "service": "postgresql",
+      "status": "HEALTHY",
+      "details": {
+        "version": "PostgreSQL 16.15 (Debian 16.15-1.pgdg12+2) on x86_64-pc-linux-gnu, compiled by g",
+        "tables_found": 18,
+        "missing_tables": [],
+        "extensions": [
+          "plpgsql",
+          "uuid-ossp",
+          "pg_trgm",
+          "vector"
+        ],
+        "has_vector": true,
+        "has_pg_trgm": true,
+        "kb_rows": 66,
+        "kb_embedded": 66,
+        "embedding_dimension": 768,
+        "hnsw_indexes": [
+          "idx_kb_embedding_hnsw"
+        ]
+      }
+    },
+    {
+      "service": "redis",
+      "status": "HEALTHY",
+      "details": {
+        "ping": true,
+        "version": "7.4.11",
+        "uptime_seconds": 383
+      }
+    },
+    {
+      "service": "n8n",
+      "status": "HEALTHY",
+      "details": {
+        "healthz_status": 200
+      }
+    },
+    {
+      "service": "ollama",
+      "status": "HEALTHY",
+      "details": {
+        "models": [
+          "nomic-embed-text:latest",
+          "qwen2.5:3b",
+          "qwen2.5:1.5b",
+          "qwen2.5:7b"
+        ],
+        "has_llm": true,
+        "has_embed": true
+      }
+    },
+    {
+      "service": "whatsapp_bridge",
+      "status": "HEALTHY",
+      "details": {
+        "service": "nexaserve-whatsapp-bridge",
+        "status": "CONNECTED",
+        "connected": true,
+        "phone": "201503350999",
+        "user": {
+          "id": "201503350999:5@s.whatsapp.net",
+          "name": "Mohamed Gharieb",
+          "lid": "220865119674532:5@lid"
+        }
+      }
+    }
+  ]
+}

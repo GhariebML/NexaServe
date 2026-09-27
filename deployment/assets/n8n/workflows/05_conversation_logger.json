@@ -1,0 +1,126 @@
+{
+  "id": "CSWF000000000007",
+  "name": "SubWF 05 - Conversation & Audit Logger",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "node-trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        160,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO messages (conversation_id, customer_id, sender_type, content, intent, confidence, pii_detected, metadata)\nVALUES (\n  '{{ ($json.conversation && $json.conversation.id && $json.conversation.id !== \"null\" && $json.conversation.id !== \"undefined\") ? $json.conversation.id : \"a0000000-0000-0000-0000-000000000001\" }}'::uuid,\n  '{{ ($json.customer && $json.customer.id && $json.customer.id !== \"null\" && $json.customer.id !== \"undefined\") ? $json.customer.id : \"a0000000-0000-0000-0000-000000000001\" }}'::uuid,\n  'customer',\n  '{{ ($json.sanitized_message || $json.customer_message || \"\").replace(/'/g, \"''\") }}',\n  '{{ $json.ai_output?.intent || \"unknown\" }}',\n  {{ $json.ai_output?.confidence || 0 }},\n  {{ $json.pii_detected ? 'TRUE' : 'FALSE' }},\n  '{{ JSON.stringify({entities: $json.ai_output?.entities || {}, request_id: $json.request_id || null, execution_id: $json.execution_id || null}).replace(/'/g, \"''\") }}'::jsonb\n);"
+      },
+      "id": "node-save-cust-msg",
+      "name": "Save Customer Message",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        380,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO messages (conversation_id, customer_id, sender_type, content, intent, confidence, metadata)\nVALUES (\n  '{{ ($('Execute Workflow Trigger').first().json.conversation && $('Execute Workflow Trigger').first().json.conversation.id && $('Execute Workflow Trigger').first().json.conversation.id !== \"null\" && $('Execute Workflow Trigger').first().json.conversation.id !== \"undefined\") ? $('Execute Workflow Trigger').first().json.conversation.id : \"a0000000-0000-0000-0000-000000000001\" }}'::uuid,\n  '{{ ($('Execute Workflow Trigger').first().json.customer && $('Execute Workflow Trigger').first().json.customer.id && $('Execute Workflow Trigger').first().json.customer.id !== \"null\" && $('Execute Workflow Trigger').first().json.customer.id !== \"undefined\") ? $('Execute Workflow Trigger').first().json.customer.id : \"a0000000-0000-0000-0000-000000000001\" }}'::uuid,\n  'ai',\n  '{{ ($('Execute Workflow Trigger').first().json.final_reply || \"\").replace(/'/g, \"''\") }}',\n  '{{ $('Execute Workflow Trigger').first().json.ai_output?.intent || \"unknown\" }}',\n  {{ $('Execute Workflow Trigger').first().json.ai_output?.confidence || 0 }},\n  json_build_object('sentiment', '{{ $('Execute Workflow Trigger').first().json.ai_output?.sentiment || \"neutral\" }}', 'locale', '{{ $('Execute Workflow Trigger').first().json.locale || \"ar\" }}', 'request_id', '{{ $('Execute Workflow Trigger').first().json.request_id || \"\" }}', 'execution_id', '{{ $('Execute Workflow Trigger').first().json.execution_id || \"\" }}')\n);"
+      },
+      "id": "node-save-ai-msg",
+      "name": "Save AI Response",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        600,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO audit_logs (workflow_name, execution_id, event_type, channel, pii_masked, payload, latency_ms)\nVALUES (\n  '01_gateway_dispatcher',\n  '{{ $('Execute Workflow Trigger').first().json.execution_id || $execution.id || (\"turn_\" + Math.floor(Math.random() * 90000 + 10000)) }}',\n  'turn_completed',\n  '{{ $('Execute Workflow Trigger').first().json.channel || \"webchat\" }}',\n  {{ $('Execute Workflow Trigger').first().json.pii_detected ? 'TRUE' : 'FALSE' }},\n  json_build_object(\n    'request_id', '{{ $('Execute Workflow Trigger').first().json.request_id || \"\" }}',\n    'intent', '{{ $('Execute Workflow Trigger').first().json.ai_output?.intent }}',\n    'status', '{{ $('Execute Workflow Trigger').first().json.handler_status }}',\n    'ticket_number', '{{ $('Execute Workflow Trigger').first().json.ticket_number }}',\n    'locale', '{{ $('Execute Workflow Trigger').first().json.locale }}',\n    'customer', '{{ $('Execute Workflow Trigger').first().json.customer?.full_name }}'\n  ),\n  {{ $('Execute Workflow Trigger').first().json.latency_ms || 0 }}\n);"
+      },
+      "id": "node-insert-audit",
+      "name": "Insert Turn Audit Log",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        820,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "/* ==========================================================================\n   🐍 PYTHON ALTERNATIVE / البديل البرمجي بلغة بايثون لنفس المهمة\n   --------------------------------------------------------------------------\n   This node is documented in both Python and JavaScript.\n   Below is the production-grade Python function equivalent:\n\ndef return_log_confirmation() -> dict:\n    \"\"\"\n    تأكيد اكتمال عملية التسجيل في قاعدة البيانات.\n\n    Simple confirmation return after all audit logging operations.\n\n    Returns:\n        Dict with logged=True and ISO timestamp.\n    \"\"\"\n    return {\n        \"logged\": True,\n        \"timestamp\": datetime.now(timezone.utc).isoformat(),\n    }\n\n\n# ==============================================================================\n# 13. WORKFLOW 06 — Format Channel Payloads (WhatsApp/Telegram/Email/Webchat)\n# Nodes: \"Format WhatsApp Payload\", \"Format Telegram Payload\",\n#        \"Format Email Payload\", \"Format Webchat Payload\"\n# Purpose: Formats the final reply into channel-specific dispatch payloads.\n# ==============================================================================\n   ========================================================================== */\n\n/* === ACTIVE JAVASCRIPT IMPLEMENTATION === */\nreturn [{\n  json: {\n    logged: true,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "node-return-log",
+      "name": "Return Log Confirmation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        300
+      ],
+      "notesInFlow": true,
+      "notes": "🐍 Python & ⚡ JS Dual-Language Node\nEquivalent: return_log_confirmation()"
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Save Customer Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Customer Message": {
+      "main": [
+        [
+          {
+            "node": "Save AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save AI Response": {
+      "main": [
+        [
+          {
+            "node": "Insert Turn Audit Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Turn Audit Log": {
+      "main": [
+        [
+          {
+            "node": "Return Log Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {},
+  "staticData": null,
+  "pinData": {},
+  "versionId": "7790efd5-832f-416e-bc0b-b72fed18d2c6",
+  "triggerCount": 0
+}

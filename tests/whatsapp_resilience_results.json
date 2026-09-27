@@ -1,0 +1,57 @@
+{
+  "test": "whatsapp_resilience",
+  "timestamp": "2026-09-27T20:01:38.143941",
+  "passed": 5,
+  "failed": 0,
+  "blocked": 0,
+  "verdict": "PASS",
+  "results": [
+    {
+      "test": "health_check",
+      "status": "PASS",
+      "data": {
+        "service": "nexaserve-whatsapp-bridge",
+        "status": "CONNECTED",
+        "connected": true,
+        "phone": "201503350999",
+        "user": {
+          "id": "201503350999:5@s.whatsapp.net",
+          "name": "Mohamed Gharieb",
+          "lid": "220865119674532:5@lid"
+        }
+      }
+    },
+    {
+      "test": "arabic_offline_reply",
+      "status": "PASS",
+      "source": "n8n",
+      "reply_preview": "تشمل مزايا منحة DEBI:\r\n1. تمويل كامل وتغطية بنسبة 100% لمصروفات الماجستير من الجامعة الأجنبية.\r\n2. شهادات مهنية دولية معتمدة من كبرى شركات التكنولوجيا.\r\n3. مكافأة شهرية للمتدربين طوال فترة المنحة.\r\n4.",
+      "failures": []
+    },
+    {
+      "test": "english_offline_reply",
+      "status": "PASS",
+      "source": "n8n",
+      "reply_preview": "Welcome to the DEPI Customer Service platform. How may we assist you today?",
+      "failures": []
+    },
+    {
+      "test": "cache_status",
+      "status": "PASS",
+      "data": {
+        "version": 3,
+        "entries": 2,
+        "maxTTL": 60000
+      }
+    },
+    {
+      "test": "cache_invalidation",
+      "status": "PASS",
+      "data": {
+        "success": true,
+        "new_version": 4,
+        "cleared_entries": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+# Offline mode rejects registry pulls; preloaded image archives are required.
+services:
+  postgres: {pull_policy: never}
+  redis: {pull_policy: never}
+  ollama: {pull_policy: never}
+  n8n: {pull_policy: never}
+  whatsapp: {pull_policy: never}
+  dashboard: {pull_policy: never}
+  proxy: {pull_policy: never}
+  scraper: {pull_policy: never}
+  kb-ingest: {pull_policy: never}

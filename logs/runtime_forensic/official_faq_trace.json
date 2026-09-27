@@ -1,0 +1,382 @@
+{
+  "request_id": "forensic-official-faq-verify-01",
+  "master_execution_id": "6124",
+  "rag_execution_id": "6127",
+  "nodes": {
+    "Execute Workflow Trigger": [
+      {
+        "status": "success",
+        "latency_ms": 0
+      }
+    ],
+    "Program Detector & Query Normalizer": [
+      {
+        "status": "success",
+        "latency_ms": 7
+      }
+    ],
+    "Generate Embedding": [
+      {
+        "status": "success",
+        "latency_ms": 176
+      }
+    ],
+    "Query Bilingual Knowledge Base": [
+      {
+        "status": "success",
+        "latency_ms": 34,
+        "retrieved": [
+          {
+            "id": 101,
+            "program": "DEBI",
+            "category": "scraped_faq",
+            "source": "DEPI Official FAQ",
+            "source_url": "https://depi.gov.eg/content/faqs",
+            "score": 56.312860267125835,
+            "question": "من المؤهل للتدريب؟",
+            "answer": "طلاب و خريجو الكليات بالجامعات المصرية حسب المسار."
+          },
+          {
+            "id": 128,
+            "program": "DEBI",
+            "category": "scraped_faq",
+            "source": "DEPI Official FAQ",
+            "source_url": "https://depi.gov.eg/content/faqs",
+            "score": 53.00522849041696,
+            "question": "ما هي مدة تدريب DEPI Industry؟",
+            "answer": "المدة التدريبية للبرنامج هي أربعة أشهر بحد أقصى."
+          },
+          {
+            "id": 120,
+            "program": "DEBI",
+            "category": "scraped_faq",
+            "source": "DEPI Official FAQ",
+            "source_url": "https://depi.gov.eg/content/faqs",
+            "score": 52.079563822603305,
+            "question": "ما الفرق بين مسار الصناعة والمسارات التقليدية في DEPI؟",
+            "answer": "تركز المسارات التقليدية بشكل أساسي على تنمية المهارات التقنية، بينما يضيف مسار الصناعة بعدًا عمليًّا أكبر من خلال التركيز على التطبيقات الصناعية التخصصية وإشراك الشركات في العملية التدريبية، وتقديم حالات استخدام واقعية، ومشروعات تطبيقية، وإرشاد مباشر من خبراء الصناعة، بما يضمن مواءمة أفضل مع احتياجات سوق العمل."
+          },
+          {
+            "id": 119,
+            "program": "DEBI",
+            "category": "scraped_faq",
+            "source": "DEPI Official FAQ",
+            "source_url": "https://depi.gov.eg/content/faqs",
+            "score": 48.54442561731956,
+            "question": "ما هو مسار الصناعة (DEPI Industry Track)؟",
+            "answer": "يُعد مسار الصناعة مساراً متقدماً وأكثر تخصصاً؛ يهدف إلى ربط المتخصصين او العاملين في التخصصات المهنية المختلفة بأحدث التطورات الفنية في تخصصاتهم وطبقا لمتطلبات سوق العمل. ويتحقق ذلك من خلال التدريب العملي، والإرشاد المهني، والمشاريع التطبيقية، بالشراكة مع الشركات الرائدة في القطاعات المهنية الحيوية (كالطب، البرمجة، القانون، والمالية) التي تعتمد على التكنولوجيا المتقدمة في أعمالها."
+          },
+          {
+            "id": 108,
+            "program": "DEBI",
+            "category": "scraped_faq",
+            "source": "DEPI Official FAQ",
+            "source_url": "https://depi.gov.eg/content/faqs",
+            "score": 41.25964028646836,
+            "question": "ما هي وسائل التواصل مع المختصين بالمبادرة؟",
+            "answer": "البريد الإلكتروني info@depi.gov.egهو وسيلة التواصل الأساسية ويتم الرد على البريد الإلكتروني خلال 24 ساعة، وفى حالة تأخر الرد بسبب كثرة الاستفسارات فيُمكن إرسال الرسالة مرة أخرى."
+          }
+        ]
+      }
+    ],
+    "Format RAG Knowledge Response": [
+      {
+        "status": "success",
+        "latency_ms": 11
+      }
+    ],
+    "Check if LLM Needed": [
+      {
+        "status": "success",
+        "latency_ms": 3,
+        "context": "[DEBI]\nسؤال: من المؤهل للتدريب؟\nإجابة: طلاب و خريجو الكليات بالجامعات المصرية حسب المسار.\n---\n[DEBI]\nسؤال: ما هي مدة تدريب DEPI Industry؟\nإجابة: المدة التدريبية للبرنامج هي أربعة أشهر بحد أقصى.\n---\n[DEBI]\nسؤال: ما الفرق بين مسار الصناعة والمسارات التقليدية في DEPI؟\nإجابة: تركز المسارات التقليدية بشكل أساسي على تنمية المهارات التقنية، بينما يضيف مسار الصناعة بعدًا عمليًّا أكبر من خلال التركيز على التطبيقات الصناعية التخصصية وإشراك الشركات في العملية التدريبية، وتقديم حالات استخدام واقعية، ومشروعات تطبيقية، وإرشاد مباشر من خبراء الصناعة، بما يضمن مواءمة أفضل مع احتياجات سوق العمل.\n---\n[DEBI]\nسؤال: ما هو مسار الصناعة (DEPI Industry Track)؟\nإجابة: يُعد مسار الصناعة مساراً متقدماً وأكثر تخصصاً؛ يهدف إلى ربط المتخصصين او العاملين في التخصصات المهنية المختلفة بأحدث التطورات الفنية في تخصصاتهم وطبقا لمتطلبات سوق العمل. ويتحقق ذلك من خلال التدريب العملي، والإرشاد المهني، والمشاريع التطبيقية، بالشراكة مع الشركات الرائدة في القطاعات المهنية الحيوية (كالطب، البرمجة، القانون، والمالية) التي تعتمد على التكنولوجيا المتقدمة في أعمالها.\n---\n[DEBI]\nسؤال: ما هي وسائل التواصل مع المختصين بالمبادرة؟\nإجابة: البريد الإلكتروني info@depi.gov.egهو وسيلة التواصل الأساسية ويتم الرد على البريد الإلكتروني خلال 24 ساعة، وفى حالة تأخر الرد بسبب كثرة الاستفسارات فيُمكن إرسال الرسالة مرة أخرى."
+      }
+    ],
+    "Qwen RAG Grounded Response": [
+      {
+        "status": "success",
+        "latency_ms": 34846,
+        "error": "500 - \"{\\\"error\\\":\\\"llama-server process has terminated: signal: killed\\\"}\""
+      }
+    ],
+    "Guardrail & Professional Formatter": [
+      {
+        "status": "success",
+        "latency_ms": 34,
+        "final_reply": "طلاب و خريجو الكليات بالجامعات المصرية حسب المسار."
+      }
+    ]
+  },
+  "source_fact": {
+    "question": "من المؤهل للتدريب؟",
+    "answer": "طلاب و خريجو الكليات بالجامعات المصرية حسب المسار.",
+    "source_url": "https://depi.gov.eg/content/faqs"
+  },
+  "database_record": {
+    "id": 101,
+    "program": "DEBI",
+    "category": "scraped_faq",
+    "question": "من المؤهل للتدريب؟",
+    "answer": "طلاب و خريجو الكليات بالجامعات المصرية حسب المسار.",
+    "source_attribution": "DEPI Official FAQ",
+    "source_url": "https://depi.gov.eg/content/faqs",
+    "content_hash": "6c75d46fd509b7193b3ba0d28056bca78519dc2931d1fc469ac4a5087d19b9f6",
+    "embedding_present": true,
+    "embedding_dimensions": 768
+  },
+  "webhook": {
+    "http_status": 200,
+    "elapsed_ms": 36403,
+    "request": {
+      "request_id": "forensic-official-faq-verify-01",
+      "channel_user_id": "forensic-official-faq-verify-01",
+      "channel": "webchat",
+      "full_name": "Synthetic Official FAQ Check",
+      "locale": "ar",
+      "customer_message": "من المؤهل للتدريب في DEPI؟"
+    },
+    "response": {
+      "status": "success",
+      "request_id": "forensic-official-faq-verify-01",
+      "execution_id": "6124",
+      "channel": "webchat",
+      "locale": "ar",
+      "customer": {
+        "name": "Synthetic Official FAQ Check",
+        "phone": "",
+        "telegram_id": ""
+      },
+      "conversation_id": "75e92bfe-9529-41fe-85bf-d2e17fda12f2",
+      "intent": "faq_query",
+      "confidence": 0.9,
+      "ticket_number": null,
+      "pii_masked": false,
+      "response": "طلاب و خريجو الكليات بالجامعات المصرية حسب المسار.",
+      "latency_ms": 35583
+    }
+  },
+  "logged_messages": [
+    {
+      "sender_type": "customer",
+      "content": "من المؤهل للتدريب في DEPI؟",
+      "metadata": {
+        "entities": {},
+        "request_id": "forensic-official-faq-verify-01",
+        "execution_id": "6124"
+      }
+    },
+    {
+      "sender_type": "ai",
+      "content": "طلاب و خريجو الكليات بالجامعات المصرية حسب المسار.",
+      "metadata": {
+        "locale": "ar",
+        "sentiment": "neutral",
+        "request_id": "forensic-official-faq-verify-01",
+        "execution_id": "6124"
+      }
+    }
+  ],
+  "audit_events": [
+    {
+      "execution_id": "6124",
+      "event_type": "turn_completed",
+      "payload": {
+        "intent": "faq_query",
+        "locale": "ar",
+        "status": "success",
+        "customer": "Synthetic Official FAQ Check",
+        "request_id": "forensic-official-faq-verify-01",
+        "ticket_number": "null"
+      }
+    }
+  ],
+  "retrieval_replay_after_fix": {
+    "case_id": "official-source-trace-01",
+    "query": "من المؤهل للتدريب في DEPI؟",
+    "program_filter_scope": "DEBI",
+    "top10": [
+      {
+        "rank": 1,
+        "id": 101,
+        "program": "DEBI",
+        "category": "scraped_faq",
+        "source": "DEPI Official FAQ",
+        "source_url": "https://depi.gov.eg/content/faqs",
+        "question": "من المؤهل للتدريب؟",
+        "answer": "طلاب و خريجو الكليات بالجامعات المصرية حسب المسار.",
+        "lexical_score": 20.0,
+        "semantic_score": 36.312860267125835,
+        "keyword_match_count": 0,
+        "content_match_count": 2,
+        "score": 56.312860267125835
+      },
+      {
+        "rank": 2,
+        "id": 128,
+        "program": "DEBI",
+        "category": "scraped_faq",
+        "source": "DEPI Official FAQ",
+        "source_url": "https://depi.gov.eg/content/faqs",
+        "question": "ما هي مدة تدريب DEPI Industry؟",
+        "answer": "المدة التدريبية للبرنامج هي أربعة أشهر بحد أقصى.",
+        "lexical_score": 0.0,
+        "semantic_score": 43.00522849041696,
+        "keyword_match_count": 0,
+        "content_match_count": 0,
+        "score": 43.00522849041696
+      },
+      {
+        "rank": 3,
+        "id": 120,
+        "program": "DEBI",
+        "category": "scraped_faq",
+        "source": "DEPI Official FAQ",
+        "source_url": "https://depi.gov.eg/content/faqs",
+        "question": "ما الفرق بين مسار الصناعة والمسارات التقليدية في DEPI؟",
+        "answer": "تركز المسارات التقليدية بشكل أساسي على تنمية المهارات التقنية، بينما يضيف مسار الصناعة بعدًا عمليًّا أكبر من خلال التركيز على التطبيقات الصناعية التخصصية وإشراك الشركات في العملية التدريبية، وتقديم حالات استخدام واقعية، ومشروعات تطبيقية، وإرشاد مباشر من خبراء الصناعة، بما يضمن مواءمة أفضل مع احتياجات سوق العمل.",
+        "lexical_score": 0.0,
+        "semantic_score": 42.079563822603305,
+        "keyword_match_count": 0,
+        "content_match_count": 0,
+        "score": 42.079563822603305
+      },
+      {
+        "rank": 4,
+        "id": 91,
+        "program": "DEBI",
+        "category": "debi_conditions",
+        "source": "مبادرة رواد مصر الرقمية (DEBI)",
+        "source_url": null,
+        "question": "ما هي شروط التقديم والقبول في مبادرة رواد مصر الرقمية (DEBI)؟",
+        "answer": "شروط التقديم والقبول في مبادرة رواد مصر الرقمية (DEBI):\r\n1. الجنسية: مصري / مصرية فقط.\r\n2. المؤهل الدراسي: خريجو كليات الهندسة (أقسام: حاسبات، اتصالات، إلكترونيات، قوى/ميكاترونكس) أو كليات الحاسبات والمعلومات / الذكاء الاصطناعي.\r\n3. التقدير التراكمي: ألا يقل التقدير العام عن «جيد جداً» (Very Good) أو معدل تراكمي (GPA) لا يقل عن 3.0 من 4.0 (أو ما يعادله).\r\n4. السن: ألا يزيد سن المتقدم عن 26 عاماً (أو 27 عاماً لبعض التخصصات المحددة عند تاريخ التقديم).\r\n5. اللغة الإنجليزية: إتقان تام للغة الإنجليزية (الحصول على TOEFL iBT بحد أدنى 80 درجة أو IELTS أكاديمي 6.5 كحد أدنى أو اجتياز اختبارات المنحة اللغوية المؤهلة للقبول بالجامعات الأجنبية الشريكة).\r\n6. الموقف التجنيدي للذكور: أداء الخدمة العسكرية أو الإعفاء النهائي منها.\r\n7. التفرغ: التفرغ الكامل والإقامة الداخلية خلال فترة الدراسة.",
+        "lexical_score": 1.0,
+        "semantic_score": 39.4713137485708,
+        "keyword_match_count": 0,
+        "content_match_count": 1,
+        "score": 40.4713137485708
+      },
+      {
+        "rank": 5,
+        "id": 96,
+        "program": "DEBI",
+        "category": "debi_benefits",
+        "source": "مبادرة رواد مصر الرقمية (DEBI)",
+        "source_url": null,
+        "question": "ما هي مزايا ومنح مبادرة رواد مصر الرقمية (DEBI)؟",
+        "answer": "تشمل مزايا منحة DEBI:\r\n1. تمويل كامل وتغطية بنسبة 100% لمصروفات الماجستير من الجامعة الأجنبية.\r\n2. شهادات مهنية دولية معتمدة من كبرى شركات التكنولوجيا.\r\n3. مكافأة شهرية للمتدربين طوال فترة المنحة.\r\n4. جهاز حاسب آلي محمول (Laptop) حديث ومعدات تقنية مخصصة لكل دارس.\r\n5. إقامة فندقية كاملة تشمل الإعاشة والوجبات.\r\n6. فرص توظيف متميزة وتواصل مع كبرى الشركات الإقليمية والدولية بعد التخرج.",
+        "lexical_score": 0.0,
+        "semantic_score": 40.391439141122696,
+        "keyword_match_count": 0,
+        "content_match_count": 0,
+        "score": 40.391439141122696
+      },
+      {
+        "rank": 6,
+        "id": 108,
+        "program": "DEBI",
+        "category": "scraped_faq",
+        "source": "DEPI Official FAQ",
+        "source_url": "https://depi.gov.eg/content/faqs",
+        "question": "ما هي وسائل التواصل مع المختصين بالمبادرة؟",
+        "answer": "البريد الإلكتروني info@depi.gov.egهو وسيلة التواصل الأساسية ويتم الرد على البريد الإلكتروني خلال 24 ساعة، وفى حالة تأخر الرد بسبب كثرة الاستفسارات فيُمكن إرسال الرسالة مرة أخرى.",
+        "lexical_score": 0.0,
+        "semantic_score": 40.25964028646836,
+        "keyword_match_count": 0,
+        "content_match_count": 0,
+        "score": 40.25964028646836
+      },
+      {
+        "rank": 7,
+        "id": 97,
+        "program": "DEBI",
+        "category": "debi_registration",
+        "source": "مبادرة رواد مصر الرقمية (DEBI)",
+        "source_url": null,
+        "question": "ما هو الرابط الرسمي وكيفية التقديم في مبادرة رواد مصر الرقمية (DEBI)؟",
+        "answer": "يتم التقديم في مبادرة رواد مصر الرقمية (DEBI) إلكترونياً وبشكل مجاني عبر الموقع الرسمي المخصص للمبادرة:\r\n🔗 https://debi.gov.eg\r\nيتم فتح باب التقديم لدفعات محددة يعلن عنها عبر الموقع الرسمي، ويقوم المتقدم بإنشاء حساب، استيفاء البيانات، ورفع المستندات الرسمية بصيغة PDF.",
+        "lexical_score": 0.0,
+        "semantic_score": 39.76915353305287,
+        "keyword_match_count": 0,
+        "content_match_count": 0,
+        "score": 39.76915353305287
+      },
+      {
+        "rank": 8,
+        "id": 92,
+        "program": "DEBI",
+        "category": "debi_documents",
+        "source": "مبادرة رواد مصر الرقمية (DEBI)",
+        "source_url": null,
+        "question": "ما هي الأوراق والمستندات المطلوبة للتقديم في DEBI؟",
+        "answer": "المستندات الرسمية المطلوبة للتقديم في مبادرة رواد مصر الرقمية (DEBI):\r\n1. شهادة التخرج الرسمية موضح بها التقدير العام (ألا يقل عن جيد جداً).\r\n2. بيان درجات السنوات الدراسية بالكامل (Transcript).\r\n3. بطاقة الرقم القومي المصرية سارية المفعول.\r\n4. شهادة الموقف من التجنيد للذكور (أدى الخدمة أو إعفاء نهائي).\r\n5. شهادة إتقان اللغة الإنجليزية (TOEFL iBT أو Academic IELTS) إن وجدت.\r\n6. السيرة الذاتية المحدثة (CV) باللغة الإنجليزية.\r\n7. خطابات توصية أكاديمية (Academic Recommendation Letters).\r\n* ملاحظة: تُرفع المستندات إلكترونياً عبر بوابة debi.gov.eg بصيغة PDF.",
+        "lexical_score": 0.0,
+        "semantic_score": 38.604221219202635,
+        "keyword_match_count": 0,
+        "content_match_count": 0,
+        "score": 38.604221219202635
+      },
+      {
+        "rank": 9,
+        "id": 90,
+        "program": "DEBI",
+        "category": "debi_overview",
+        "source": "مبادرة رواد مصر الرقمية (DEBI)",
+        "source_url": null,
+        "question": "ما هي مبادرة رواد مصر الرقمية (DEBI)؟",
+        "answer": "مبادرة رواد مصر الرقمية (DEBI - Digital Egypt Builders Initiative) هي منحة دراسية كاملة أطلقتها وزارة الاتصالات وتكنولوجيا المعلومات المصرية. تهدف المنحة إلى تمكين جيل متميز من خريجي كليات الهندسة والحاسبات في مصر من الحصول على درجة الماجستير في العلوم المهنية والتكنولوجيا المتقدمة من كبرى الجامعات الدولية المرموقة، بالتوازي مع تدريب عملي مع كبرى شركات التكنولوجيا العالمية وتطوير المهارات القيادية واللغوية.",
+        "lexical_score": 0.0,
+        "semantic_score": 38.5825687270923,
+        "keyword_match_count": 0,
+        "content_match_count": 0,
+        "score": 38.5825687270923
+      },
+      {
+        "rank": 10,
+        "id": 119,
+        "program": "DEBI",
+        "category": "scraped_faq",
+        "source": "DEPI Official FAQ",
+        "source_url": "https://depi.gov.eg/content/faqs",
+        "question": "ما هو مسار الصناعة (DEPI Industry Track)؟",
+        "answer": "يُعد مسار الصناعة مساراً متقدماً وأكثر تخصصاً؛ يهدف إلى ربط المتخصصين او العاملين في التخصصات المهنية المختلفة بأحدث التطورات الفنية في تخصصاتهم وطبقا لمتطلبات سوق العمل. ويتحقق ذلك من خلال التدريب العملي، والإرشاد المهني، والمشاريع التطبيقية، بالشراكة مع الشركات الرائدة في القطاعات المهنية الحيوية (كالطب، البرمجة، القانون، والمالية) التي تعتمد على التكنولوجيا المتقدمة في أعمالها.",
+        "lexical_score": 0.0,
+        "semantic_score": 38.54442561731956,
+        "keyword_match_count": 0,
+        "content_match_count": 0,
+        "score": 38.54442561731956
+      }
+    ],
+    "topic_category": "",
+    "evidence_gate": true
+  },
+  "final_live_correlation_probe": {
+    "request": {
+      "request_id": "forensic-live-ambiguous-final-02",
+      "channel_user_id": "forensic-live-ambiguous-final-02",
+      "channel": "webchat",
+      "full_name": "Synthetic Final Runtime Check",
+      "locale": "ar",
+      "customer_message": "ما هي المسارات؟"
+    },
+    "http_status": 200,
+    "response": {
+      "status": "success",
+      "request_id": "forensic-live-ambiguous-final-02",
+      "execution_id": "6134",
+      "channel": "webchat",
+      "locale": "ar",
+      "customer": {
+        "name": "Synthetic Final Runtime Check",
+        "phone": "",
+        "telegram_id": ""
+      },
+      "conversation_id": "bebeb2db-1b70-4c00-a197-bc6d1daf148a",
+      "intent": "faq_query",
+      "confidence": 0.9,
+      "ticket_number": null,
+      "pii_masked": false,
+      "response": "هل تقصد مبادرة الرواد الرقميون (Digilians) أم مبادرة رواد مصر الرقمية (DEBI/DEPI)؟ يرجى تحديد المبادرة لتقديم الشروط الدقيقة المعتمدة.",
+      "latency_ms": 945
+    }
+  }
+}

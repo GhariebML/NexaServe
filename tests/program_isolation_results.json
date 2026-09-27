@@ -1,0 +1,92 @@
+{
+  "test": "program_isolation",
+  "timestamp": "2026-09-27T20:04:21.777412",
+  "total_cases": 9,
+  "testable_cases": 6,
+  "leakage_count": 0,
+  "leakage_percentage": 0.0,
+  "verdict": "PASS",
+  "results": [
+    {
+      "case_id": "ISO_DEPI_01",
+      "query": "ما هي منح رواد مصر الرقمية؟",
+      "target_program": "DEBI",
+      "status": "PASS",
+      "answer": "تشمل مزايا منحة DEBI:\r\n1. تمويل كامل وتغطية بنسبة 100% لمصروفات الماجستير من الجامعة الأجنبية.\r\n2. شهادات مهنية دولية معتمدة من كبرى شركات التكنولوجيا.\r\n3. مكافأة شهرية للمتدربين طوال فترة المنحة.\r\n4. جهاز حاسب آلي محمول (Laptop) حديث ومعدات تقنية مخصصة لكل دارس.\r\n5. إقامة فندقية كاملة تشمل الإعاشة ",
+      "leakage_terms": [],
+      "latency_ms": 6073
+    },
+    {
+      "case_id": "ISO_DEPI_02",
+      "query": "ما هي شروط التقديم في DEPI؟",
+      "target_program": "DEBI",
+      "status": "PASS",
+      "answer": "شروط التقديم والقبول في مبادرة رواد مصر الرقمية (DEBI):\r\n1. الجنسية: مصري / مصرية فقط.\r\n2. المؤهل الدراسي: خريجو كليات الهندسة (أقسام: حاسبات، اتصالات، إلكترونيات، قوى/ميكاترونكس) أو كليات الحاسبات والمعلومات / الذكاء الاصطناعي.\r\n3. التقدير التراكمي: ألا يقل التقدير العام عن «جيد جداً» (Very Good) أ",
+      "leakage_terms": [],
+      "latency_ms": 3127
+    },
+    {
+      "case_id": "ISO_DEPI_03",
+      "query": "What tracks are available in DEBI?",
+      "target_program": "DEBI",
+      "status": "PASS",
+      "answer": "I could not find an active service request or order matching \"your requested order\". Please verify the reference number (e.g. SRV-1001 or ORD-1001) or provide your registered contact details.",
+      "leakage_terms": [],
+      "latency_ms": 2955
+    },
+    {
+      "case_id": "ISO_DIG_01",
+      "query": "ما هي شروط مبادرة الرواد الرقميون؟",
+      "target_program": "DIGILIANS",
+      "status": "PASS",
+      "answer": "شروط التقديم في مبادرة الرواد الرقميون (Digilians):\n1. الجنسية: مصري / مصرية.\n2. السن: من 18 حتى 32 عاماً.\n3. المؤهل الدراسي: مؤهل مناسب لمسار التدريب (خريجو الكليات، المعاهد العليا، والمعاهد المتوسطة وفوق المتوسطة)، ويمكن لطلاب السنة النهائية التقديم بإفادة رسمية.\n4. الموقف التجنيدي للذكور: أدى الخ",
+      "leakage_terms": [],
+      "latency_ms": 2925
+    },
+    {
+      "case_id": "ISO_DIG_02",
+      "query": "ما هي المسارات في الرواد الرقميون؟",
+      "target_program": "DIGILIANS",
+      "status": "PASS",
+      "answer": "مبادرة الرواد الرقميون (Digilians) هي مبادرة وطنية أطلقتها وزارة الاتصالات وتكنولوجيا المعلومات بالتعاون مع الأكاديمية العسكرية المصرية. تهدف المبادرة إلى تطوير مهارات الشباب المصري (من 18 إلى 32 سنة) في مجالات تكنولوجيا المعلومات والاتصالات، وبناء المهارات الشخصية والقيادية واللغوية، وإبرام شراكات ",
+      "leakage_terms": [],
+      "latency_ms": 3322
+    },
+    {
+      "case_id": "ISO_DIG_03",
+      "query": "How can I apply for Digilians?",
+      "target_program": "DIGILIANS",
+      "status": "PASS",
+      "answer": "Official support channels: General email info@digilians.gov.eg, Exam support info@depi.gov.eg, 24/7 WhatsApp AI Customer Service, and the portal at https://www.digilians.gov.eg.",
+      "leakage_terms": [],
+      "latency_ms": 3179
+    },
+    {
+      "case_id": "ISO_COMP_01",
+      "query": "ما الفرق بين DEPI والرواد الرقميون؟",
+      "target_program": "COMPARISON",
+      "status": "PASS",
+      "answer": "*المقارنة بين مبادرة الرواد الرقميون (Digilians) ومبادرة رواد مصر الرقمية (DEBI):* 🏛️\r\n\r\n1. *الدرجة العلمية والهدف:*\r\n- *مبادرة الرواد الرقميون (Digilians):* تركز على بناء المهارات التقنية التطبيقية والقيادية والتأهيل لسوق العمل، وتقدم دبلومات مهنية معتمدة من وزارة الاتصالات والأكاديمية العسكرية الم",
+      "leakage_terms": [],
+      "latency_ms": 3093
+    },
+    {
+      "case_id": "ISO_AMB_01",
+      "query": "ما هي شروط المبادرة؟",
+      "target_program": "AMBIGUOUS",
+      "status": "PASS",
+      "answer": "هل تقصد مبادرة الرواد الرقميون (Digilians) أم مبادرة رواد مصر الرقمية (DEBI/DEPI)؟ يرجى تحديد المبادرة لتقديم الشروط الدقيقة المعتمدة.",
+      "leakage_terms": [],
+      "latency_ms": 2994
+    },
+    {
+      "case_id": "ISO_AMB_02",
+      "query": "إزاي أقدم في المبادرة؟",
+      "target_program": "AMBIGUOUS",
+      "status": "PASS",
+      "answer": "أهلاً وسهلاً بك في منصة خدمة العملاء لمبادرة الرواد الرقميون (DEPI). كيف يمكننا خدمتك اليوم؟",
+      "leakage_terms": [],
+      "latency_ms": 44737
+    }
+  ]
+}

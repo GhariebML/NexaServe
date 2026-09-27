@@ -1,0 +1,58 @@
+INFO:__main__:Starting ingestion...
+INFO:__main__:Extracting Excel FAQs...
+INFO:__main__:Extracting PDF: E:\NexaServe\FAQs\FAQ LMS-English Exam.pdf
+INFO:__main__:Extracting PDF: E:\NexaServe\FAQs\FAQ final-Digilians.pdf
+INFO:__main__:Extracting scraped FAQ and RAG records...
+INFO:__main__:Total items extracted: 79
+INFO:__main__:Connecting to DB...
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+ERROR:__main__:Unexpected embedding response: {'error': 'model "nomic-embed-text" not found, try pulling it first'}
+INFO:__main__:No new records to insert.

@@ -5,8 +5,15 @@
 [CmdletBinding()]
 param (
     [string]$Email = "moghariebai@gmail.com",
-    [string]$NewPassword = "NexaServe2026!"
+    [Parameter(Mandatory=$false)]
+    [string]$NewPassword = $env:N8N_ADMIN_PASSWORD
 )
+
+if ([string]::IsNullOrWhiteSpace($NewPassword)) {
+    $secPass = Read-Host -Prompt "Enter new n8n administrator password" -AsSecureString
+    $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secPass)
+    $NewPassword = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
+}
 
 $ErrorActionPreference = "Stop"
 
@@ -15,7 +22,7 @@ Write-Host " NexaServe: Updating n8n Administrator Password" -ForegroundColor Cy
 Write-Host "==================================================" -ForegroundColor Cyan
 
 # 1. Generate standard bcrypt hash ($2a$ format)
-$hash = python -c "import bcrypt; print(bcrypt.hashpw(b'$NewPassword', bcrypt.gensalt(10, prefix=b'2a')).decode())"
+$hash = python -c "import bcrypt, sys; print(bcrypt.hashpw(sys.argv[1].encode(), bcrypt.gensalt(10, prefix=b'2a')).decode())" $NewPassword
 if (-not $hash) {
     Write-Error "Failed to generate bcrypt hash using local python runtime."
     exit 1
@@ -37,5 +44,5 @@ Write-Host "`n==================================================" -ForegroundCol
 Write-Host " [OK] Credentials successfully updated!" -ForegroundColor Green
 Write-Host " Login URL: http://localhost:5678" -ForegroundColor Green
 Write-Host " Email:     $Email" -ForegroundColor White
-Write-Host " Password:  $NewPassword" -ForegroundColor White
+Write-Host " Password:  [REDACTED / SECURELY SET]" -ForegroundColor White
 Write-Host "==================================================" -ForegroundColor Cyan

@@ -1,0 +1,11 @@
+[Unit]
+Description=NexaServe database backup
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/nexaserve/deployment
+ExecStart=/opt/nexaserve/deployment/scripts/backup.sh
+User=root
+UMask=0077

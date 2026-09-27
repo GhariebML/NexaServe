@@ -1,0 +1,30 @@
+{
+  "request": {
+    "request_id": "forensic-live-ambiguous-final-02",
+    "channel_user_id": "forensic-live-ambiguous-final-02",
+    "channel": "webchat",
+    "full_name": "Synthetic Final Runtime Check",
+    "locale": "ar",
+    "customer_message": "ما هي المسارات؟"
+  },
+  "http_status": 200,
+  "response": {
+    "status": "success",
+    "request_id": "forensic-live-ambiguous-final-02",
+    "execution_id": "6134",
+    "channel": "webchat",
+    "locale": "ar",
+    "customer": {
+      "name": "Synthetic Final Runtime Check",
+      "phone": "",
+      "telegram_id": ""
+    },
+    "conversation_id": "bebeb2db-1b70-4c00-a197-bc6d1daf148a",
+    "intent": "faq_query",
+    "confidence": 0.9,
+    "ticket_number": null,
+    "pii_masked": false,
+    "response": "هل تقصد مبادرة الرواد الرقميون (Digilians) أم مبادرة رواد مصر الرقمية (DEBI/DEPI)؟ يرجى تحديد المبادرة لتقديم الشروط الدقيقة المعتمدة.",
+    "latency_ms": 945
+  }
+}

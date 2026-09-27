@@ -1,0 +1,31 @@
+{
+  "http_status": 200,
+  "elapsed_ms": 36403,
+  "request": {
+    "request_id": "forensic-official-faq-verify-01",
+    "channel_user_id": "forensic-official-faq-verify-01",
+    "channel": "webchat",
+    "full_name": "Synthetic Official FAQ Check",
+    "locale": "ar",
+    "customer_message": "من المؤهل للتدريب في DEPI؟"
+  },
+  "response": {
+    "status": "success",
+    "request_id": "forensic-official-faq-verify-01",
+    "execution_id": "6124",
+    "channel": "webchat",
+    "locale": "ar",
+    "customer": {
+      "name": "Synthetic Official FAQ Check",
+      "phone": "",
+      "telegram_id": ""
+    },
+    "conversation_id": "75e92bfe-9529-41fe-85bf-d2e17fda12f2",
+    "intent": "faq_query",
+    "confidence": 0.9,
+    "ticket_number": null,
+    "pii_masked": false,
+    "response": "طلاب و خريجو الكليات بالجامعات المصرية حسب المسار.",
+    "latency_ms": 35583
+  }
+}

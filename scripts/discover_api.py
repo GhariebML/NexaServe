@@ -4,7 +4,11 @@ import urllib.request
 import json
 import time
 
-API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxNmFmY2M3My1iYTYwLTQ3YjctOWQzMy0wYjY2YmE5NTY0YmUiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiMzcwOGNjYmQtMDAwMy00ZGQzLTk1ZjMtNWFlYmZhNmNiOTE1IiwiaWF0IjoxNzg5MDQ0MDc1LCJleHAiOjE3OTE1OTA0MDB9.gnqmx1Ac4Sw7zsdNiBPL8XkFcm0xhrXMx9848LGlVAc"
+import os, sys
+API_KEY = os.environ.get("N8N_API_KEY", "")
+if not API_KEY:
+    print("[ERROR] N8N_API_KEY environment variable required.")
+    sys.exit(1)
 
 headers = {
     "X-N8N-API-KEY": API_KEY,

@@ -1,0 +1,199 @@
+name: nexaserve
+services:
+  postgres:
+    container_name: cs-postgres
+    image: pgvector/pgvector:pg16@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      N8N_DB_NAME: ${N8N_DB_NAME:?set N8N_DB_NAME}
+      N8N_DB_USER: ${N8N_DB_USER:?set N8N_DB_USER}
+      N8N_DB_PASSWORD: ${N8N_DB_PASSWORD:?set N8N_DB_PASSWORD}
+      CS_DB_NAME: ${CS_DB_NAME:?set CS_DB_NAME}
+      CS_DB_USER: ${CS_DB_USER:?set CS_DB_USER}
+      CS_DB_PASSWORD: ${CS_DB_PASSWORD:?set CS_DB_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../assets/postgres/init-databases.sh:/docker-entrypoint-initdb.d/00-init-databases.sh:ro
+      - ../assets/postgres/schema.sql:/opt/nexaserve/schema.sql:ro
+      - ../migrations/001_professional_support.sql:/opt/nexaserve/001_professional_support.sql:ro
+      - ../migrations/002_dashboard_admin_users.sql:/opt/nexaserve/002_dashboard_admin_users.sql:ro
+    expose: ["5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    networks: [backend]
+  redis:
+    container_name: cs-redis
+    image: redis:7-bookworm@sha256:71da9275c5f3fcb97d0fa0c8c5b36cc995327265420f17a04bfd544f458059f7
+    restart: unless-stopped
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--requirepass", "${REDIS_PASSWORD:?set REDIS_PASSWORD}"]
+    volumes:
+      - redis-data:/data
+      - ../assets/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    expose: ["6379"]
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=$$REDIS_PASSWORD redis-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD}
+    networks: [backend]
+  ollama:
+    container_name: cs-ollama
+    image: ollama/ollama:latest@sha256:684d8674b4315fa18f4f0e973a118ec2652ed96f67563277839985175858e0ba
+    restart: unless-stopped
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-24h}
+    volumes: [ollama-data:/root/.ollama]
+    expose: ["11434"]
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 15s
+      timeout: 10s
+      retries: 8
+      start_period: 30s
+    networks: [backend]
+  n8n:
+    container_name: cs-n8n
+    image: docker.n8n.io/n8nio/n8n:2.38.1@sha256:9f21fbf422982bbdddc31085c180bef82d59cc608ba16dfec4fc48611d0b51b8
+    restart: unless-stopped
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      ollama: {condition: service_healthy}
+    environment:
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: ${N8N_DB_NAME}
+      DB_POSTGRESDB_USER: ${N8N_DB_USER}
+      DB_POSTGRESDB_PASSWORD: ${N8N_DB_PASSWORD}
+      N8N_LISTEN_ADDRESS: 0.0.0.0
+      N8N_HOST: ${N8N_HOST:-localhost}
+      N8N_PORT: 5678
+      N8N_PROTOCOL: ${N8N_PROTOCOL:-http}
+      WEBHOOK_URL: ${WEBHOOK_URL:-http://localhost:5678/}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?set N8N_ENCRYPTION_KEY}
+      N8N_USER_MANAGEMENT_JWT_SECRET: ${N8N_USER_MANAGEMENT_JWT_SECRET:?set N8N_USER_MANAGEMENT_JWT_SECRET}
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-UTC}
+      TZ: ${TZ:-UTC}
+      N8N_DIAGNOSTICS_ENABLED: ${N8N_DIAGNOSTICS_ENABLED:-false}
+      N8N_PERSONALIZATION_ENABLED: ${N8N_PERSONALIZATION_ENABLED:-false}
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
+      N8N_DEFAULT_BINARY_DATA_MODE: filesystem
+      OLLAMA_HOST: http://ollama:11434
+      WHATSAPP_BRIDGE_URL: http://whatsapp:8080
+    volumes:
+      - n8n-data:/home/node/.n8n
+      - ../assets/n8n/workflows:/opt/nexaserve/workflows:ro
+    expose: ["5678"]
+    ports: ["127.0.0.1:${N8N_PORT:-5678}:5678"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:5678/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 45s
+    networks: [backend]
+  whatsapp:
+    container_name: cs-whatsapp
+    build: {context: ../application/whatsapp, dockerfile: Dockerfile}
+    restart: unless-stopped
+    environment:
+      PORT: 8080
+      AUTH_DIR: /app/data/auth
+      N8N_WEBHOOK_URL: http://n8n:5678/webhook/customer-service
+      OLLAMA_URL: http://ollama:11434/api/generate
+    volumes: [whatsapp-auth:/app/data/auth]
+    expose: ["8080"]
+    ports: ["127.0.0.1:${WHATSAPP_PORT:-8080}:8080"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    networks: [backend]
+  dashboard:
+    container_name: cs-dashboard
+    build: {context: ../application/dashboard, dockerfile: Dockerfile}
+    restart: unless-stopped
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${CS_DB_NAME}
+      CS_DB_NAME: ${CS_DB_NAME}
+      CS_DB_USER: ${CS_DB_USER}
+      CS_DB_PASSWORD: ${CS_DB_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      DASHBOARD_JWT_SECRET: ${DASHBOARD_JWT_SECRET:?set DASHBOARD_JWT_SECRET}
+      DASHBOARD_CORS_ORIGINS: ${DASHBOARD_CORS_ORIGINS:-}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    expose: ["8090"]
+    ports: ["127.0.0.1:${DASHBOARD_PORT:-8090}:8090"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/openapi.json', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 30s
+    networks: [backend]
+  proxy:
+    image: nginx:stable-alpine@sha256:0985e772fb9f729e6fa0980da05fca5d9c468e870eed43071545afa9d2e27d94
+    profiles: [proxy]
+    restart: unless-stopped
+    depends_on: [dashboard, whatsapp, n8n]
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ../config/nginx/nexaserve.conf:/etc/nginx/conf.d/default.conf:ro
+      - ${TLS_CERT_DIR:-/etc/nexaserve/tls}:/etc/nginx/tls:ro
+    networks: [backend]
+  kb-ingest:
+    profiles: [tools]
+    build: {context: ../application/ingestion, dockerfile: Dockerfile}
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      CS_DB_NAME: ${CS_DB_NAME}
+      CS_DB_USER: ${CS_DB_USER}
+      CS_DB_PASSWORD: ${CS_DB_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      OLLAMA_EMBED_URL: http://ollama:11434/api/embed
+      OLLAMA_MODEL: ${OLLAMA_MODEL}
+      EMBED_MODEL: ${EMBED_MODEL}
+      EMBED_DIMENSION: ${EMBED_DIMENSION}
+    depends_on:
+      postgres: {condition: service_healthy}
+      ollama: {condition: service_healthy}
+    volumes: [source-data:/app/DEPI_Web_Scraper/data]
+    networks: [backend]
+  scraper:
+    profiles: [tools]
+    build: {context: ../application/scraper, dockerfile: Dockerfile}
+    command: ["python", "/app/DEPI_Web_Scraper/main.py"]
+    volumes: [source-data:/app/DEPI_Web_Scraper/data]
+    networks: [backend]
+volumes:
+  postgres-data:
+  redis-data:
+  ollama-data:
+  n8n-data:
+  whatsapp-auth:
+  source-data:
+networks:
+  backend: {name: nexaserve-backend}

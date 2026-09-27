@@ -1,0 +1,227 @@
+{
+  "attempt": "concurrent synthetic webchat load run B",
+  "cases_attempted": 30,
+  "http_200": 4,
+  "http_503": 26,
+  "reconstruction_note": "Aggregate status/latency/character counts were observed in the command output. The shared raw JSONL was interleaved by an earlier still-running serial process, so 26 503 response bodies and two of the accepted response bodies were not preserved as valid JSON records.",
+  "records": [
+    {
+      "case_id": "depi-01",
+      "request_id": "forensic-depi-01-20260927-b",
+      "channel": "webchat",
+      "http_status": 200,
+      "elapsed_ms": 58326,
+      "response_chars": 785,
+      "response_body_preserved": true
+    },
+    {
+      "case_id": "depi-02",
+      "request_id": "forensic-depi-02-20260927-b",
+      "channel": "webchat",
+      "http_status": 200,
+      "elapsed_ms": 28240,
+      "response_chars": 48,
+      "response_body_preserved": true
+    },
+    {
+      "case_id": "depi-03",
+      "request_id": "forensic-depi-03-20260927-b",
+      "channel": "webchat",
+      "http_status": 200,
+      "elapsed_ms": 64753,
+      "response_chars": 312,
+      "response_body_preserved": false
+    },
+    {
+      "case_id": "depi-04",
+      "request_id": "forensic-depi-04-20260927-b",
+      "channel": "webchat",
+      "http_status": 200,
+      "elapsed_ms": 66328,
+      "response_chars": 268,
+      "response_body_preserved": false
+    },
+    {
+      "case_id": "digilians-01",
+      "request_id": "forensic-digilians-01-20260927-b",
+      "channel": "webchat",
+      "http_status": 503,
+      "error": "Database is not ready!"
+    },
+    {
+      "case_id": "digilians-02",
+      "request_id": "forensic-digilians-02-20260927-b",
+      "channel": "webchat",
+      "http_status": 503,
+      "error": "Database is not ready!"
+    },
+    {
+      "case_id": "digilians-03",
+      "request_id": "forensic-digilians-03-20260927-b",
+      "channel": "webchat",
+      "http_status": 503,
+      "error": "Database is not ready!"
+    },
+    {
+      "case_id": "ambiguous-01",
+      "request_id": "forensic-ambiguous-01-20260927-b",
+      "channel": "webchat",
+      "http_status": 503,
+      "error": "Database is not ready!"
+    },
+    {
+      "case_id": "ambiguous-02",
+      "request_id": "forensic-ambiguous-02-20260927-b",
+      "channel": "webchat",
+      "http_status": 503,
+      "error": "Database is not ready!"
+    },
+    {
+      "case_id": "comparison-01",
+      "request_id": "forensic-comparison-01-20260927-b",
+      "channel": "webchat",
+      "http_status": 503,
+      "error": "Database is not ready!"
+    },
+    {
+      "case_id": "english-depi-01",
+      "request_id": "forensic-english-depi-01-20260927-b",
+      "channel": "webchat",
+      "http_status": 503,
+      "error": "Database is not ready!"
+    },
+    {
+      "case_id": "no-answer-01",
+      "request_id": "forensic-no-answer-01-20260927-b",
+      "channel": "webchat",
+      "http_status": 503,
+      "error": "Database is not ready!"
+    },
+    {
+      "case_id": "security-01",
+      "request_id": "forensic-security-01-20260927-b",
+      "channel": "webchat",
+      "http_status": 503,
+      "error": "Database is not ready!"
+    },
+    {
+      "case_id": "depi-05",
+      "request_id": "forensic-depi-05-20260927-b",
+      "channel": "webchat",
+      "http_status": 503,
+      "error": "Database is not ready!"
+    },
+    {
+      "case_id": "depi-06",
+      "request_id": "forensic-depi-06-20260927-b",
+      "channel": "webchat",
+      "http_status": 503,
+      "error": "Database is not ready!"
+    },
+    {
+      "case_id": "depi-07",
+      "request_id": "forensic-depi-07-20260927-b",
+      "channel": "webchat",
+      "http_status": 503,
+      "error": "Database is not ready!"
+    },
+    {
+      "case_id": "depi-08",
+      "request_id": "forensic-depi-08-20260927-b",
+      "channel": "webchat",
+      "http_status": 503,
+      "error": "Database is not ready!"
+    },
+    {
+      "case_id": "depi-09",
+      "request_id": "forensic-depi-09-20260927-b",
+      "channel": "webchat",
+      "http_status": 503,
+      "error": "Database is not ready!"
+    },
+    {
+      "case_id": "depi-10",
+      "request_id": "forensic-depi-10-20260927-b",
+      "channel": "webchat",
+      "http_status": 503,
+      "error": "Database is not ready!"
+    },
+    {
+      "case_id": "digilians-04",
+      "request_id": "forensic-digilians-04-20260927-b",
+      "channel": "webchat",
+      "http_status": 503,
+      "error": "Database is not ready!"
+    },
+    {
+      "case_id": "digilians-05",
+      "request_id": "forensic-digilians-05-20260927-b",
+      "channel": "webchat",
+      "http_status": 503,
+      "error": "Database is not ready!"
+    },
+    {
+      "case_id": "digilians-06",
+      "request_id": "forensic-digilians-06-20260927-b",
+      "channel": "webchat",
+      "http_status": 503,
+      "error": "Database is not ready!"
+    },
+    {
+      "case_id": "digilians-07",
+      "request_id": "forensic-digilians-07-20260927-b",
+      "channel": "webchat",
+      "http_status": 503,
+      "error": "Database is not ready!"
+    },
+    {
+      "case_id": "ambiguous-03",
+      "request_id": "forensic-ambiguous-03-20260927-b",
+      "channel": "webchat",
+      "http_status": 503,
+      "error": "Database is not ready!"
+    },
+    {
+      "case_id": "comparison-02",
+      "request_id": "forensic-comparison-02-20260927-b",
+      "channel": "webchat",
+      "http_status": 503,
+      "error": "Database is not ready!"
+    },
+    {
+      "case_id": "exact-faq-01",
+      "request_id": "forensic-exact-faq-01-20260927-b",
+      "channel": "webchat",
+      "http_status": 503,
+      "error": "Database is not ready!"
+    },
+    {
+      "case_id": "paraphrase-faq-01",
+      "request_id": "forensic-paraphrase-faq-01-20260927-b",
+      "channel": "webchat",
+      "http_status": 503,
+      "error": "Database is not ready!"
+    },
+    {
+      "case_id": "scraped-fact-01",
+      "request_id": "forensic-scraped-fact-01-20260927-b",
+      "channel": "webchat",
+      "http_status": 503,
+      "error": "Database is not ready!"
+    },
+    {
+      "case_id": "out-of-scope-01",
+      "request_id": "forensic-out-of-scope-01-20260927-b",
+      "channel": "webchat",
+      "http_status": 503,
+      "error": "Database is not ready!"
+    },
+    {
+      "case_id": "memory-followup-01",
+      "request_id": "forensic-memory-followup-01-20260927-b",
+      "channel": "webchat",
+      "http_status": 503,
+      "error": "Database is not ready!"
+    }
+  ]
+}

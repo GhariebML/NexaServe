@@ -44,4 +44,10 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$CS_DB_NAME" <<-EO
     ALTER SCHEMA public OWNER TO $CS_DB_USER;
 EOSQL
 
-echo "=== Application Databases and Dedicated Roles Created Successfully ==="
+# Execute schema definition on fresh initialization if available
+if [ -f "/docker-entrypoint-initdb.d/schema.sql" ]; then
+    echo "=== Applying Customer Service Schema on $CS_DB_NAME ==="
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$CS_DB_NAME" -f /docker-entrypoint-initdb.d/schema.sql
+fi
+
+echo "=== Application Databases, Dedicated Roles, and Schema Initialized Successfully ==="

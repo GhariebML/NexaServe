@@ -1,0 +1,76 @@
+{
+  "test": "disaster_recovery",
+  "timestamp": "2026-09-27T17:02:32.936739",
+  "passed": 5,
+  "failed": 0,
+  "other": 0,
+  "verdict": "PASS",
+  "results": [
+    {
+      "test": "backup_directory",
+      "status": "PASS",
+      "backup_count": 1,
+      "latest_backups": [
+        "manual_dr_test.sql"
+      ]
+    },
+    {
+      "test": "fresh_backup",
+      "status": "PASS",
+      "backup_file": "E:\\NexaServe\\backups\\dr_test_20260927_170231.sql",
+      "size_bytes": 1766955
+    },
+    {
+      "test": "backup_validation",
+      "status": "PASS",
+      "markers_found": [
+        "CREATE TABLE",
+        "knowledge_base",
+        "customers",
+        "tickets"
+      ],
+      "markers_missing": []
+    },
+    {
+      "test": "data_integrity",
+      "status": "PASS",
+      "row_counts": {
+        "knowledge_base": 66,
+        "customers": 54,
+        "conversations": 56,
+        "messages": 1553,
+        "tickets": 89,
+        "audit_logs": 1310,
+        "customer_memory": 0
+      }
+    },
+    {
+      "test": "n8n_workflow_backup",
+      "status": "PASS",
+      "workflow_count": 20,
+      "workflows": [
+        "00_global_error_handler.json",
+        "01_gateway_dispatcher.json",
+        "02_customer_session.json",
+        "02_customer_session_manager.json",
+        "03_ai_intent_engine.json",
+        "04A_order_lookup.json",
+        "04B_knowledge_base_faq.json",
+        "04C_human_escalation.json",
+        "04D_agent_response_bridge.json",
+        "05_conversation_logger.json",
+        "06_output_channel_dispatcher.json",
+        "06_output_dispatcher.json",
+        "07_analytics_reporting.json",
+        "08_csat_survey.json",
+        "08_global_error_handler.json",
+        "09_automation_rules.json",
+        "10_agent_management.json",
+        "11_kb_admin.json",
+        "Master_Workflow.json",
+        "Master_Workflow_Enterprise.json"
+      ],
+      "valid_json": 20
+    }
+  ]
+}

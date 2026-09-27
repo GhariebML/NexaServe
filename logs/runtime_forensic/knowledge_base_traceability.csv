@@ -1,0 +1,511 @@
+﻿id,program,category,source_attribution,source_url,content_hash,created_at,is_active,embedding_present,embedding_dimensions,question_ar,answer_ar,updated_at_column_present,embedding_model_metadata_present
+90,DEBI,debi_overview,مبادرة رواد مصر الرقمية (DEBI),,,2026-09-27 11:35:51.000241+00:00,True,True,768,ما هي مبادرة رواد مصر الرقمية (DEBI)؟,مبادرة رواد مصر الرقمية (DEBI - Digital Egypt Builders Initiative) هي منحة دراسية كاملة أطلقتها وزارة الاتصالات وتكنولوجيا المعلومات المصرية. تهدف المنحة إلى تمكين جيل متميز من خريجي كليات الهندسة والحاسبات في مصر من الحصول على درجة الماجستير في العلوم المهنية والتكنولوجيا المتقدمة من كبرى الجامعات الدولية المرموقة، بالتوازي مع تدريب عملي مع كبرى شركات التكنولوجيا العالمية وتطوير المهارات القيادية واللغوية.,False,False
+91,DEBI,debi_conditions,مبادرة رواد مصر الرقمية (DEBI),,,2026-09-27 11:35:51.009915+00:00,True,True,768,ما هي شروط التقديم والقبول في مبادرة رواد مصر الرقمية (DEBI)؟,"شروط التقديم والقبول في مبادرة رواد مصر الرقمية (DEBI):
+1. الجنسية: مصري / مصرية فقط.
+2. المؤهل الدراسي: خريجو كليات الهندسة (أقسام: حاسبات، اتصالات، إلكترونيات، قوى/ميكاترونكس) أو كليات الحاسبات والمعلومات / الذكاء الاصطناعي.
+3. التقدير التراكمي: ألا يقل التقدير العام عن «جيد جداً» (Very Good) أو معدل تراكمي (GPA) لا يقل عن 3.0 من 4.0 (أو ما يعادله).
+4. السن: ألا يزيد سن المتقدم عن 26 عاماً (أو 27 عاماً لبعض التخصصات المحددة عند تاريخ التقديم).
+5. اللغة الإنجليزية: إتقان تام للغة الإنجليزية (الحصول على TOEFL iBT بحد أدنى 80 درجة أو IELTS أكاديمي 6.5 كحد أدنى أو اجتياز اختبارات المنحة اللغوية المؤهلة للقبول بالجامعات الأجنبية الشريكة).
+6. الموقف التجنيدي للذكور: أداء الخدمة العسكرية أو الإعفاء النهائي منها.
+7. التفرغ: التفرغ الكامل والإقامة الداخلية خلال فترة الدراسة.",False,False
+92,DEBI,debi_documents,مبادرة رواد مصر الرقمية (DEBI),,,2026-09-27 11:35:51.015681+00:00,True,True,768,ما هي الأوراق والمستندات المطلوبة للتقديم في DEBI؟,"المستندات الرسمية المطلوبة للتقديم في مبادرة رواد مصر الرقمية (DEBI):
+1. شهادة التخرج الرسمية موضح بها التقدير العام (ألا يقل عن جيد جداً).
+2. بيان درجات السنوات الدراسية بالكامل (Transcript).
+3. بطاقة الرقم القومي المصرية سارية المفعول.
+4. شهادة الموقف من التجنيد للذكور (أدى الخدمة أو إعفاء نهائي).
+5. شهادة إتقان اللغة الإنجليزية (TOEFL iBT أو Academic IELTS) إن وجدت.
+6. السيرة الذاتية المحدثة (CV) باللغة الإنجليزية.
+7. خطابات توصية أكاديمية (Academic Recommendation Letters).
+* ملاحظة: تُرفع المستندات إلكترونياً عبر بوابة debi.gov.eg بصيغة PDF.",False,False
+93,DEBI,debi_tracks,مبادرة رواد مصر الرقمية (DEBI),,,2026-09-27 11:35:51.017373+00:00,True,True,768,ما هي المسارات والتخصصات المتاحة في مبادرة رواد مصر الرقمية (DEBI)؟,"تتضمن مبادرة رواد مصر الرقمية (DEBI) المسارات التكنولوجية المتقدمة التالية للحصول على الماجستير:
+1. الذكاء الاصطناعي وعلوم البيانات (Artificial Intelligence & Data Science)
+2. الأمن السيبراني (Cybersecurity)
+3. الروبوتات والأتمتة الذكية (Robotics & Automation)
+4. هندسة البرمجيات (Software Engineering)
+5. الفنون الرقمية والتكنولوجيا المالية (Digital Arts & FinTech)
+* يحصل الدارس في كل مسار على ماجستير علوم مهني معتمد دولياً.",False,False
+94,DEBI,debi_universities,مبادرة رواد مصر الرقمية (DEBI),,,2026-09-27 11:35:51.019346+00:00,True,True,768,ما هي الجامعات الدولية الشريكة المانحة لشهادة الماجستير في DEBI؟,"تتعاون مبادرة رواد مصر الرقمية (DEBI) مع كبرى الجامعات الكندية والدولية المرموقة لمنح درجة الماجستير للطلاب، ومن أبرزها:
+- جامعة أوتاوا الكندية (University of Ottawa - Canada)
+- جامعة كوينز الكندية (Queen's University - Canada)
+بالإضافة إلى نخبة من أفضل الجامعات والمؤسسات الأكاديمية العالمية. الشهادة الممنوحة هي درجة ماجستير رسمية ومعتمدة دولياً ومحلياً من المجلس الأعلى للجامعات.",False,False
+95,DEBI,debi_training,مبادرة رواد مصر الرقمية (DEBI),,,2026-09-27 11:35:51.021436+00:00,True,True,768,من هم شركاء التدريب التقني والمهارات القيادية في مبادرة DEBI؟,"تتضمن مبادرة DEBI تدريباً شاملاً مع كبرى المؤسسات العالمية:
+1. التدريب التقني الاحترافي: شركات أمازون ويب سيرفيسز (AWS)، سيسكو (Cisco)، آي بي إم (IBM)، مايكروسوفت (Microsoft)، وفيموير (VMware).
+2. المهارات القيادية والشخصية: ديل كارنيجي العالمية (Dale Carnegie) لبناء مهارات التفاوض، القيادة، والعمل الجماعي.
+3. إتقان اللغة الإنجليزية: معهد بيرلتز العالمي (Berlitz) للوصول إلى أعلى مستويات الطلاقة اللغوية.",False,False
+96,DEBI,debi_benefits,مبادرة رواد مصر الرقمية (DEBI),,,2026-09-27 11:35:51.023222+00:00,True,True,768,ما هي مزايا ومنح مبادرة رواد مصر الرقمية (DEBI)؟,"تشمل مزايا منحة DEBI:
+1. تمويل كامل وتغطية بنسبة 100% لمصروفات الماجستير من الجامعة الأجنبية.
+2. شهادات مهنية دولية معتمدة من كبرى شركات التكنولوجيا.
+3. مكافأة شهرية للمتدربين طوال فترة المنحة.
+4. جهاز حاسب آلي محمول (Laptop) حديث ومعدات تقنية مخصصة لكل دارس.
+5. إقامة فندقية كاملة تشمل الإعاشة والوجبات.
+6. فرص توظيف متميزة وتواصل مع كبرى الشركات الإقليمية والدولية بعد التخرج.",False,False
+97,DEBI,debi_registration,مبادرة رواد مصر الرقمية (DEBI),,,2026-09-27 11:35:51.025030+00:00,True,True,768,ما هو الرابط الرسمي وكيفية التقديم في مبادرة رواد مصر الرقمية (DEBI)؟,"يتم التقديم في مبادرة رواد مصر الرقمية (DEBI) إلكترونياً وبشكل مجاني عبر الموقع الرسمي المخصص للمبادرة:
+🔗 https://debi.gov.eg
+يتم فتح باب التقديم لدفعات محددة يعلن عنها عبر الموقع الرسمي، ويقوم المتقدم بإنشاء حساب، استيفاء البيانات، ورفع المستندات الرسمية بصيغة PDF.",False,False
+98,COMMON,comparison,وزارة الاتصالات وتكنولوجيا المعلومات (MCIT),,,2026-09-27 11:35:51.028971+00:00,True,True,768,ما الفرق بين مبادرة الرواد الرقميون (Digilians) ومبادرة رواد مصر الرقمية (DEBI)؟,"*المقارنة بين مبادرة الرواد الرقميون (Digilians) ومبادرة رواد مصر الرقمية (DEBI):* 🏛️
+
+1. *الدرجة العلمية والهدف:*
+- *مبادرة الرواد الرقميون (Digilians):* تركز على بناء المهارات التقنية التطبيقية والقيادية والتأهيل لسوق العمل، وتقدم دبلومات مهنية معتمدة من وزارة الاتصالات والأكاديمية العسكرية المصرية ومسار ماجستير للمتميزين.
+- *مبادرة رواد مصر الرقمية (DEBI):* تركز على منح درجة ماجستير علوم مهنية (Master of Science) معتمدة دولياً ومباشرة من جامعات كندية وأجنبية مرموقة (مثل University of Ottawa).
+
+2. *الفئة المستهدفة والمؤهل:*
+- *Digilians:* تقبل خريجي الكليات والمعاهد العليا والمتوسطة بمختلف التخصصات، بالإضافة لطلاب السنة النهائية (السن من 18 حتى 32 عاماً).
+- *DEBI:* مخصصة حصرياً لخريجي كليات الهندسة وكليات الحاسبات والذكاء الاصطناعي، بتقدير لا يقل عن «جيد جداً» (GPA 3.0+)، وألا يزيد السن عن 26-27 عاماً.
+
+3. *متطلبات اللغة الإنجليزية:*
+- *Digilians:* مستوى أساسي إلى متوسط (B1 كحد أدنى).
+- *DEBI:* مستوى متقدم مع اشتراط TOEFL iBT (80+) أو IELTS (6.5+) للقبول بالجامعات الأجنبية.
+
+4. *البوابة الرسمية:*
+- *Digilians:* https://www.digilians.gov.eg
+- *DEBI:* https://debi.gov.eg",False,False
+99,COMMON,disambiguation,وزارة الاتصالات وتكنولوجيا المعلومات (MCIT),,,2026-09-27 11:35:51.031399+00:00,True,True,768,هل تقصد مبادرة الرواد الرقميون (Digilians) أم مبادرة رواد مصر الرقمية (DEBI)؟,"يرجى تحديد المبادرة المعنية لاستعراض الشروط الدقيقة:
+1. *مبادرة الرواد الرقميون (Digilians):* للشباب وخريجي الجامعات وطلاب السنة النهائية (18-32 سنة).
+2. *مبادرة رواد مصر الرقمية (DEBI):* لخريجي كليات الهندسة والحاسبات بتقدير جيد جداً للحصول على الماجستير الدولي.",False,False
+100,DEBI,pdf_document,FAQ LMS-English Exam.pdf,,8fbab63d143cf51ca663bf93d843c5cb768d412e92c584dfb5b57a67b89199f6,2026-09-27 11:36:09.630660+00:00,True,True,768,Excerpt from FAQ LMS-English Exam.pdf,"DEPI LMS  
+Assessment Exam FAQ  
+ 
+1.​ Common Questions and Answers 
+Q1. I did not receive link to exam registration by email 
+Check your account on the portal. If you do not find it, send email to info@depi.gov.eg 
+ 
+Q2. I got this error message when I logged into my portal account  
+ 
+ 
+Please recheck your portal account. Not all exam information are posted at the same time due 
+to the large number of applicants. The exam slot selection is open till April 10th. If you still have 
+problem,  send email to info@depi.gov.eg 
+ 
+Q3. I got problems after installing SEB 
+SEB requires Windows Operating system with recent updates. If installing it from the 
+LMS did not succeed, then you need to perform a complete reinstallation in your 
+machine (See section 2.3). 
+Alternatively, you can download older version of the SEB from sourceforge using this link 
+https://sourceforge.net/projects/seb/files/seb/SEB_3.7.1/ 
+ 
+ 
+Q4. I select the exam time but my selection is not shown in my portal account 
+Selections will be updated on or before April 10th. 
+ 
+Q5. When I logged into my account, there is a message “your exam time is not available” 
+ 
+ 
+ 
+ 
+This is because either you did not select your exam time yet (in this case, follow the steps to 
+login and select it) or your selection is not displayed yet (as in Q3)  
+ 
+Q6. Can not log into DEPI LMS 
+Contact support on registration platform 
+ 
+Q7. I did not receive my username and password 
+​
+Username and password for LMS access will be displayed in your account during 
+the duration of April 6th-8th. If you still did not get them, Please contact support or open 
+ticket on the registration platform 
+ 
+Q8. I tried to setup my camera but I always get black screen 
+ 
+Black camera view means the camera is already in use by another application or another 
+browser tab, or the camera is disabled by your operating system. 
+Close all browser tabs or any program that may be using the camera.  
+You must enable or allow the LMS to use the camera from the browser. 
+Make sure your device has a functional webcam, then test your webcam on the browser 
+first. check one the following links and make sure that it's working properly: 
+https://jumpshare.com/webcam-test Or  
+https://www.veed.io/tools/webcam-test 
+ 
+Q9. I got problems while trying to install Safe Exam Browser “SEB” 
+ 
+ 
+ 
+ 
+SEB requires Windows Operating system with recent updates. If installing it from the 
+LMS did not succeed, then you need to perform a complete reinstallation in your 
+machine (See section 2.3). 
+Alternatively, you can download older version of the SEB from sourceforge using this link 
+https://sourceforge.net/projects/seb/files/seb/SEB_3.7.1/ 
+ 
+ 
+Q10. I want to change the time slot I selected 
+Unfortunately, you can’t change time slot after your first selection 
+ 
+Q11. I got this error message after installing Safe exam Browser 
+One or more of SEB dependencies are missing. Please refer to SEB installation  (See section 
+2.3) or your version of windows is not updated and you should try using older version of SEB  
+ 
+ 
+ 
+Q12. I got this error message after installing Safe exam Browser 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+1. Do NOT open SEB manually 
+●​ Do NOT launch SEB from the desktop icon.​
+ 
+●​ Always launch SEB by clicking “Launch Safe Exam Browser” on the quiz page 
+(from a normal browser like Chrome or Firefox).​
+ 
+○​ This automatically loads the correct config file.​
+ 
+ 
+ 2. Make Sure the Correct .seb Configuration File is Used 
+●​ The quiz provides a “Download configuration” button:​
+ 
+○​ Click it and save the .seb file​
+ 
+○​ Then double-click the downloaded .seb file — this opens SEB in secure 
+mode with the right settings.​
+ 
+ 
+ 3. Clear Old SEB Configurations 
+On Windows: 
+ 
+ 
+ 
+ 
+Go to:​
+​
+ makefile​
+CopyEdit​
+C:\Users\<your username>\AppData\Local\SafeExamBrowser 
+●​  
+○​ Delete any old *.seb config files if present.​
+ 
+ 
+✅ 4. Reinstall SEB (Optional but Helpful) 
+●​ Uninstall SEB completely​
+ 
+●​ Re-download the latest version from:​
+ https://safeexambrowser.org/download_en.html​
+ 
+●​ Install a new installation from scratch​
+ 
+●​ Then open the new .seb config file from the quiz 
+ 
+Q13. I got this error message while trying to run SEB 
+Please refer to Q4 for SEB installation problems. 
+ 
+ 
+ 
+ 
+ 
+Q14. While preparing for the exam, I downloaded the official Safe Exam Browser (SEB) 
+configuration file from your website. When I open SEB directly using this file, everything works 
+fine — the exam interface loads, the camera activates, and I can proceed without any issues. 
+However, when I try to launch SEB through Google Chrome using the ""Launch Safe Exam
+ 
+Browser"" button, the program gets stuck on ""Initializing configuration,"" and then the following
+ 
+message appears
+:
+ 
+""
+SEB failed to start a new session! Please consult the log files for more information
+"".
+ 
+After that, it shows a message indicating that the configuration is not supported? 
+1.       Uninstall this version, download an older version that is compatible with your operating 
+system version and install it.
+ 
+2.       Then, try to launch safe exam browser 
+ 
+Q15.After installing SEB it kept giving me error every single time I tried to launch it? 
+  Please refer to Q9 for SEB installation problems. 
+ 
+ 
+ 
+ 
+ 
+Q16.I haven't seen any pop up message to allow me to open the camera? 
+Please allow Camera permission  as shown in picture below 
+ 
+Or go to site setting and allow camera for LMS site 
+ 
+ 
+ 
+ 
+ 
+Q17.I don't know if the camera opened successfully or not, there was a black square 
+screen on the right while I'm answering the quiz on the safe browser app. How do I know if 
+it has opened successfully or not? 
+ 
+Please refer to Q3 
+ 
+Q18. English 
+418 
+Sorry, your request has been intercepted because it appears to be an attack. 
+Event ID:32-inst-131-20250328172055-807f9eb7 
+If you are the webmaster, configure related parameters on the WAF console to allow your 
+requests. 
+ 
+Access to the DEPI platform is restricted to users inside Egypt. 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+2.​ Additional Information 
+2.1.​
+DEPI Round 3 Support information 
+2.2.​
+How to create a ticket from your Platform account 
+2.3.​
+How to perform a complete installation of Safe Exam 
+browser “SEB” 
+Make sure your Operating System is Windows 10 (Version 1803 or newer) or 
+    Windows 11 
+To install Safe Exam Browser (SEB) version 3.9.0.787 on a Windows system, ensure 
+your computer meets the following prerequisites:  
+1.​ Operating System: Windows 10 (Version 1803 or newer) or Windows 11.   
+2.​ .NET Framework: .NET Framework Runtime 4.8. 
+a.​ https://dotnet.microsoft.com/en-us/download/dotnet-framework/net48 
+3.​ Visual C++ Redistributable: Microsoft Visual C++ 2015-2019 Redistributable. 
+a.​ https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?
+view=msvc-170#visual-studio-2015-2017-2019-and-2022 
+4.​ Disk Space: At least 4.5 GB of free disk space. 
+Re-download the latest SEB version from:  https://safeexambrowser.org/download_en.html​
+ 
+ 
+ 
+ 
+ 
+ 
+Install SEB after the download ends. Agree to the terms and then press ""Install"" 
+ 
+ 
+Click on ""Close"" and then go back to the exam page on the platform 
+ 
+لو محتاج اى مساعدة تقدر تتواصل معانا على الخط الساخن او الواتس اب على اﻻرقام 
+:التالية",False,False
+101,DEBI,scraped_faq,DEPI Official FAQ,https://depi.gov.eg/content/faqs,6c75d46fd509b7193b3ba0d28056bca78519dc2931d1fc469ac4a5087d19b9f6,2026-09-27 11:36:09.630660+00:00,True,True,768,من المؤهل للتدريب؟,طلاب و خريجو الكليات بالجامعات المصرية حسب المسار.,False,False
+102,DEBI,scraped_faq,DEPI Official FAQ,https://depi.gov.eg/content/faqs,59fd4eb0e1ddab4adec5518ab7129acfdad6a25332ed867ce19e93c051e3e6bc,2026-09-27 11:36:09.630660+00:00,True,True,768,ماهى مسارات التدريب التكنولوجية.؟,Software Development Digital Arts Data Analytics AI & Data Science Infrastructure & Security Business- ERP Digital Game Creation,False,False
+103,DEBI,scraped_faq,DEPI Official FAQ,https://depi.gov.eg/content/faqs,fc439a97dfdd2c8e7149daa1eb4b63bb21564ac4ebbfd8945deed41f2844be57,2026-09-27 11:36:09.630660+00:00,True,True,768,ما تعريف ال Job Profile؟,هي متطلبات وظيفية بأدوار محددة تخدم أهداف الهيكل التنظيمي داخل أي مؤسسة.,False,False
+104,DEBI,scraped_faq,DEPI Official FAQ,https://depi.gov.eg/content/faqs,8c28a8270eef9af31be9a95094ef1854bd755c7dee48454dbfbfd7160e39c2c3,2026-09-27 11:36:09.630660+00:00,True,True,768,ماهى شروط الإلتحاق؟,يجب على المتقدمين استيفاء شروط التقديم ومعايير القبول التالية: مصري الجنسية ومقيم بجمهورية مصر العربية طلاب وخريجو الكليـــات والمعاهد العليا المصرية. يشترط اجتياز اختبار اللغة الإنجليزية بمستوى لا يقل عن المستوى الرابع، كما تتطلب بعض المسارات اجتياز اختبار تأهيل تقني موضح تفصيلًا في الكتالوج. للذكور: يجب أن يكون المتقدم قد أنهى فترة التجنيد أو معفي من التجنيد أو تم تأجيله للتجنيد حتى شهر يناير 2027 (شروط الالتحاق) الموافقة على إقرار الالتزام الكامل بشروط ونظام الدراسة المحدد للمنحة توفير طرق للاتصال مستدامة للمتقدم تشمل بريد إلكتروني ورقم هاتف محمول مزود بتطبيق الواتس أبWhatsApp محافظة التدريب هي المحافظة التي يتم فيها حضور الجلسات الحضورية وغير قابلة للتعديل,False,False
+105,DEBI,scraped_faq,DEPI Official FAQ,https://depi.gov.eg/content/faqs,c055f8afc7cdce5f10ed98a144c2e01f1f3a0f57626a8fde03bc8877a677cfea,2026-09-27 11:36:09.630660+00:00,True,True,768,منهجية القبول؟,القبول بأولوية التسجيل واجتياز اختبارات القبول مع مراعاة تناسب البرامج التدريبية ورغبات المتقدمين مع خلفية كل متقدم الدراسية والعملية . يتم التحقق من استيفاء شروط التقدم الأساسية واستكمال جميع الاوراق المطلوبة لجميع المتقدمين، وبناء عليه يتم دعوة المقبولين إلى استكمال مراحل التقديم وتشمل تأدية اختبارات القبول. يقوم الطالب بتسجيل بياناته ورفع المستندات المطلوبة المستندات المطلوبة للتقدم هي: للخريجين: شهادة التخرج من الجامعة (صورة). شهادة الخدمة العسكرية (صورة) . بطاقة الرقم القومي (صورة) للطلاب: بيان درجات لاخر سنة دراسية او شهادة القيد / صورة من كارنيه الكلية (لحين استخراج بيان للدرجات). بطاقة الرقم القومي (صورة),False,False
+106,DEBI,scraped_faq,DEPI Official FAQ,https://depi.gov.eg/content/faqs,1739c56761d158ffd4243a8675c18b96069b4534f0be6c056deaba312bbeabf4,2026-09-27 11:36:09.630660+00:00,True,True,768,هل يوجد شروط لمحل السكن؟,التقدم من اى مدينة فى الجمهورية.,False,False
+107,DEBI,scraped_faq,DEPI Official FAQ,https://depi.gov.eg/content/faqs,6e7434dd43b6479b1533ef328967df17e71b1f2cd8eb1361ec3d9ffe71e19311,2026-09-27 11:36:09.630660+00:00,True,True,768,هل سيتم دفع أي مصاريف نظير التسجيل أو الالتحاق بالمنحة؟,لا، المنحة مجانية بالكامل وسيتم توفير أدوات التدريب للطلاب أثناء التدريب.,False,False
+108,DEBI,scraped_faq,DEPI Official FAQ,https://depi.gov.eg/content/faqs,6770c8d203b3ca9732c991604e669a7ba1bf9605de73867f28ef87bbb079fbdf,2026-09-27 11:36:09.630660+00:00,True,True,768,ما هي وسائل التواصل مع المختصين بالمبادرة؟,البريد الإلكتروني info@depi.gov.egهو وسيلة التواصل الأساسية ويتم الرد على البريد الإلكتروني خلال 24 ساعة، وفى حالة تأخر الرد بسبب كثرة الاستفسارات فيُمكن إرسال الرسالة مرة أخرى.,False,False
+109,DEBI,scraped_faq,DEPI Official FAQ,https://depi.gov.eg/content/faqs,80adec9d17038598b937b1c4923c2c4edcba8b3eae18a95bfbfe868e3c97bce6,2026-09-27 11:36:09.630660+00:00,True,True,768,هل يستطيع من لا تنطبق عليه شروط المنحة التسجيل وسداد التكلفة؟,لا بد لمن يلتحق بالمنحة أن يكون مطابقاً لشروط التقديم كاملة.,False,False
+110,DEBI,scraped_faq,DEPI Official FAQ,https://depi.gov.eg/content/faqs,376b2e9bdeb4703067bd8e315d6d37fa1a556b303ca1b30b3b03e37c1d3d777d,2026-09-27 11:36:09.630660+00:00,True,True,768,ما هي مدة الدراسة بالمنحة؟,مدة الدراسة بالمنحة هي ستة أشهر، تشمل 4 أشهر للمحاور الفنية والمهارات المطلوبة للعمل الحر (مهارات العمل الحر والمهارات الحياتية واللغة الإنجليزية) بواقع 200 ساعة، 3 ساعات لكل محاضرة ، وشهران للإرشاد المهني للعمل الحر .,False,False
+111,DEBI,scraped_faq,DEPI Official FAQ,https://depi.gov.eg/content/faqs,dfe611445fd270d53878071179bd212c3b9f9fa3df31555d1e71f3f3e9ab3243,2026-09-27 11:36:09.630660+00:00,True,True,768,هل سيتم التدريب في أوقات الدراسة؟,يتم التوقف عن التدريب للطلاب خلال فترة الامتحانات النهائية لمدة شهر واحد ولا يتوقف التدريب بالنسبة للمتقدمين من فئة الخريجين.,False,False
+112,DEBI,scraped_faq,DEPI Official FAQ,https://depi.gov.eg/content/faqs,ac4dd7318c0a09a22c58e65ab37aa2d2d7c9b0ad7a4a88aef7d27238e27f127e,2026-09-27 11:36:09.630660+00:00,True,True,768,ما هي نسبة الحضور المطلوبة لاستكمال معايير التخرج من كل سنة دراسية؟,يشترط على المتدرب الالتزام بحضور 65% من الجلسات الحضورية و 65% من الجلسات عن بعد وذلك فى جميع محاور الدراسة Technical – English - Soft skills –Freelancing skills)) من التوقيتات المطلوبة لكل مسار تدريبي.,False,False
+113,DEBI,scraped_faq,DEPI Official FAQ,https://depi.gov.eg/content/faqs,acdf06b5407cfee0e76f1fbf3f650accc7efc7e14544db7ac1436b65884fb0d4,2026-09-27 11:36:09.630660+00:00,True,True,768,هل يجوز التقدم للمنحة في حالة الالتحاق أو الارتباط بمنحة أخرى اونلاين؟,لا يفضل ذلك حيث أنه من المطلوب التركيز في التدريب نظراً لتعدد أنشطة التدريب.,False,False
+114,DEBI,scraped_faq,DEPI Official FAQ,https://depi.gov.eg/content/faqs,ea01fdc475def08aa3d9b5e0b92f8ed655f169e0f63d709ba93b6e93470f0904,2026-09-27 11:36:09.630660+00:00,True,True,768,"هل ستكون التدريبات العملية (الحضورية) في القاهرة فقط؟""",لا، سيتم توفير مركز تدريب في كل محافظة تابعة للملتحقين بالمنحة لتنفيذ التدريبات العملية طبقًا للخطة الزمنية لكل مجموعة تدريبية في كل محافظة.,False,False
+115,DEBI,scraped_faq,DEPI Official FAQ,https://depi.gov.eg/content/faqs,bd0d196473920c814100d4bd8c746c6d41099b73223959affa9e93b310ada8a9,2026-09-27 11:36:09.630660+00:00,True,True,768,هل سيتم منح شهادة بعد إتمام التدريب ؟,يتم منح المتدرب شهادة إتمام التدريب وفقا لعدد الساعات التدريبية لكل مسار تدريبي معتمدة من وزارة الاتصالات وتكنولوجيا المعلومات وذلك بعد إنتهاء التدريب وإتمام المتدرب كافة متطلبات المسار التدريبي وتنفيذ المشروع المطلوب والحصول بنجاح على عدد 3 مهام على الأقل من إحدى منصات العمل الحر.,False,False
+116,DEBI,scraped_faq,DEPI Official FAQ,https://depi.gov.eg/content/faqs,0b333205e03b764138085561db253b6d0a9799fdad5a9f1cf4a5858699fee2c3,2026-09-27 11:36:09.630660+00:00,True,True,768,ما هي أماكن تنفيذ التدريب بالمحافظات؟,سيتم الإعلان عن مراكز التدريب في المحافظات بعد الانتهاء من فترة التسجيل وطبقاً لكثافة المسجلين للمنحة في المحافظات.,False,False
+117,DEBI,scraped_faq,DEPI Official FAQ,https://depi.gov.eg/content/faqs,e33d2d8e312710593ed02c1f736b8ace7949d078fb2daef3324e66ef28efe7bc,2026-09-27 11:36:09.630660+00:00,True,True,768,كيف يمكن التأكد أن التسجيل تم بنجاح؟,يمكن للمتقدم متابعة حالة استمارة البيانات على الموقع من خلال الدخول على الحساب الشخصي له، هذا بالإضافة إلى التأكد من وصول رسالة على البريد الإلكتروني تؤكد تمام التسجيل.,False,False
+118,DEBI,scraped_faq,DEPI Official FAQ,https://depi.gov.eg/content/faqs,e79ba9caa6015e4aa30dfcaaa655c4e0816bb4b0c2f8ba4fc20b2222622bf7f4,2026-09-27 11:36:09.630660+00:00,True,True,768,كيف يمكن معرفة قبولي بالمنحة؟,يتم ذلك من خلال متابعة موقف المتقدم على حسابه الشخصي ومتابعة أهم الأخبار على الموقع بالإضافة إلى متابعة البريد الالكتروني بعد إغلاق فترة التسجيل.,False,False
+119,DEBI,scraped_faq,DEPI Official FAQ,https://depi.gov.eg/content/faqs,f9c21b0a92a88fd5184a4f4a925293fdfe9b74dadd254f2740dfe498ef5a3abf,2026-09-27 11:36:09.630660+00:00,True,True,768,ما هو مسار الصناعة (DEPI Industry Track)؟,يُعد مسار الصناعة مساراً متقدماً وأكثر تخصصاً؛ يهدف إلى ربط المتخصصين او العاملين في التخصصات المهنية المختلفة بأحدث التطورات الفنية في تخصصاتهم وطبقا لمتطلبات سوق العمل. ويتحقق ذلك من خلال التدريب العملي، والإرشاد المهني، والمشاريع التطبيقية، بالشراكة مع الشركات الرائدة في القطاعات المهنية الحيوية (كالطب، البرمجة، القانون، والمالية) التي تعتمد على التكنولوجيا المتقدمة في أعمالها.,False,False
+120,DEBI,scraped_faq,DEPI Official FAQ,https://depi.gov.eg/content/faqs,563b1da84d820e8d2040b6ce423b998069af609d8a55426e6bde446d89f210b8,2026-09-27 11:36:09.630660+00:00,True,True,768,ما الفرق بين مسار الصناعة والمسارات التقليدية في DEPI؟,تركز المسارات التقليدية بشكل أساسي على تنمية المهارات التقنية، بينما يضيف مسار الصناعة بعدًا عمليًّا أكبر من خلال التركيز على التطبيقات الصناعية التخصصية وإشراك الشركات في العملية التدريبية، وتقديم حالات استخدام واقعية، ومشروعات تطبيقية، وإرشاد مباشر من خبراء الصناعة، بما يضمن مواءمة أفضل مع احتياجات سوق العمل.,False,False
+121,DEBI,scraped_faq,DEPI Official FAQ,https://depi.gov.eg/content/faqs,3053e0a920deb097d9f7569911a1c649ffd124be86e25d858e195ee04ed0bb0b,2026-09-27 11:36:09.630660+00:00,True,True,768,ما الفوائد التي سيحصل عليها المشاركون في هذا المسار؟,سيحصل المشاركون على: خبرة عملية من خلال مشروعات واقعية. إرشاد مهني من خبراء الصناعة. فرص للتواصل وبناء شبكة علاقات مهنية. تطوير المهارات الشخصية والمهنية مثل العمل الجماعي والتواصل وحل المشكلات. تعزيز فرص التوظيف والاستعداد لسوق العمل.,False,False
+122,DEBI,scraped_faq,DEPI Official FAQ,https://depi.gov.eg/content/faqs,7e8330fe3bf14c6216334774a07d9bd633e6693b3b886829cf2e2b83ab871ca5,2026-09-27 11:36:09.630660+00:00,True,True,768,من الفئة المستهدفة لهذا المسار؟,يستهدف المسار الخريجين الذين يمتلكون أساسيات معرفية أو تقنية ويرغبون في اكتساب خبرة عملية أكبر والانخراط بشكل مباشر مع قطاع الصناعة لتعزيز فرصهم المهنية.,False,False
+123,DEBI,scraped_faq,DEPI Official FAQ,https://depi.gov.eg/content/faqs,2fbd1c3feee1ef8d8092271c90381d3f815729cb3776d198e25b745c9af2672b,2026-09-27 11:36:09.630660+00:00,True,True,768,هل سيعمل المشاركون على مشروعات حقيقية؟,نعم، يعتمد المسار على مشروعات وتحديات مستوحاة من احتياجات حقيقية للشركات والقطاع الصناعي، مما يمنح المشاركين فرصة لتطبيق معارفهم في بيئة تحاكي الواقع المهني.,False,False
+124,DEBI,scraped_faq,DEPI Official FAQ,https://depi.gov.eg/content/faqs,8c2dbc5214b0c44737b6eb4fb27393c6f7ebe029cf1aa4ed6053ebd7249561c7,2026-09-27 11:36:09.630660+00:00,True,True,768,كيف يدعم مسار الصناعة فرص التوظيف؟,من خلال مواءمة المحتوى التدريبي مع احتياجات سوق العمل الحالية، وإشراك الشركات والخبراء في التدريب، واكتساب خبرات عملية يمكن إضافتها إلى السيرة الذاتية، مما يزيد من جاهزية المشاركين وفرصهم في الحصول على وظائف متميزة.,False,False
+125,DEBI,scraped_faq,DEPI Official FAQ,https://depi.gov.eg/content/faqs,fb172a54dd4f908167e985aecdb0ee904ea405c7ab45c6ba4d5fbb4ddd2fcd69,2026-09-27 11:36:09.630660+00:00,True,True,768,ما دور الشركاء الصناعيين في هذا المسار؟,يساهم الشركاء الصناعيون في: تقديم الإرشاد والتوجيه المهني. طرح مشروعات وتحديات واقعية. تقديم محاضرات وورش عمل متخصصة. مشاركة أفضل الممارسات والاتجاهات الحديثة في السوق. المساهمة في تأهيل الكفاءات المطلوبة للصناعة.,False,False
+126,DEBI,scraped_faq,DEPI Official FAQ,https://depi.gov.eg/content/faqs,a85868d780c495a96d664802eeb2f9ca85e1d1139eed1bac383726ad57aa6fe3,2026-09-27 11:36:09.630660+00:00,True,True,768,ما الذي يميز مسار الصناعة عن غيره؟,يتميز بدمج التدريب التقني عالي الجودة مع الخبرة العملية المباشرة والتفاعل المستمر مع الشركات والخبراء، مما يوفر تجربة تعليمية متكاملة تؤهل المشاركين للنجاح المهني بشكل أسرع.,False,False
+127,DEBI,scraped_faq,DEPI Official FAQ,https://depi.gov.eg/content/faqs,ffffaae3221167449592638bf8489382eae141a247bc0720005ad4772cd453aa,2026-09-27 11:36:09.630660+00:00,True,True,768,لماذا تم إطلاق مسار الصناعة الآن؟,لأن سوق العمل يشهد تطورًا متسارعًا ويتطلب كوادر تمتلك خبرة عملية إلى جانب المعرفة التقنية. لذلك جاء مسار الصناعة لتعزيز الربط بين التدريب المتخصص والعمل المهني في الطب والبرمجة والقانون والمالية، حيث تستخدم التكنولوجيا المتقدمة في مهنهم، وضمان أن يكتسب المتدربون المهارات والخبرات التي تجعلهم أكثر جاهزية وقدرة على المنافسة في سوق العمل منذ اليوم الأول.,False,False
+128,DEBI,scraped_faq,DEPI Official FAQ,https://depi.gov.eg/content/faqs,2e1526128eceb1691e914cce4ff7bddfab348185db9585a037f2ebe7c073e360,2026-09-27 11:36:09.630660+00:00,True,True,768,ما هي مدة تدريب DEPI Industry؟,المدة التدريبية للبرنامج هي أربعة أشهر بحد أقصى.,False,False
+129,DEBI,scraped_faq,DEPI Official FAQ,https://depi.gov.eg/content/faqs,485eb42766e6703524377b0735a7a5f1aa6ef49a4e7d72d89dbef003feae7066,2026-09-27 11:36:09.630660+00:00,True,True,768,هل سيتم دراسة محتوى التيكنيكال والإنجليزي والمهارات ومطالب تحقيق الأهداف؟,لا يتم دراسة محتوى اللغة الإنجليزية، ويتم دراسة المحتوى التقني ومهارات العمل في سوق العمل الحر فقط.,False,False
+130,DIGILIANS,depi_overview,مبادرة الرواد الرقميون (Digilians),,,2026-09-27 11:41:58.523966+00:00,True,True,768,ما هي مبادرة الرواد الرقميون وما هي أهدافها؟,مبادرة الرواد الرقميون (Digilians) هي مبادرة وطنية أطلقتها وزارة الاتصالات وتكنولوجيا المعلومات بالتعاون مع الأكاديمية العسكرية المصرية. تهدف المبادرة إلى تطوير مهارات الشباب المصري (من 18 إلى 32 سنة) في مجالات تكنولوجيا المعلومات والاتصالات، وبناء المهارات الشخصية والقيادية واللغوية، وإبرام شراكات مع كبرى الشركات العالمية والجامعات المرموقة لتمكين الكفاءات الوطنية.,False,False
+131,DIGILIANS,depi_benefits,مبادرة الرواد الرقميون (Digilians),,,2026-09-27 11:41:58.523966+00:00,True,True,768,ما هي مزايا ومنح مبادرة الرواد الرقميون؟,"تشمل مزايا مبادرة الرواد الرقميون (Digilians):
+- شهادة معتمدة مشتركة من وزارة الاتصالات والأكاديمية العسكرية المصرية.
+- شهادات معتمدة دولياً لكل محور تدريبي ومهارة تقنية.
+- فرصة الحصول على شهادة ماجستير من جامعة أجنبية مرموقة للمقبولين في مسار الماجستير.
+- مسار تدريبي متكامل مجاني مع جوائز ومسابقات تكنولوجية للمتفوقين.
+- تدريب عملي ميداني وإقامة فندقية مجانية كاملة شاملة كافة الوجبات داخل الأكاديمية العسكرية.",False,False
+132,DIGILIANS,depi_conditions,مبادرة الرواد الرقميون (Digilians),,,2026-09-27 11:41:58.523966+00:00,True,True,768,ما هي شروط التقديم والقبول في مبادرة الرواد الرقميون؟,"شروط التقديم في مبادرة الرواد الرقميون (Digilians):
+1. الجنسية: مصري / مصرية.
+2. السن: من 18 حتى 32 عاماً.
+3. المؤهل الدراسي: مؤهل مناسب لمسار التدريب (خريجو الكليات، المعاهد العليا، والمعاهد المتوسطة وفوق المتوسطة)، ويمكن لطلاب السنة النهائية التقديم بإفادة رسمية.
+4. الموقف التجنيدي للذكور: أدى الخدمة العسكرية أو معفى نهائياً أو مؤجل تأجيلاً سارياً.
+5. اللغة: إلمام بأساسيات اللغة الإنجليزية (بمستوى B1 كحد أدنى).
+6. التفرغ الكامل والإقامة الداخلية بالأكاديمية العسكرية بمصر الجديدة طوال فترة المسار التدريبي.",False,False
+133,DIGILIANS,depi_documents,مبادرة الرواد الرقميون (Digilians),,,2026-09-27 11:41:58.523966+00:00,True,True,768,ما هي المستندات والأوراق المطلوبة للتقديم في المبادرة؟,"المستندات المطلوبة للتقديم:
+- صورة بطاقة الرقم القومي (سارية).
+- أصل شهادة التخرج متضمنة المواد والتقديرات (أو بيان نجاح / إفادة قيد بالسنة النهائية).
+- شهادة الموقف من التجنيد للذكور.
+- شهادة إتقان اللغة الإنجليزية (TOEFL أو IELTS إن وجدت).
+- صحيفة الحالة الجنائية (فيش وتشبيه ساري).
+* تنبيه: تُرفع جميع المستندات بصيغة PDF وبحد أقصى 2 ميجابايت للملف.",False,False
+134,DIGILIANS,depi_stages,مبادرة الرواد الرقميون (Digilians),,,2026-09-27 11:41:58.523966+00:00,True,True,768,ما هي مراحل التقديم والقبول واختبارات المبادرة؟,"مراحل القبول تمر بـ 7 خطوات:
+1. التسجيل الإلكتروني المجاني عبر الموقع الرسمي.
+2. فحص المستندات والتحقق من الشروط.
+3. إخطار المؤهلين مبدئياً بمواعيد الاختبارات عبر البريد الإلكتروني.
+4. اختبارات القبول (تفكير منطقي، لغة إنجليزية، أساسيات رقمية، واختبار تخصصي للمسار) بالإضافة لمقابلة شخصية وكشف طبي بالأكاديمية العسكرية.
+5. إبلاغ الناجحين لحضور المحاضرة التعريفية.
+6. توقيع الإقرار واستلام أصول المستندات.
+7. التسكين وبدء الدراسة والتدريب.",False,False
+135,DIGILIANS,depi_tracks,مبادرة الرواد الرقميون (Digilians),,,2026-09-27 11:41:58.523966+00:00,True,True,768,ما هي المسارات والتخصصات المتاحة في مبادرة الرواد الرقميون؟,"تضم المبادرة 6 تخصصات رئيسية:
+1. الذكاء الاصطناعي وعلوم البيانات (AI & Data Science)
+2. الأمن السيبراني (Cybersecurity)
+3. تطوير البرمجيات وهندسة النظم (Software Development)
+4. البنية التحتية الرقمية والشبكات السحابية (Digital Infrastructure & Cloud)
+5. الفنون والوسائط الرقمية (Digital Arts & Design)
+6. تصميم الدوائر الإلكترونية والنظم المدمجة (Embedded Systems & VLSI)
+* ملاحظة: يُتاح للمتقدم اختيار مسار واحد فقط تحت تخصص واحد لضمان التركيز والتميز.",False,False
+136,DIGILIANS,depi_registration,مبادرة الرواد الرقميون (Digilians),,,2026-09-27 11:41:58.523966+00:00,True,True,768,كيف أقوم بالتسجيل في مبادرة الرواد الرقميون وما هو الرابط الرسمي؟,"التسجيل مجاني تماماً وبشكل إلكتروني عبر الرابط الرسمي المعتمد:
+🔗 https://www.digilians.gov.eg/login
+
+إرشادات التسجيل:
+- يُفضل استخدام جهاز كمبيوتر للتسجيل لضمان وضوح رفع الملفات.
+- لا يعتمد القبول على أسبقية التقديم بل على الكفاءة ونتائج الاختبارات.
+- يمكن تعديل البيانات والمستندات طوال فترة فتح باب التسجيل وقبل حجز موعد الامتحان.",False,False
+137,DIGILIANS,depi_study_system,مبادرة الرواد الرقميون (Digilians),,,2026-09-27 11:41:58.523966+00:00,True,True,768,ما هو نظام الدراسة والإقامة واللغة في المبادرة؟,"نظام الدراسة في مبادرة الرواد الرقميون:
+- تفرغ كامل وإقامة فندقية شاملة داخل الأكاديمية العسكرية بمصر الجديدة.
+- لغة الدراسة الرسمية هي الإنجليزية مع شرح وتوضيح بالعربية.
+- التدريب مكثف يومياً طوال الأسبوع مع إجازات دورية كل أسبوعين.
+- الحضور إلزامي بنسبة لا تقل عن 85% للتمكن من الاستمرار.
+- مدة البرامج: تتراوح من 4 أشهر (دبلوم احترافي مكثف) إلى سنتين (لبرامج الماجستير).
+- إشراف ومتابعة مستمرة من مرشدين ومدربين تقنيين دوليين.",False,False
+138,DIGILIANS,depi_exams_seb,مبادرة الرواد الرقميون (Digilians),,,2026-09-27 11:41:58.523966+00:00,True,True,768,ما هي متطلبات الامتحانات وحل مشاكل متصفح SEB (Safe Exam Browser) والكاميرا؟,"إرشادات هامة لامتحانات القبول وLMS:
+1. متصفح الامتحانات الآمن SEB: يتطلب نظام Windows 10 (إصدار 1803 فأحدث) أو Windows 11.
+2. تشغيل الامتحان: لا تفتح برنامج SEB يدوياً من قائمة البرامج، بل اضغط على زر 'Launch Safe Exam Browser' من داخل صفحة الامتحان بالبوابة.
+3. الكاميرا السوداء: تأكد من إغلاق كافة البرامج والتطبيقات التي تستخدم الكاميرا (مثل Zoom، Teams)، وامنح متصفحك صلاحية الوصول للكاميرا.
+4. بيانات الدخول: تظهر بيانات LMS (اسم المستخدم وكلمة المرور) في حسابك على البوابة بعد تحديد الموعد.
+5. في حال حدوث أي عطل، تواصل فوراً عبر: info@depi.gov.eg",False,False
+139,DIGILIANS,depi_career_opportunities,مبادرة الرواد الرقميون (Digilians),,,2026-09-27 11:41:58.523966+00:00,True,True,768,ما هي فرص التوظيف والعمل بعد التخرج من مبادرة الرواد؟,"توفر المبادرة دعماً وظيفياً شاملاً للمتفوقين والخريجين:
+- ترشيح مباشر لكبرى شركات التكنولوجيا والاتصالات المحلية والدولية.
+- تدريب متخصص على كتابة السيرة الذاتية (CV) واجتياز المقابلات الشخصية.
+- جلسات إرشاد وتوجيه مهني فردية ومتابعة مستمرة بعد التخرج.
+- فرص تدريب عملي (Internships) في الوزارات والمؤسسات الشريكة.
+- دعم وتمكين رواد الأعمال والعمل الحر (Freelancing).
+- ملتقيات توظيف دورية تنظمها وزارة الاتصالات لربط الخريجين بسوق العمل.",False,False
+140,DIGILIANS,depi_certificates,مبادرة الرواد الرقميون (Digilians),,,2026-09-27 11:41:58.523966+00:00,True,True,768,ما هي الشهادات والاعتمادات التي يحصل عليها خريج المبادرة؟,"يحصل المتدرب على:
+1. شهادة تخرج معتمدة مشتركة من وزارة الاتصالات وتكنولوجيا المعلومات والأكاديمية العسكرية المصرية.
+2. شهادات مهنية دولية معتمدة لكل محور تخصصي يتم اجتيازه.
+3. شهادة درجة الماجستير من جامعة أجنبية مرموقة للملتحقين بمسارات الماجستير.
+* يشترط تسليم ومناقشة مشروع التخرج بنجاح للحصول على الشهادة النهائية.",False,False
+141,DIGILIANS,depi_contact_support,مبادرة الرواد الرقميون (Digilians),,,2026-09-27 11:41:58.523966+00:00,True,True,768,كيف يمكنني التواصل مع الدعم الفني وخدمة عملاء مبادرة الرواد الرقميون؟,"قنوات التواصل الرسمية والدعم الفني لمبادرة الرواد الرقميون (Digilians):
+- البريد الإلكتروني الرسمي: info@digilians.gov.eg
+- بريد الدعم الأكاديمي والامتحانات: info@depi.gov.eg
+- خدمة عملاء الواتساب الذكية: متوفرة عبر هذه المحادثة على مدار الساعة للرد الفوري على الاستفسارات.
+- بوابة الاستفسارات: https://www.digilians.gov.eg",False,False
+142,DIGILIANS,depi_withdrawal_policy,مبادرة الرواد الرقميون (Digilians),,,2026-09-27 11:41:58.523966+00:00,True,True,768,ما هي سياسة وقواعد الانسحاب من المبادرة؟,"سياسة الانسحاب:
+نظراً لأن منحة مبادرة الرواد الرقميون مجانية وممولة بالكامل من الدولة ذات تكلفة عالية وتفرغ كامل، لا يجوز الانسحاب بعد بدء التدريب إلا في الظروف القهرية القصوى وبموافقة خطية من إدارة المبادرة، وفي حال الانسحاب دون عذر مقبول يتحمل الطالب التكاليف والالتزامات المترتبة وفقاً للإقرار الموقع.",False,False
+143,DIGILIANS,depi_grants,مبادرة الرواد الرقميون (Digilians),,,2026-09-27 11:41:58.523966+00:00,True,True,768,ما هي المنح والتمويل المتاح لطلاب مبادرة الرواد الرقميون؟,"مبادرة الرواد الرقميون (Digilians) ممولة بالكامل من الدولة.
+- لا رسوم دراسية لجميع البرامج.
+- بدل إقامة يومي شامل الوجبات.
+- تغطية تكاليف النقل للطلاب من خارج القاهرة.
+- جوائز مالية للمتفوقين.
+- دعم شراء الأجهزة التقنية للطلاب المحتاجين.",False,False
+144,DIGILIANS,depi_lms_platform,مبادرة الرواد الرقميون (Digilians),,,2026-09-27 11:41:58.523966+00:00,True,True,768,ما هي المنصة التعليمية (LMS) المستخدمة في DEPI؟,"تستخدم مبادرة الرواد الرقميون منصة LMS متكاملة تقدم:
+- المحاضرات والفيديوهات التعليمية
+- الواجبات والاختبارات الإلكترونية
+- نظام الحضور والإجازات
+- التواصل بين الطلاب والمدربين
+- لوحة التحكم الشخصية لكل طالب
+
+الدعم الفني: info@depi.gov.eg",False,False
+145,DIGILIANS,depi_international_partnerships,مبادرة الرواد الرقميون (Digilians),,,2026-09-27 11:41:58.523966+00:00,True,True,768,ما هي الشراكات الدولية لمبادرة الرواد الرقميون؟,"تتعاون مبادرة الرواد الرقميون (Digilians) مع جامعات وشركات تقنية عالمية:
+- جامعات في ألمانيا وبريطانيا وكندا
+- شراكات مع مايكروسوفت وغوغل وأمازون
+- برامج تبادل ثقافي وتدريب مشترك
+- اعتمادات دولية للشهادات
+- مشاريع بحثية مشتركة",False,False
+146,DIGILIANS,depi_evaluation_criteria,مبادرة الرواد الرقميون (Digilians),,,2026-09-27 11:41:58.523966+00:00,True,True,768,ما هي معايير تقييم الطلاب في مبادرة الرواد الرقميون؟,"يتم تقييم الطلاب وفقاً لمعايير متعددة:
+- الاختبارات الإلكترونية: 30%
+- المشاريع التطبيقية: 30%
+- الحضور والمشاركة: 15%
+- الامتحان النهائي: 25%
+
+الحد الأدنى للنجاح: 60%
+التقديرات: ممتاز (90+)، جيد جداً (80+)، جيد (70+)، مقبول (60+)",False,False
+147,DIGILIANS,depi_admission_appeal,مبادرة الرواد الرقميون (Digilians),,,2026-09-27 11:41:58.523966+00:00,True,True,768,كيف يمكنني تقديم اعتراض أو الطعن في قرار القبول؟,"إجراءات الاعتراض على قرارات القبول في مبادرة الرواد الرقميون:
+1. تقديم اعتراض رسمي عبر البوابة الإلكترونية خلال 5 أيام عمل من إعلان النتيجة.
+2. دفع رسوم الاعتراض (تُسترد في حال إلغاء القرار).
+3. مراجعة اللجنة العليا للاعتراضات.
+4. الإخطار بالنتيجة خلال 10 أيام عمل.
+5. في حال عدم الرضا عن النتيجة، يمكن التواصل مع مكتب أمين المظالم.",False,False
+148,DIGILIANS,depi_admission_deferral,مبادرة الرواد الرقميون (Digilians),,,2026-09-27 11:41:58.523966+00:00,True,True,768,هل يمكن تأجيل التسجيل أو إعادة تفعيل الطلب؟,"سياسة التأجيل وإعادة التفعيل:
+- يمكن تأجيل التسجيل مرة واحدة لمدة تصل إلى فصل دراسي واحد بأسباب قهرية موثقة.
+- يجب تقديم طلب التأجيل عبر البوابة مع المستندات الداعمة.
+- لا يحق تأجيل التسجيل بعد استكمال الاختبارات.
+- إعادة التفعيل تتطلب إعادة تقديم الطلب ودفع أي رسوم مستحقة.",False,False
+149,DIGILIANS,depi_exam_appeal,مبادرة الرواد الرقميون (Digilians),,,2026-09-27 11:41:58.523966+00:00,True,True,768,كيف يمكنني الاعتراض على نتيجة الامتحان أو طلب مراجعتها؟,"إجراءات مراجعة نتائج الامتحانات:
+1. تقديم طلب مراجعة خلال 7 أيام عمل من إعلان النتيجة.
+2. يتم مراجعة الإجابات مقارنة بمعايير التصحيح المعتمدة.
+3. لا تُعاد تصحيح الإجابات إلا في حال وجود خطأ واضح في التصحيح.
+4. تُرد رسوم المراجعة في حال تغيير النتيجة.
+5. التواصل عبر: exam.review@depi.gov.eg",False,False
+150,DIGILIANS,depi_exam_incident,مبادرة الرواد الرقميون (Digilians),,,2026-09-27 11:41:58.523966+00:00,True,True,768,ماذا أفعل في حالة حدوث طارئ أو حادث أثناء الامتحان؟,"الإبلاغ عن الحوادث أثناء الامتحانات:
+- في حال حدوث عطل فني أو طارئ أثناء الامتحان: الضغط على زر المساعدة في البوصة أو التواصل مع المشرف فوراً.
+- الإبلاغ عبر: exam.incidents@depi.gov.eg
+- توثيق الحادث بالصور أو الفيديو إن أمكن.
+- سيتم النظر في الطلب خلال 48 ساعة عمل.
+- قد يتم جدولة إعادة للامتحان المتأثر.",False,False
+151,DIGILIANS,depi_exam_accommodation,مبادرة الرواد الرقميون (Digilians),,,2026-09-27 11:41:58.523966+00:00,True,True,768,هل تتوفر تسهيلات خاصة للطلاب ذوي الاحتياجات الخاصة في الامتحانات؟,"التسهيلات الخاصة للطلاب ذوي الاحتياجات الخاصة:
+- توفير وقت إضافي (25% إضافية).
+- توفير قاعة منفصلة ومرتبة.
+- توفير أدوات مساعدة (حاسوب، قارئ شاشة).
+- توفير مترجم لغة الإشارة عند الطلب.
+- يجب تقديم طلب مسبق مع تقرير طبي معتمد قبل 14 يوم من الامتحان.
+- التواصل: accommodations@depi.gov.eg",False,False
+152,DIGILIANS,depi_training_feedback,مبادرة الرواد الرقميون (Digilians),,,2026-09-27 11:41:58.523966+00:00,True,True,768,كيف يمكنني تقديم ملاحظات أو شكوى عن جودة التدريب؟,"تقديم ملاحظات وشكاوى جودة التدريب:
+- استمارة التقييم بعد كل مسار تدريبي عبر البوصة.
+- تقديم شكوى جودة عبر: quality@depi.gov.eg
+- الاجتماعات التقييمية الدورية مع المرشدين.
+- مدة الاستجابة: 72 ساعة عمل.
+- يمكن طلب جلسة استشارية فردية مع فريق الجودة.",False,False
+153,DIGILIANS,depi_training_schedule,مبادرة الرواد الرقميون (Digilians),,,2026-09-27 11:41:58.523966+00:00,True,True,768,كيف يتم التعامل مع تعارض المواعيد أو الغياب من التدريب؟,"سياسة التعارض والغياب:
+- تعارض المواعيد: تقديم طلب مسبق عبر البوابة مع المستندات.
+- الغياب المبرر (مواعيد طبية، عائلية): تقديم إشعار قبل 48 ساعة مع تقرير طبي أو مستند رسمي.
+- الغياب غير المبرر: يُحتسب من نسبة الحضور الإلزامية (85%).
+- التغيب المتكرر يعرض الطالب للإيقاف مؤقتاً.",False,False
+154,DIGILIANS,depi_platform_bug,مبادرة الرواد الرقميون (Digilians),,,2026-09-27 11:41:58.523966+00:00,True,True,768,كيف أبلغ عن خلل فني أو خطأ في المنصة الإلكترونية؟,"الإبلاغ عن الأخطاء التقنية:
+- الإبلاغ عبر زر 'بلغ عن خطأ' الموجود في كل صفحة من البوابة.
+- البريد التقني: support@digilians.gov.eg
+- وصف الخطأ بوضوح مع لقطات شاشة إن أمكن.
+- تحديد المتصفح ونظام التشغيل المستخدم.
+- الاستجابة خلال 24 ساعة عمل.
+- تتبع حالة البلاغ عبر رقم التتبع المرفق.",False,False
+155,DIGILIANS,depi_platform_login_issues,مبادرة الرواد الرقميون (Digilians),,,2026-09-27 11:41:58.523966+00:00,True,True,768,لا أستطيع تسجيل الدخول أو رفع المستندات على المنصة، ماذا أفعل؟,"حلول مشاكل تسجيل الدخول والرفع:
+- كلمة المرور المنسية: اضغط 'نسيت كلمة المرور' وأدخل البريد الإلكتروني المسجل.
+- انتهاء الجلسة: أعد تسجيل الدخول وتأكد من استقرار الإنترنت.
+- عدم قبول الرفع: تأكد من صيغة PDF وحجم الملف أقل من 2 ميجابايت.
+- حاول استخدام متصفح Chrome أو Firefox أحدث إصدار.
+- إذا استمرت المشكلة: contact@digilians.gov.eg",False,False
+156,DEBI,scraped_rag,DEPI Official Web Page (home),https://depi.gov.eg/content/home,787e904ec30474a65ca8cabe8cc814ecd1666de8522ed88e678596e8cacc6d05,2026-09-27 19:30:28.813237+00:00,True,True,768,"تم إطلاق رحلة جديدة ، ""الدورة الخامسة."" مع مبادرة رواد مصر الرقمية","تم إطلاق رحلة جديدة ، ""الدورة الخامسة."" مع مبادرة رواد مصر الرقمية: في إطار رؤية مصر 2030، وتنفيذاً للتوجيهات المستمرة لسيادة رئيس الجمهورية بضرورة الاستثمار في بناء الإنسان المصري، وتماشياً مع الاستراتيجية الطموحة لوزارة الاتصالات وتكنولوجيا المعلومات لتنمية القطاع وبناء كوادر متخصصة ذات احترافية عالية؛ أطلقت الوزارة",False,False
+157,DEBI,scraped_rag,DEPI Official Web Page (home),https://depi.gov.eg/content/home,36b274aada4385fb24bfa705c9125378623d12bc0eec1b116168f39a971f328f,2026-09-27 19:30:28.813237+00:00,True,True,768,الرؤية,الرؤية: تحقيق الريادة في مجال الاتصالات وتكنولوجيا المعلومات من خلال بناء قوة عاملة ماهرة ومبتكرة تقود مسيرة التحول الرقمي الشامل محليًا وإقليميًا . تُـنـفَـذ المبادرة بالتعاون مع عدد من كبرى شركات التكنولوجيا العالمية والشركات المحلية والإقليمية العاملة في مجالات تنمية مهارات الاتصالات وتكنولوجيا المعلومات، حيث تقوم الشركات بالعديد من الأنشطة، منها عقد ورش عمل تطبيقية في المجالات التكنولوجية المختلفة والمساهمة في إثراء العملية التعليمية وتوفير دورات تدريبية لتطوير مهارات المتدربين .,False,False
+158,DEBI,scraped_rag,DEPI Official Web Page (about_depi),https://depi.gov.eg/content/aboutdepi,d60bd6b418d2dff0596851f5de7a1ef10d41f3167e98d66cc0f2f0f55fe3efe6,2026-09-27 19:30:28.813237+00:00,True,True,768,مبادرة رواد مصر الرقمية,مبادرة رواد مصر الرقمية: في إطار رؤية مصر 2030، وتنفيذاً للتوجيهات المستمرة لسيادة رئيس الجمهورية بضرورة الاستثمار في بناء الإنسان المصري، وتماشياً مع الاستراتيجية الطموحة لوزارة الاتصالات وتكنولوجيا المعلومات لتنمية القطاع وبناء كوادر متخصصة ذات احترافية عالية؛ أطلقت الوزارة,False,False
+159,DEBI,scraped_rag,DEPI Official Web Page (about_depi),https://depi.gov.eg/content/aboutdepi,9d7f5565648462349817c60560da1c1fda6fff5ba6065936af560e837256e97c,2026-09-27 19:30:28.813237+00:00,True,True,768,مبادرة رواد مصر الرقمية,"مبادرة رواد مصر الرقمية: في عام 2023. واليوم، وبعد مرور 3 سنوات حافلة بالإنجازات المثمرة والنجاحات الكبيرة التي تحققت خلال الدورات السابقة، يتم إطلاق الدورة الخامسة من المبادرة، لتواصل مسيرتها في تمكين الشباب وتطوير مهاراتهم الرقمية بما يواكب أحدث المتغيرات التكنولوجية العالمية. تُعد المبادرة ركيزة أساسية لتعزيز مشروعات بناء القدرات البشرية، واستثماراً للنجاحات التي حققتها مبادرات ""أجيال مصر الرقمية"" (والتي تضم تحت مظلتها: براعم، وأشبال، وبناة مصر الرقمية). وتهدف المبادرة إلى إعداد جيل من المتخصصين والمبدعين في التقنيات الحديثة، لتمكينهم من المنافسة بقوة في سوق العمل المحلي والإقليمي والعالمي، والمشاركة بفاعلية في صياغة مستقبل مصر الرقمية. الرؤية الرسالة المزايا الأهداف البرنامج الأساسي Depi برنامج Depi Industry",False,False
+160,DEBI,scraped_rag,DEPI Official Web Page (about_depi),https://depi.gov.eg/content/aboutdepi,136d5670244e8bbb413e7de5059bb375814fe6bb5d43dac6b9ec474a627aee15,2026-09-27 19:30:28.813237+00:00,True,True,768,الرؤية,الرؤية: تحقيق الريادة المحلية والإقليمية في قطاع الاتصالات وتكنولوجيا المعلومات من خلال بناء قوة عاملة مصرية، ماهرة ومبتكرة، تقود مسيرة التحول الرقمي الشامل وتصنع مستقبلاً تكنولوجياً مستداماً.,False,False
+161,DEBI,scraped_rag,DEPI Official Web Page (guidance),https://depi.gov.eg/StaticContent/Guidance,1ed0b631ac06500be91931bf55700804a7b421c262d97bb1d46eee48ee61abde,2026-09-27 19:30:28.813237+00:00,True,True,768,الإرشادات,الإرشادات: تنبيه هام! برجاء الإنتباه أنه بعد إتمام عملية التسجيل، يُرجى التفضل بالانتظار للحصول على رابط الامتحان على بريدك الالكتروني يرجى الانتباه أثناء أداء الاختبار، حيث لن تتمكن من الإعادة مرة أخرى. الامتحان مراقب ومدته 45 دقيقة فقط. يمكنك اختيار مسار وظيفي واحد فقط في مرحلة التسجيل، برجاء التأكد من كافة البيانات المسجلة قبل الحفظ. يرجى التأكد من إكمال عملية التسجيل من خلال ظهور الشاشة الأخيرة، وهي صفحة المستخدم، بالإضافة إلى ظهور رقم التسجيل. بعد الانتهاء من التسجيل سيصلك رابط الامتحان عبر بريدك الالكتروني وأيضا من خلال صفحة المستخدم.,False,False
+162,DEBI,scraped_rag,DEPI Official Web Page (contact_us),https://depi.gov.eg/StaticContent/ContactUs,ad6b56483b01c61f59333d6fab646936cf687c9e519aa33b0f20169c83348e04,2026-09-27 19:30:28.813237+00:00,True,True,768,قنوات التواصل,قنوات التواصل: للإستفسارات يرجى الاتصال على يوميا من الساعة 9 صباحا حتى 5 مساءً طوال أيام الأسبوع 15388 +20 2 21293441 يوميا من الساعة 9 صباحا حتى 5 مساءً طوال أيام الأسبوع إرسال بريد إلكتروني إلى info@depi.gov.eg العنوان القرية الذكية - الكيلو 28 طريق القاهرة / الإسكندرية الصحراوي - الجيزة - مصر. الصندوق البريدي 12577,False,False
