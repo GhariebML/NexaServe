@@ -2,6 +2,7 @@
 set -Eeuo pipefail
 source "$(dirname -- "$0")/common.sh"
 require_env
+umask 077
 base="${NEXASERVE_DATA_ROOT:-/var/lib/nexaserve}/backups"; install -d -m 0700 "$base"
 stamp=$(date -u +%Y%m%dT%H%M%SZ); out="$base/$stamp"; install -d -m 0700 "$out"
 root_user=$(grep '^POSTGRES_USER=' "$ENV_FILE"|cut -d= -f2-)

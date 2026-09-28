@@ -16,10 +16,10 @@ services:
       CS_DB_PASSWORD: ${CS_DB_PASSWORD:?set CS_DB_PASSWORD}
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ../assets/postgres/init-databases.sh:/docker-entrypoint-initdb.d/00-init-databases.sh:ro
-      - ../assets/postgres/schema.sql:/opt/nexaserve/schema.sql:ro
-      - ../migrations/001_professional_support.sql:/opt/nexaserve/001_professional_support.sql:ro
-      - ../migrations/002_dashboard_admin_users.sql:/opt/nexaserve/002_dashboard_admin_users.sql:ro
+      - ./assets/postgres/init-databases.sh:/docker-entrypoint-initdb.d/00-init-databases.sh:ro
+      - ./assets/postgres/schema.sql:/opt/nexaserve/schema.sql:ro
+      - ./migrations/001_professional_support.sql:/opt/nexaserve/001_professional_support.sql:ro
+      - ./migrations/002_dashboard_admin_users.sql:/opt/nexaserve/002_dashboard_admin_users.sql:ro
     expose: ["5432"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
@@ -35,7 +35,7 @@ services:
     command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--requirepass", "${REDIS_PASSWORD:?set REDIS_PASSWORD}"]
     volumes:
       - redis-data:/data
-      - ../assets/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - ./assets/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
     expose: ["6379"]
     healthcheck:
       test: ["CMD-SHELL", "REDISCLI_AUTH=$$REDIS_PASSWORD redis-cli ping | grep -q PONG"]
@@ -93,7 +93,7 @@ services:
       WHATSAPP_BRIDGE_URL: http://whatsapp:8080
     volumes:
       - n8n-data:/home/node/.n8n
-      - ../assets/n8n/workflows:/opt/nexaserve/workflows:ro
+      - ./assets/n8n/workflows:/opt/nexaserve/workflows:ro
     expose: ["5678"]
     ports: ["127.0.0.1:${N8N_PORT:-5678}:5678"]
     healthcheck:
@@ -105,7 +105,7 @@ services:
     networks: [backend]
   whatsapp:
     container_name: cs-whatsapp
-    build: {context: ../application/whatsapp, dockerfile: Dockerfile}
+    build: {context: ./application/whatsapp, dockerfile: Dockerfile}
     restart: unless-stopped
     environment:
       PORT: 8080
@@ -124,7 +124,7 @@ services:
     networks: [backend]
   dashboard:
     container_name: cs-dashboard
-    build: {context: ../application/dashboard, dockerfile: Dockerfile}
+    build: {context: ./application/dashboard, dockerfile: Dockerfile}
     restart: unless-stopped
     depends_on:
       postgres: {condition: service_healthy}
@@ -159,12 +159,12 @@ services:
     depends_on: [dashboard, whatsapp, n8n]
     ports: ["80:80", "443:443"]
     volumes:
-      - ../config/nginx/nexaserve.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./config/nginx/nexaserve.conf:/etc/nginx/conf.d/default.conf:ro
       - ${TLS_CERT_DIR:-/etc/nexaserve/tls}:/etc/nginx/tls:ro
     networks: [backend]
   kb-ingest:
     profiles: [tools]
-    build: {context: ../application/ingestion, dockerfile: Dockerfile}
+    build: {context: ./application/ingestion, dockerfile: Dockerfile}
     environment:
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
@@ -184,7 +184,7 @@ services:
     networks: [backend]
   scraper:
     profiles: [tools]
-    build: {context: ../application/scraper, dockerfile: Dockerfile}
+    build: {context: ./application/scraper, dockerfile: Dockerfile}
     command: ["python", "/app/DEPI_Web_Scraper/main.py"]
     volumes: [source-data:/app/DEPI_Web_Scraper/data]
     networks: [backend]

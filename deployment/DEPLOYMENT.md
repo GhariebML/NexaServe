@@ -45,7 +45,7 @@ Run commands from this directory unless stated. Keep a second administrator sess
 ### Phase A — verify the bundle and host
 
 1. Check transfer integrity: `sha256sum -c MANIFEST.sha256`. Expected: each listed file reports `OK`; a mismatch means recopy the bundle.
-2. Make shell scripts executable after transfer: `bash scripts/set_permissions.sh`. Expected: permission confirmation. If this fails, stop and check filesystem mount options.
+2. Make shell scripts executable after transfer: `bash scripts/set_permissions.sh`. Expected: permission confirmation (scripts 0750; container-mounted assets world-readable, Postgres init script 0755). If this fails, stop and check filesystem mount options.
 3. Install base tools: `bash scripts/01_install_host_dependencies.sh`. Expected: apt exits 0. On repository/DNS failure, request Ministry mirror access; do not switch to unapproved mirrors.
 4. Review Ubuntu and GPU: `cat /etc/os-release; uname -m; lscpu; free -h; df -h /; timedatectl status; nvidia-smi`. Expected Ubuntu 24.04, x86_64, adequate RAM/disk and recognized GPU/driver. If GPU absent, stop GPU deployment; CPU mode is not certified.
 5. For a missing driver, ask Ministry IT to approve the correct signed Ubuntu driver. Review `ubuntu-drivers devices`, install the approved/recommended driver with `sudo ubuntu-drivers install`, reboot, then repeat `nvidia-smi`. Do not install a driver `.run` file over package-managed drivers.
@@ -70,7 +70,7 @@ Run commands from this directory unless stated. Keep a second administrator sess
 ### Phase D — models, database, workflows and dashboard
 
 17. Check schema: `bash scripts/smoke.sh`. Expected pgvector, pg_trgm, uuid-ossp, migration ledger, active KB/embedding counts, and `ollama list`. Fresh DB creation only occurs with a new empty PostgreSQL volume. Existing volumes are never reset. For existing DBs, take a verified backup first, then run `bash scripts/migrate.sh` and inspect its output.
-18. Download models in online mode: `bash scripts/13_initialize_models.sh`. Expected both model pulls and a generation JSON response. If generation fails, inspect `docker compose logs ollama`, host RAM/VRAM, and GPU use; do not claim readiness from `ollama list`.
+18. Download models in online mode: `bash scripts/13_initialize_models.sh`. Expected: models present, container generation OK, embedding dimension 768, and `100% GPU`; the script tests the Compose Ollama service, never a host Ollama, and exits non-zero on failure. If generation fails, inspect `docker compose logs ollama`, host RAM/VRAM, and GPU use; do not claim readiness from `ollama list`.
 19. Establish the n8n owner account in the n8n UI via a localhost SSH tunnel, e.g. `ssh -L 5678:127.0.0.1:5678 <admin>@<server>`. Open `http://127.0.0.1:5678`. Use Ministry credential policy; no default account is supplied.
 20. In n8n create a PostgreSQL credential for host `postgres`, port `5432`, database `customerservice`, user `cs_app_user`, password from `.env`; create a second credential only if a workflow explicitly requires the n8n DB. Never copy the local credential export. Assign the credential to every Postgres node.
 21. Import canonical workflow JSON: `bash scripts/deploy_workflows.sh`. Workflow exports are inactive and local credential IDs were removed. Confirm every node's credential, Ollama URL, WhatsApp URL, internal workflow ID/call, and webhook path in n8n; resolve import errors before activating. Activate only the reviewed core gateway and required subworkflows after a backup/export.

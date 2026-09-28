@@ -4,5 +4,6 @@ COPY requirements.runtime.txt /app/requirements.runtime.txt
 RUN pip install --no-cache-dir -r /app/requirements.runtime.txt
 COPY main.py /app/DEPI_Web_Scraper/main.py
 COPY scraper/ /app/DEPI_Web_Scraper/scraper/
-COPY data/final/ /app/DEPI_Web_Scraper/data/final/
+# Scrape output goes to the source-data volume mounted at data/ (compose scraper), not the image.
+RUN mkdir -p /app/DEPI_Web_Scraper/data/final /app/DEPI_Web_Scraper/data/raw
 CMD ["python", "/app/DEPI_Web_Scraper/main.py"]

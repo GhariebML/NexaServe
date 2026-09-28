@@ -1,0 +1,6 @@
+**/.env
+**/.env.*
+**/__pycache__
+**/*.pyc
+**/data
+DEPI_Web_Scraper

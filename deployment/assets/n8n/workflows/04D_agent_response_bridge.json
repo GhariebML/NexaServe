@@ -229,8 +229,6 @@
       ]
     }
   },
-  "settings": {
-    "executionOrder": "v1"
-  },
+  "settings": {"executionOrder": "v1", "errorWorkflow": "CSWF000000000008"},
   "active": false
 }

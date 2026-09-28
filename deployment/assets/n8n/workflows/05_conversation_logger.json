@@ -118,7 +118,7 @@
       ]
     }
   },
-  "settings": {},
+  "settings": {"errorWorkflow": "CSWF000000000008"},
   "staticData": null,
   "pinData": {},
   "versionId": "7790efd5-832f-416e-bc0b-b72fed18d2c6",

@@ -528,9 +528,7 @@
       ]
     }
   },
-  "settings": {
-    "executionOrder": "v1"
-  },
+  "settings": {"executionOrder": "v1", "errorWorkflow": "CSWF000000000008"},
   "versionId": "acc3cd28-4ec2-4883-8402-03b9e207e046",
   "active": false
 }
