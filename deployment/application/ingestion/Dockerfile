@@ -1,7 +1,7 @@
 FROM python:3.12-slim
 WORKDIR /app
 COPY requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r /app/requirements.txt
+RUN pip install --no-cache-dir --timeout 60 --retries 10 -r /app/requirements.txt
 # scripts/ holds ingest_knowledge.py and the db_config.py module it imports.
 COPY scripts/ /app/scripts/
 COPY FAQs/ /app/FAQs/
