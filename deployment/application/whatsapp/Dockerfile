@@ -8,6 +8,7 @@ COPY package*.json ./
 RUN npm install --omit=dev
 
 COPY server.js ./
+COPY n8n-response.js ./
 
 ENV PORT=8080
 ENV AUTH_DIR=/app/data/auth

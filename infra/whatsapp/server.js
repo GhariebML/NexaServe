@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import QRCode from 'qrcode';
 import qrcodeTerminal from 'qrcode-terminal';
 import pino from 'pino';
+import { extractN8nReply } from './n8n-response.js';
 import makeWASocket, {
   DisconnectReason,
   useMultiFileAuthState,
@@ -121,12 +122,16 @@ function enqueueOfflineMessage(senderJid, payload) {
 
 function getDeterministicOfflineReply(customerMessage, senderName) {
   const lang = detectLanguage(customerMessage);
-  const name = senderName ? senderName.trim() : '';
-
-  const ar = `أهلاً بك${name ? ' ' + name : ''} في منصة الدعم الرسمية لمبادرات وزارة الاتصالات وتكنولوجيا المعلومات (MCIT). 🏛️\n\nنظام الاستجابة الذكية يخضع حالياً لأعمال صيانة وتحديث مجدولة. تم استلام رسالتك وحفظها في قائمة الانتظار للمتابعة فور عودة الخدمة.\n\n📌 *للاطلاع على المعلومات المعتمدة والتقديم الفوري، يرجى زيارة البوابات الرسمية:*\n• *مبادرة الرواد الرقميون (Digilians):*\nhttps://www.digilians.gov.eg\n• *مبادرة رواد مصر الرقمية (DEPI):*\nhttps://depi.gov.eg\n• *مبادرة بناة مصر الرقمية (DEBI):*\nhttps://debi.gov.eg`;
-
-  const en = `Welcome${name ? ' ' + name : ''} to the official MCIT Initiatives Support Platform. 🏛️\n\nThe automated assistance engine is currently undergoing scheduled maintenance. Your message has been securely received and queued for review once services are fully restored.\n\n📌 *For verified program details and immediate registration, please visit our official portals:*\n• *Digital Pioneers Initiative (Digilians):*\nhttps://www.digilians.gov.eg\n• *Digital Egypt Pioneers Initiative (DEPI):*\nhttps://depi.gov.eg\n• *Digital Egypt Builders Initiative (DEBI):*\nhttps://debi.gov.eg`;
-
+  const ar = 'نعتذر، تعذّر إتمام معالجة استفسارك حالياً نظراً لأعمال صيانة مؤقتة. يمكنك متابعة برامجنا ومبادراتنا الرسمية عبر الروابط المعتمدة التالية:\n' +
+    '• مبادرة رواد مصر الرقمية (DEPI): https://depi.gov.eg\n' +
+    '• بوابة رواد مصر الرقمية (Digilians): https://digilians.gov.eg\n' +
+    '• مبادرة براعم مصر الرقمية (DEBI): https://debi.gov.eg\n' +
+    'يرجى إعادة المحاولة لاحقاً أو مراجعة البوابات الرسمية أعلاه.';
+  const en = 'We apologize, our automated assistant is currently undergoing temporary maintenance. You can explore all official programs and initiatives through our official portals below:\n' +
+    '• Digital Egypt Pioneers Initiative (DEPI): https://depi.gov.eg\n' +
+    '• Digital Egypt Platform (Digilians): https://digilians.gov.eg\n' +
+    '• Digital Egypt Buds Initiative (DEBI): https://debi.gov.eg\n' +
+    'Please try again shortly or visit the official portals above.';
   return lang === 'en' ? en : ar;
 }
 
@@ -326,15 +331,17 @@ async function initWhatsApp() {
             });
             clearTimeout(timeout);
 
-            const result = await response.json().catch(() => ({ status: response.statusText }));
+            const result = await response.json().catch(() => null);
             const elapsed = Date.now() - startTime;
-            console.log(`[WhatsApp Dispatch -> n8n] Status ${response.status} (${elapsed}ms):`, JSON.stringify(result).slice(0, 150));
+            replyText = extractN8nReply(response.status, result);
+            console.log(`[WhatsApp Dispatch -> n8n] Status ${response.status} (${elapsed}ms), customer_reply=${Boolean(replyText)}`);
 
             // Extract response string if returned synchronously from n8n webhook
-            if (result && (result.response || result.final_reply || result.reply || result.message)) {
-              replyText = result.response || result.final_reply || result.reply || result.message;
+            if (replyText) {
               replySource = 'n8n';
               setCachedReply(text, replyText);
+            } else {
+              console.warn(`[WhatsApp Bridge] n8n did not return a successful customer reply (HTTP ${response.status}).`);
             }
           }
         } catch (webhookErr) {
@@ -688,12 +695,14 @@ app.post('/simulate', async (req, res) => {
       const elapsed = Date.now() - startTime;
       if (n8nResp.ok) {
         const json = await n8nResp.json();
-        replyText = json.response || json.final_reply || json.reply || json.message;
+        replyText = extractN8nReply(n8nResp.status, json);
         if (replyText) {
           source = 'n8n';
           setCachedReply(message, replyText);
         }
         console.log(`[Simulate -> n8n] Status ${n8nResp.status} (${elapsed}ms)`);
+      } else {
+        console.warn(`[Simulate -> n8n] Rejected HTTP ${n8nResp.status}; no customer reply was returned.`);
       }
     } catch (e) {}
 
@@ -703,7 +712,9 @@ app.post('/simulate', async (req, res) => {
     }
 
     res.json({
-      success: true,
+      success: source === 'n8n',
+      status: source === 'n8n' ? 'completed' : 'fallback',
+      error_code: source === 'n8n' ? null : 'n8n_response_unavailable',
       source: source,
       reply: replyText,
       timestamp: new Date().toISOString()

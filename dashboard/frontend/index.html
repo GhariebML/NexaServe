@@ -63,6 +63,8 @@
         <li class="nav-item"><button data-view="customers" onclick="switchView('customers')">👥 <span data-i18n="nav_customers">Customers & Students</span></button></li>
         <li class="nav-item"><button data-view="conversations" onclick="switchView('conversations')">💬 <span data-i18n="nav_conversations">Conversations</span></button></li>
         <li class="nav-item"><button data-view="tickets" onclick="switchView('tickets')">🎫 <span data-i18n="nav_tickets">Tickets & HITL</span></button></li>
+        <li class="nav-item"><button data-view="n8n" onclick="switchView('n8n')">⚡ <span data-i18n="nav_n8n">n8n Automation</span></button></li>
+        <li class="nav-item"><button data-view="simulator" onclick="switchView('simulator')">🤖 <span data-i18n="nav_simulator">Live AI Simulator</span></button></li>
         <li class="nav-item"><button data-view="rag" onclick="switchView('rag')">🧠 <span data-i18n="nav_rag">RAG & AI Quality</span></button></li>
         <li class="nav-item"><button data-view="kb" onclick="switchView('kb')">📚 <span data-i18n="nav_kb">Knowledge Base</span></button></li>
         <li class="nav-item"><button data-view="health" onclick="switchView('health')">⚡ <span data-i18n="nav_health">System Health</span></button></li>
@@ -236,12 +238,165 @@
                     <th data-i18n="col_sla_deadline">SLA Deadline</th>
                     <th data-i18n="col_sla_status">SLA Status</th>
                     <th data-i18n="col_created">Created</th>
+                    <th data-i18n="col_actions">Actions</th>
                   </tr>
                 </thead>
                 <tbody id="tickets-table-body"></tbody>
               </table>
             </div>
             <div class="pagination" id="tickets-pagination"></div>
+          </div>
+        </section>
+
+        <!-- SECTION: N8N WORKFLOW AUTOMATION -->
+        <section id="view-n8n" class="dashboard-section" style="display:none;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <div>
+              <h2 style="font-size:1.25rem; font-weight:700;" data-i18n="title_n8n_workflows">n8n Automation Engine & Workflows</h2>
+              <p style="font-size:0.85rem; color:var(--text-muted);" data-i18n="sub_n8n_workflows">Direct bidirectional link with local n8n instance and workflow execution engine</p>
+            </div>
+            <div style="display:flex; gap:12px;">
+              <a href="http://localhost:5678" target="_blank" class="btn-primary" style="text-decoration:none; display:inline-flex; align-items:center; gap:8px;" data-i18n="btn_open_n8n">
+                <span>Open n8n Canvas</span> ↗
+              </a>
+              <button class="btn-icon" onclick="loadN8nData()" title="Refresh n8n Data">🔄</button>
+            </div>
+          </div>
+
+          <div class="kpi-grid" id="n8n-kpi-grid" style="margin-bottom:24px;"></div>
+
+          <div class="table-panel" style="margin-bottom:24px;">
+            <div class="panel-header">
+              <h2 class="panel-title" data-i18n="title_deployed_wfs">Registered System Workflows</h2>
+              <span id="n8n-wf-count" class="badge" style="background:var(--primary);">36 Workflows</span>
+            </div>
+            <div class="table-wrapper">
+              <table id="n8n-workflows-table">
+                <thead>
+                  <tr>
+                    <th>Workflow ID</th>
+                    <th data-i18n="col_name">Workflow Name</th>
+                    <th>Nodes</th>
+                    <th>Tags</th>
+                    <th>Updated At</th>
+                    <th>Active State</th>
+                    <th data-i18n="col_actions">Canvas Link</th>
+                  </tr>
+                </thead>
+                <tbody id="n8n-workflows-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="table-panel">
+            <div class="panel-header">
+              <h2 class="panel-title" data-i18n="title_n8n_live_execs">Live n8n REST Executions</h2>
+              <span class="badge" style="background:var(--accent-emerald);">Live Telemetry</span>
+            </div>
+            <div class="table-wrapper">
+              <table id="n8n-executions-table">
+                <thead>
+                  <tr>
+                    <th>Exec ID</th>
+                    <th>Workflow ID</th>
+                    <th>Trigger Mode</th>
+                    <th>Execution Status</th>
+                    <th>Started At</th>
+                    <th>Duration</th>
+                    <th>Execution Trace</th>
+                  </tr>
+                </thead>
+                <tbody id="n8n-executions-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION: LIVE AI SYSTEM SIMULATOR -->
+        <section id="view-simulator" class="dashboard-section" style="display:none;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <div>
+              <h2 style="font-size:1.25rem; font-weight:700;" data-i18n="title_simulator">Live Customer Service AI Simulator</h2>
+              <p style="font-size:0.85rem; color:var(--text-muted);" data-i18n="sub_simulator">Interact directly with live n8n Master Gateway, Ollama LLM, pgvector RAG, and HITL escalation</p>
+            </div>
+            <div style="display:flex; gap:12px; align-items:center;">
+              <select id="sim-program-select" style="padding:6px 12px; border-radius:var(--radius-sm); background:var(--bg-card); color:var(--text-main); border:1px solid var(--border-color);">
+                <option value="DEPI">DEPI Program</option>
+                <option value="DIGILIANS">Digilians Program</option>
+                <option value="COMMON">Common Domain</option>
+              </select>
+              <select id="sim-channel-select" style="padding:6px 12px; border-radius:var(--radius-sm); background:var(--bg-card); color:var(--text-main); border:1px solid var(--border-color);">
+                <option value="whatsapp">WhatsApp Bridge</option>
+                <option value="webchat" selected>Webchat Portal</option>
+                <option value="telegram">Telegram Bot</option>
+              </select>
+              <button class="btn-icon" onclick="clearSimChat()" title="Clear Chat History">🗑️</button>
+            </div>
+          </div>
+
+          <div class="sim-container">
+            <!-- Left: Interactive Chat Panel -->
+            <div class="sim-chat-panel">
+              <div class="chat-header">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <span class="badge" style="background:var(--accent-emerald);">● LIVE GATEWAY</span>
+                  <span style="font-size:0.85rem; color:var(--text-muted);">POST /webhook/customer-service</span>
+                </div>
+                <div id="sim-latency-badge" style="font-size:0.75rem; color:var(--text-subtle);">Ready</div>
+              </div>
+
+              <div class="chat-messages" id="sim-messages-container">
+                <div class="chat-bubble bot">
+                  مرحباً بك! أنا مساعد خدمة عملاء NexaServe الذكي المرتبط بنظام n8n. يمكنك تجربة الأسئلة باللغة العربية أو الإنجليزية لاختبار التوجيه التلقائي (RAG)، تتبع الطلبات، أو التصعيد البشري.
+                  <div class="chat-meta"><span>NexaServe AI System</span></div>
+                </div>
+              </div>
+
+              <!-- Quick Prompts Chips -->
+              <div class="quick-prompts-bar">
+                <button class="chip-btn" onclick="sendQuickPrompt('ما هي شروط التقديم في مبادرة براعم مصر الرقمية؟')">💡 شروط براعم مصر</button>
+                <button class="chip-btn" onclick="sendQuickPrompt('أريد الاستفسار عن برامج تدريب رواد مصر الرقمية DEPI')">🎓 برامج DEPI</button>
+                <button class="chip-btn" onclick="sendQuickPrompt('أريد التحدث مع موظف خدمة العملاء')">🚨 تصعيد لموظف بشري</button>
+                <button class="chip-btn" onclick="sendQuickPrompt('ما هي مواعيد الاختبارات للدفعة الحالية؟')">📅 مواعيد الاختبارات</button>
+                <button class="chip-btn" onclick="sendQuickPrompt('Where can I check my training application status?')">🌐 English FAQ</button>
+              </div>
+
+              <!-- Chat Input Bar -->
+              <form id="sim-chat-form" onsubmit="handleSimSubmit(event)" class="chat-input-bar">
+                <input type="text" id="sim-chat-input" placeholder="Type customer inquiry in Arabic or English..." required autocomplete="off">
+                <button type="submit" id="sim-send-btn" class="btn-primary" style="padding:10px 20px;" data-i18n="btn_send">Send Inquiry 🚀</button>
+              </form>
+            </div>
+
+            <!-- Right: Real-time Live Trace & Inspection -->
+            <div class="table-panel" style="display:flex; flex-direction:column; height:680px; padding:20px;">
+              <h3 style="font-size:1rem; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+                <span data-i18n="title_live_telemetry">Correlated n8n Trace & Telemetry</span>
+                <span id="sim-telemetry-badge" class="badge" style="font-size:0.75rem;">Awaiting Query</span>
+              </h3>
+              
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;">
+                <div style="background:var(--bg-subtle); padding:10px; border-radius:var(--radius-sm);">
+                  <div style="font-size:0.75rem; color:var(--text-muted);">Detected Intent</div>
+                  <div id="sim-trace-intent" style="font-weight:700; font-size:0.9rem; color:var(--accent-cyan);">-</div>
+                </div>
+                <div style="background:var(--bg-subtle); padding:10px; border-radius:var(--radius-sm);">
+                  <div style="font-size:0.75rem; color:var(--text-muted);">Confidence Score</div>
+                  <div id="sim-trace-confidence" style="font-weight:700; font-size:0.9rem; color:var(--accent-emerald);">-</div>
+                </div>
+                <div style="background:var(--bg-subtle); padding:10px; border-radius:var(--radius-sm);">
+                  <div style="font-size:0.75rem; color:var(--text-muted);">Target Program</div>
+                  <div id="sim-trace-program" style="font-weight:700; font-size:0.9rem; color:var(--accent-purple);">-</div>
+                </div>
+                <div style="background:var(--bg-subtle); padding:10px; border-radius:var(--radius-sm);">
+                  <div style="font-size:0.75rem; color:var(--text-muted);">Execution Latency</div>
+                  <div id="sim-trace-latency" style="font-weight:700; font-size:0.9rem; color:var(--accent-amber);">-</div>
+                </div>
+              </div>
+
+              <div style="font-size:0.8rem; font-weight:600; color:var(--text-muted); margin-bottom:6px;">Workflow Hop Events & Audit Trail:</div>
+              <div class="trace-box" id="sim-trace-box" style="flex:1;">// Real-time execution logs and audit entries will display here...</div>
+            </div>
           </div>
         </section>
 
@@ -260,11 +415,11 @@
               <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); padding: 16px; border-radius: var(--radius-md);">
                 <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
                   <span style="font-weight:600;">DEPI Leakage Rate</span>
-                  <span style="color:#34D399; font-weight:700;">0.0% (Verified 0/9)</span>
+                  <span id="depi-leakage-rate" style="font-weight:700;">Not measured</span>
                 </div>
                 <div style="display:flex; justify-content:space-between;">
                   <span style="font-weight:600;">Digilians Leakage Rate</span>
-                  <span style="color:#34D399; font-weight:700;">0.0% (Verified 0/9)</span>
+                  <span id="digilians-leakage-rate" style="font-weight:700;">Not measured</span>
                 </div>
               </div>
               <p style="font-size:0.8rem; color:var(--text-muted);" data-i18n="isolation_desc">
@@ -305,6 +460,25 @@
 
         <!-- SECTION 8: RECENT ACTIVITY -->
         <section id="view-activity" class="dashboard-section" style="display:none;">
+          <div class="table-panel" style="margin-bottom:20px;">
+            <div class="panel-header">
+              <h2 class="panel-title" data-i18n="title_recent_executions">Recent customer requests</h2>
+              <select id="execution-status-filter" onchange="loadRecentExecutions()" aria-label="Filter execution status">
+                <option value="">All statuses</option>
+                <option value="completed">Completed</option>
+                <option value="fallback">FAQ fallback</option>
+                <option value="failed">Failed</option>
+                <option value="unknown">Unknown</option>
+              </select>
+            </div>
+            <div class="table-wrapper">
+              <table>
+                <thead><tr><th>Request / execution</th><th>Workflow</th><th>Channel</th><th>Program</th><th>Status</th><th>Latency</th><th>Time</th><th>Trace</th></tr></thead>
+                <tbody id="execution-table-body"></tbody>
+              </table>
+            </div>
+            <div id="execution-detail-panel" style="display:none; padding:16px;"></div>
+          </div>
           <div class="table-panel">
             <div class="panel-header">
               <h2 class="panel-title" data-i18n="title_recent_activity">System Observability & Audit Trail</h2>
@@ -341,6 +515,37 @@
       </div>
       <div class="modal-body" id="modal-conv-body">
         <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- TICKET RESOLUTION MODAL -->
+  <div id="ticket-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card" style="max-width:550px;">
+      <div class="modal-header">
+        <h3 style="font-size: 1.1rem; font-weight: 700;" id="modal-ticket-title">Resolve Escalated Ticket</h3>
+        <button class="btn-icon" onclick="closeTicketModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="ticket-respond-form" onsubmit="handleTicketRespondSubmit(event)" style="display:flex; flex-direction:column; gap:16px;">
+          <input type="hidden" id="modal-ticket-id">
+          <div>
+            <label style="font-size:0.8rem; color:var(--text-muted); display:block; margin-bottom:4px;">Customer & Ticket</label>
+            <div id="modal-ticket-info" style="font-size:0.9rem; font-weight:600; background:var(--bg-subtle); padding:10px; border-radius:var(--radius-sm);"></div>
+          </div>
+          <div>
+            <label style="font-size:0.8rem; color:var(--text-muted); display:block; margin-bottom:4px;">Action Status</label>
+            <select id="modal-ticket-action" style="width:100%; padding:8px; border-radius:var(--radius-sm); background:var(--bg-subtle); color:var(--text-main); border:1px solid var(--border-color);">
+              <option value="resolve">Resolve Ticket & Notify Customer</option>
+              <option value="reply">Reply in Progress</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:0.8rem; color:var(--text-muted); display:block; margin-bottom:4px;">Agent Response Message</label>
+            <textarea id="modal-ticket-message" rows="4" required placeholder="Type official response to send to customer via WhatsApp/Web..." style="width:100%; padding:10px; border-radius:var(--radius-sm); background:var(--bg-subtle); color:var(--text-main); border:1px solid var(--border-color);"></textarea>
+          </div>
+          <button type="submit" id="modal-ticket-btn" class="btn-primary" style="margin-top:8px;">Dispatch Response to n8n & Customer 🚀</button>
+        </form>
       </div>
     </div>
   </div>

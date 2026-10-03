@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from database import init_db_pool
+from database import init_db_pool, query_one
 import auth
 from routes import router as dashboard_router
 
@@ -23,7 +23,7 @@ app = FastAPI(
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[origin.strip() for origin in os.getenv("DASHBOARD_CORS_ORIGINS", "").split(",") if origin.strip()],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -32,6 +32,30 @@ app.add_middleware(
 @app.on_event("startup")
 def on_startup():
     init_db_pool()
+
+@app.get("/health/live")
+async def health_live():
+    return {"status": "ok"}
+
+@app.get("/health/ready")
+async def health_ready():
+    try:
+        query_one("SELECT 1 AS ok")
+        redis_pw = os.getenv("REDIS_PASSWORD")
+        if not redis_pw:
+            raise RuntimeError("Redis health check is not configured")
+        import redis
+        client = redis.Redis(
+            host=os.getenv("REDIS_HOST", "127.0.0.1"),
+            port=int(os.getenv("REDIS_PORT", "6379")),
+            password=redis_pw,
+            socket_connect_timeout=2,
+            socket_timeout=2,
+        )
+        client.ping()
+        return {"status": "ready"}
+    except Exception:
+        raise HTTPException(status_code=503, detail="Dashboard dependencies are not ready")
 
 class LoginRequest(BaseModel):
     username: str
@@ -64,7 +88,7 @@ async def login(req: LoginRequest):
 
 @app.post("/api/auth/change-password")
 async def change_password(req: ChangePasswordRequest, current_user: dict = Depends(auth.get_current_user)):
-    user = authenticate_user(current_user["username"], req.old_password)
+    user = auth.authenticate_user(current_user["username"], req.old_password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

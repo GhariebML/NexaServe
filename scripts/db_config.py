@@ -32,7 +32,7 @@ DB_HOST = os.getenv("POSTGRES_HOST", "127.0.0.1")
 DB_PORT = os.getenv("POSTGRES_PORT", "5432")
 
 OLLAMA_EMBED_URL = os.getenv("OLLAMA_EMBED_URL", "http://127.0.0.1:11434/api/embed")
-OLLAMA_GENERATE_URL = os.getenv("OLLAMA_GENERATE_URL", "http://localhost:11434/api/generate")
+OLLAMA_GENERATE_URL = os.getenv("OLLAMA_GENERATE_URL", "http://127.0.0.1:11434/api/generate")
 EMBED_MODEL = os.getenv("EMBED_MODEL", "nomic-embed-text")
 EMBED_DIMENSION = int(os.getenv("EMBED_DIMENSION", "768"))
 LLM_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")

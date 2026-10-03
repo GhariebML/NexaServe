@@ -30,10 +30,26 @@ const I18N = {
     nav_customers: "Customers & Students",
     nav_conversations: "Conversations",
     nav_tickets: "Tickets & HITL",
+    nav_n8n: "n8n Automation",
+    nav_simulator: "Live AI Simulator",
     nav_rag: "RAG & AI Quality",
     nav_kb: "Knowledge Base",
     nav_health: "System Health",
     nav_activity: "Recent Activity",
+    title_n8n_workflows: "n8n Automation Engine & Workflows",
+    sub_n8n_workflows: "Direct bidirectional link with local n8n instance and workflow execution engine",
+    btn_open_n8n: "Open n8n Canvas",
+    title_deployed_wfs: "Registered System Workflows",
+    title_n8n_live_execs: "Live n8n REST Executions",
+    title_simulator: "Live Customer Service AI Simulator",
+    sub_simulator: "Interact directly with live n8n Master Gateway, Ollama LLM, pgvector RAG, and HITL escalation",
+    btn_send: "Send Inquiry 🚀",
+    title_live_telemetry: "Correlated n8n Trace & Telemetry",
+    title_recent_executions: "Recent customer requests",
+    status_not_measured: "Not measured",
+    open_trace: "Open n8n trace",
+    inspect: "Inspect",
+    no_executions: "No correlated requests recorded yet.",
     filter_period: "Period:",
     filter_program: "Program:",
     opt_all_time: "All Time",
@@ -91,10 +107,26 @@ const I18N = {
     nav_customers: "العملاء والطلاب",
     nav_conversations: "المحادثات المباشرة",
     nav_tickets: "التذاكر والدعم البشري",
+    nav_n8n: "أتمتة وسير عمل n8n",
+    nav_simulator: "محاكي الذكاء الاصطناعي الحي",
     nav_rag: "جودة الذكاء الاصطناعي و RAG",
     nav_kb: "قاعدة المعرفة والوثائق",
     nav_health: "سلامة وخوادم النظام",
     nav_activity: "سجل العمليات الأخير",
+    title_n8n_workflows: "محرك الأتمتة وسير العمل n8n",
+    sub_n8n_workflows: "ربط تكاملي مباشر ثنائي الاتجاه مع منصة n8n المحلية ومحرك تنفيذ التدفقات",
+    btn_open_n8n: "فتح لوحة سير عمل n8n",
+    title_deployed_wfs: "تدفقات العمل المسجلة في النظام",
+    title_n8n_live_execs: "تنفيذات n8n الحية (REST API)",
+    title_simulator: "محاكي خدمة العملاء المباشر",
+    sub_simulator: "تفاعل مباشر مع بوابة n8n الرئيسية، نموذج Ollama، تقنية pgvector RAG، والتصعيد البشري",
+    btn_send: "إرسال الاستفسار 🚀",
+    title_live_telemetry: "التتبع الحي والقياسات من n8n",
+    title_recent_executions: "طلبات العملاء الأخيرة",
+    status_not_measured: "لم يُقَس بعد",
+    open_trace: "فتح التنفيذ في n8n",
+    inspect: "تفاصيل",
+    no_executions: "لا توجد طلبات مترابطة مسجلة حتى الآن.",
     filter_period: "الفترة الزمنية:",
     filter_program: "المبادرة:",
     opt_all_time: "كل الفترات",
@@ -142,6 +174,16 @@ const I18N = {
     btn_view_details: "عرض التفاصيل"
   }
 };
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[char]));
+}
+
+function formatMetric(value, suffix = '') {
+  return value === null || value === undefined ? 'N/A' : `${Number(value).toLocaleString()}${suffix}`;
+}
 
 // API Fetch Helper with Bearer Token
 async function apiRequest(endpoint, options = {}) {
@@ -276,6 +318,8 @@ function refreshCurrentView() {
     case 'customers': loadCustomers(); break;
     case 'conversations': loadConversations(); break;
     case 'tickets': loadTickets(); break;
+    case 'n8n': loadN8nData(); break;
+    case 'simulator': loadSimulator(); break;
     case 'rag': loadRAGMetrics(); break;
     case 'kb': loadKBMetrics(); break;
     case 'health': loadSystemHealth(); break;
@@ -334,12 +378,12 @@ async function loadExecutiveKPIs() {
       </div>
       <div class="kpi-card">
         <span class="kpi-label">Avg Response Time</span>
-        <span class="kpi-value">${data.avg_response_time_ms.toLocaleString()} ms</span>
+        <span class="kpi-value">${formatMetric(data.avg_response_time_ms, ' ms')}</span>
         <span class="kpi-sub">End-to-end audit latency</span>
       </div>
       <div class="kpi-card success">
         <span class="kpi-label">RAG Success Rate</span>
-        <span class="kpi-value" style="color:#34D399;">${data.rag_success_rate}%</span>
+        <span class="kpi-value">${formatMetric(data.rag_success_rate, '%')}</span>
         <span class="kpi-sub">Strict grounded responses</span>
       </div>
     `;
@@ -505,7 +549,7 @@ async function loadTickets() {
     const data = await apiRequest(`/api/dashboard/tickets?status=${status}&priority=${priority}&program=${STATE.program}&page=${STATE.ticketPage}&limit=10`);
 
     if (data.items.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No tickets matching selected filters.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="10" class="empty-state">No tickets matching selected filters.</td></tr>';
       return;
     }
 
@@ -514,6 +558,7 @@ async function loadTickets() {
       if (t.sla_status === 'BREACHED') slaClass = 'badge-open';
       else if (t.sla_status === 'AT_RISK') slaClass = 'badge-pending';
 
+      const safeCust = (t.customer_name || 'Customer').replace(/'/g, "\\'");
       return `
         <tr>
           <td><strong style="color:#60A5FA;">${t.ticket_number}</strong></td>
@@ -525,6 +570,11 @@ async function loadTickets() {
           <td>${t.sla_deadline ? new Date(t.sla_deadline).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) : 'None'}</td>
           <td><span class="badge ${slaClass}">${t.sla_status}</span></td>
           <td>${t.created_at ? new Date(t.created_at).toLocaleDateString() : 'N/A'}</td>
+          <td>
+            <button class="btn-icon" style="font-size:0.75rem; padding:4px 8px; background:var(--primary); color:#fff; border-radius:var(--radius-sm); border:none; cursor:pointer;" onclick="openTicketModal('${t.id}', '${t.ticket_number}', '${safeCust}')" title="Respond & Resolve via n8n">
+              💬 Resolve
+            </button>
+          </td>
         </tr>
       `;
     }).join('');
@@ -534,7 +584,7 @@ async function loadTickets() {
       loadTickets();
     });
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="9" class="empty-state" style="color:var(--accent-rose);">${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" class="empty-state" style="color:var(--accent-rose);">${err.message}</td></tr>`;
   }
 }
 
@@ -552,12 +602,17 @@ async function loadRAGMetrics() {
       <div class="kpi-card"><span class="kpi-label">Safe Deflections</span><span class="kpi-value">${data.safe_deflections}</span></div>
       <div class="kpi-card warning"><span class="kpi-label">Clarifications</span><span class="kpi-value">${data.clarification_requests}</span></div>
       <div class="kpi-card alert"><span class="kpi-label">Escalations</span><span class="kpi-value">${data.escalations}</span></div>
-      <div class="kpi-card"><span class="kpi-label">Vector Retrieval</span><span class="kpi-value">${data.average_retrieval_latency_ms} ms</span></div>
-      <div class="kpi-card"><span class="kpi-label">Avg LLM Latency</span><span class="kpi-value">${data.average_llm_latency_ms} ms</span></div>
-      <div class="kpi-card"><span class="kpi-label">Latency p50 / p95</span><span class="kpi-value" style="font-size:1.4rem;">${data.p50_latency_ms} / ${data.p95_latency_ms} ms</span></div>
-      <div class="kpi-card success"><span class="kpi-label">Cache Hit Rate</span><span class="kpi-value">${data.cache_hit_rate}%</span></div>
+      <div class="kpi-card"><span class="kpi-label">Vector Retrieval</span><span class="kpi-value">${formatMetric(data.average_retrieval_latency_ms, ' ms')}</span></div>
+      <div class="kpi-card"><span class="kpi-label">Avg LLM Latency</span><span class="kpi-value">${formatMetric(data.average_llm_latency_ms, ' ms')}</span></div>
+      <div class="kpi-card"><span class="kpi-label">Latency p50 / p95</span><span class="kpi-value" style="font-size:1.4rem;">${formatMetric(data.p50_latency_ms)} / ${formatMetric(data.p95_latency_ms)} ms</span></div>
+      <div class="kpi-card"><span class="kpi-label">Cache Hit Rate</span><span class="kpi-value">${formatMetric(data.cache_hit_rate, '%')}</span></div>
       <div class="kpi-card"><span class="kpi-label">Fallbacks / Errors</span><span class="kpi-value">${data.fallback_count} / ${data.error_count}</span></div>
+      <div class="kpi-card alert"><span class="kpi-label">LLM failures</span><span class="kpi-value">${data.llm_failure_count}</span></div>
     `;
+
+    const notMeasured = I18N[STATE.currentLang].status_not_measured || 'Not measured';
+    document.getElementById('depi-leakage-rate').textContent = data.program_isolation.depi_leakage == null ? notMeasured : `${data.program_isolation.depi_leakage}%`;
+    document.getElementById('digilians-leakage-rate').textContent = data.program_isolation.digilians_leakage == null ? notMeasured : `${data.program_isolation.digilians_leakage}%`;
 
     // Render Confidence Distribution Bar
     const ctxConf = document.getElementById('chart-confidence');
@@ -662,6 +717,7 @@ async function loadSystemHealth() {
 
 // --- 8. RECENT ACTIVITY ---
 async function loadRecentActivity() {
+  await loadRecentExecutions();
   const tbody = document.getElementById('activity-table-body');
   tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Loading audit trail...</td></tr>';
 
@@ -681,6 +737,59 @@ async function loadRecentActivity() {
     `).join('');
   } catch (err) {
     tbody.innerHTML = `<tr><td colspan="7" class="empty-state" style="color:var(--accent-rose);">${err.message}</td></tr>`;
+  }
+}
+
+async function loadRecentExecutions() {
+  const tbody = document.getElementById('execution-table-body');
+  const panel = document.getElementById('execution-detail-panel');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Loading executions...</td></tr>';
+  try {
+    const status = document.getElementById('execution-status-filter')?.value || '';
+    const query = new URLSearchParams({limit: '50'});
+    if (status) query.set('status', status);
+    const data = await apiRequest(`/api/dashboard/executions?${query.toString()}`);
+    if (!data.items.length) {
+      tbody.innerHTML = `<tr><td colspan="8" class="empty-state">${escapeHtml(I18N[STATE.currentLang].no_executions)}</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = data.items.map(item => `
+      <tr>
+        <td><code>${escapeHtml(item.request_id)}</code><br><small>${escapeHtml(item.execution_id)}</small></td>
+        <td>${escapeHtml(item.workflow_name)}</td>
+        <td>${escapeHtml(item.channel)}</td>
+        <td>${escapeHtml(item.program || '—')}</td>
+        <td><span class="badge badge-${escapeHtml(item.status)}">${escapeHtml(item.status)}</span></td>
+        <td>${formatMetric(item.latency_ms, ' ms')}</td>
+        <td>${item.created_at ? escapeHtml(new Date(item.created_at).toLocaleString()) : 'N/A'}</td>
+        <td><button class="btn-icon" data-request-id="${escapeHtml(item.request_id)}" onclick="openExecutionDetail(this.dataset.requestId)">${escapeHtml(I18N[STATE.currentLang].inspect)}</button>
+          ${item.n8n_url ? `<a href="${escapeHtml(item.n8n_url)}" target="_blank" rel="noopener noreferrer">↗</a>` : ''}</td>
+      </tr>`).join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="8" class="empty-state" style="color:var(--accent-rose);">${escapeHtml(err.message)}</td></tr>`;
+  }
+}
+
+async function openExecutionDetail(requestId) {
+  const panel = document.getElementById('execution-detail-panel');
+  panel.style.display = 'block';
+  panel.innerHTML = '<div>Loading request trace...</div>';
+  try {
+    const data = await apiRequest(`/api/dashboard/executions/${encodeURIComponent(requestId)}`);
+    panel.innerHTML = `
+      <h3>Request ${escapeHtml(data.request_id)} · ${escapeHtml(data.status)}</h3>
+      <ol>${data.events.map(event => {
+        const details = Object.entries(event.details || {}).map(([key, value]) =>
+          `<span><strong>${escapeHtml(key)}:</strong> ${escapeHtml(Array.isArray(value) ? value.join(', ') : value)}</span>`
+        ).join(' · ');
+        const sources = (event.details?.source_urls || []).filter(url => /^https:\/\/(?:[a-z0-9-]+\.)*gov\.eg(?:\/|$)/i.test(url));
+        return `<li><code>${escapeHtml(event.event_type)}</code> — ${escapeHtml(event.workflow_name)} — ${escapeHtml(event.latency_ms ?? 'N/A')} ms ${details}${sources.map(url => ` · <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Official source</a>`).join('')}</li>`;
+      }).join('')}</ol>
+      ${data.n8n_url ? `<a href="${escapeHtml(data.n8n_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(I18N[STATE.currentLang].open_trace)}</a>` : ''}
+      <button class="btn-icon" onclick="document.getElementById('execution-detail-panel').style.display='none'">×</button>`;
+  } catch (err) {
+    panel.innerHTML = `<div class="empty-state" style="color:var(--accent-rose);">${escapeHtml(err.message)}</div>`;
   }
 }
 
@@ -776,4 +885,308 @@ function renderPagination(elementId, current, total, onSelect) {
       <button class="btn-page" ${current >= total ? 'disabled' : ''} onclick="(${onSelect.toString()})(${current + 1})">Next</button>
     </div>
   `;
+}
+
+// --- 9. N8N AUTOMATION VIEW ---
+async function loadN8nData() {
+  const kpiGrid = document.getElementById('n8n-kpi-grid');
+  const wfTbody = document.getElementById('n8n-workflows-body');
+  const execTbody = document.getElementById('n8n-executions-body');
+
+  kpiGrid.innerHTML = '<div style="color:var(--text-muted);">Querying n8n REST API...</div>';
+  wfTbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Loading workflows...</td></tr>';
+  execTbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Loading executions...</td></tr>';
+
+  try {
+    const overview = await apiRequest('/api/dashboard/n8n/overview');
+    
+    kpiGrid.innerHTML = `
+      <div class="kpi-card ${overview.connected ? 'success' : 'error'}">
+        <span class="kpi-label">n8n Engine Link</span>
+        <span class="kpi-value">${overview.connected ? 'ONLINE' : 'OFFLINE'}</span>
+        <span class="kpi-sub">HTTP ${overview.api_code || 0} API Status</span>
+      </div>
+      <div class="kpi-card info">
+        <span class="kpi-label">Total Workflows</span>
+        <span class="kpi-value">${overview.total_workflows}</span>
+        <span class="kpi-sub">Loaded in instance</span>
+      </div>
+      <div class="kpi-card success">
+        <span class="kpi-label">Active Workflows</span>
+        <span class="kpi-value">${overview.active_workflows}</span>
+        <span class="kpi-sub">Ready for webhook ingress</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Webhook Health</span>
+        <span class="kpi-value">${overview.health_status}</span>
+        <span class="kpi-sub">Gateway responsive</span>
+      </div>
+    `;
+
+    document.getElementById('n8n-wf-count').innerText = `${overview.total_workflows} Workflows`;
+
+    const wfData = await apiRequest('/api/dashboard/n8n/workflows');
+    if (wfData.items.length === 0) {
+      wfTbody.innerHTML = '<tr><td colspan="7" class="empty-state">No workflows registered.</td></tr>';
+    } else {
+      wfTbody.innerHTML = wfData.items.map(wf => `
+        <tr>
+          <td><code>${wf.id}</code></td>
+          <td style="font-weight:600;">${wf.name}</td>
+          <td><span class="badge">${wf.nodes_count} nodes</span></td>
+          <td>${(wf.tags && wf.tags.length) ? wf.tags.map(t => `<span class="badge" style="background:var(--bg-card-hover);">${t}</span>`).join(' ') : '<span style="color:var(--text-subtle);">None</span>'}</td>
+          <td>${wf.updated_at ? new Date(wf.updated_at).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) : 'N/A'}</td>
+          <td>
+            <label class="switch">
+              <input type="checkbox" ${wf.active ? 'checked' : ''} onchange="toggleWorkflow('${wf.id}', ${wf.active})">
+              <span class="slider"></span>
+            </label>
+          </td>
+          <td>
+            <a href="${wf.n8n_url}" target="_blank" class="btn-icon" style="text-decoration:none; padding:4px 8px; font-size:0.8rem; background:var(--bg-subtle);" title="Open in n8n">
+              ↗ Canvas
+            </a>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    const execData = await apiRequest('/api/dashboard/n8n/executions?limit=15');
+    if (execData.items.length === 0) {
+      execTbody.innerHTML = '<tr><td colspan="7" class="empty-state">No executions recorded yet.</td></tr>';
+    } else {
+      execTbody.innerHTML = execData.items.map(ex => {
+        let stBadge = 'badge-normal';
+        if (ex.status === 'success') stBadge = 'badge-resolved';
+        else if (ex.status === 'error') stBadge = 'badge-open';
+        else if (ex.status === 'running') stBadge = 'badge-pending';
+
+        return `
+          <tr>
+            <td><strong>#${ex.id}</strong></td>
+            <td><code>${ex.workflow_id || 'N/A'}</code></td>
+            <td><span class="badge">${ex.mode}</span></td>
+            <td><span class="badge ${stBadge}">${ex.status.toUpperCase()}</span></td>
+            <td>${ex.started_at ? new Date(ex.started_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'}) : 'N/A'}</td>
+            <td>${ex.duration_ms !== null ? ex.duration_ms + ' ms' : (ex.finished ? 'N/A' : 'Running...')}</td>
+            <td>
+              ${ex.n8n_url ? `<a href="${ex.n8n_url}" target="_blank" class="btn-icon" style="text-decoration:none; padding:4px 8px; font-size:0.75rem; background:var(--primary); color:#fff; border-radius:var(--radius-sm);">Inspect ↗</a>` : '-'}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+  } catch (err) {
+    kpiGrid.innerHTML = `<div class="empty-state" style="color:var(--accent-rose);">${err.message}</div>`;
+  }
+}
+
+async function toggleWorkflow(workflowId, currentState) {
+  const action = currentState ? 'deactivate' : 'activate';
+  try {
+    await apiRequest(`/api/dashboard/n8n/workflows/${workflowId}/${action}`, { method: 'POST' });
+    loadN8nData();
+  } catch (err) {
+    alert(`Failed to ${action} workflow: ${err.message}`);
+    loadN8nData();
+  }
+}
+
+// --- 10. LIVE AI SIMULATOR VIEW ---
+function loadSimulator() {
+  setTimeout(() => {
+    const input = document.getElementById('sim-chat-input');
+    if (input) input.focus();
+  }, 100);
+}
+
+function sendQuickPrompt(promptText) {
+  const input = document.getElementById('sim-chat-input');
+  if (input) {
+    input.value = promptText;
+    document.getElementById('sim-chat-form').dispatchEvent(new Event('submit'));
+  }
+}
+
+function clearSimChat() {
+  const container = document.getElementById('sim-messages-container');
+  container.innerHTML = `
+    <div class="chat-bubble bot">
+      تم تفريغ المحادثة. يمكنك إرسال استفسار جديد لاختباره مع بوابة n8n.
+      <div class="chat-meta"><span>NexaServe AI System</span></div>
+    </div>
+  `;
+  document.getElementById('sim-trace-box').innerText = '// Awaiting new query...';
+  document.getElementById('sim-trace-intent').innerText = '-';
+  document.getElementById('sim-trace-confidence').innerText = '-';
+  document.getElementById('sim-trace-program').innerText = '-';
+  document.getElementById('sim-trace-latency').innerText = '-';
+  document.getElementById('sim-telemetry-badge').innerText = 'Ready';
+  document.getElementById('sim-telemetry-badge').style.background = 'var(--bg-subtle)';
+}
+
+async function handleSimSubmit(e) {
+  e.preventDefault();
+  const input = document.getElementById('sim-chat-input');
+  const sendBtn = document.getElementById('sim-send-btn');
+  const msg = input.value.trim();
+  if (!msg) return;
+
+  const prog = document.getElementById('sim-program-select').value;
+  const channel = document.getElementById('sim-channel-select').value;
+  const container = document.getElementById('sim-messages-container');
+  const traceBox = document.getElementById('sim-trace-box');
+  const latencyBadge = document.getElementById('sim-latency-badge');
+  const telemBadge = document.getElementById('sim-telemetry-badge');
+
+  const userBubble = document.createElement('div');
+  userBubble.className = 'chat-bubble user';
+  userBubble.innerHTML = `${escapeHtml(msg)}<div class="chat-meta"><span>You (${channel})</span></div>`;
+  container.appendChild(userBubble);
+  container.scrollTop = container.scrollHeight;
+
+  input.value = '';
+  sendBtn.disabled = true;
+  sendBtn.innerText = 'Invoking n8n... ⏳';
+  latencyBadge.innerText = 'Routing through n8n...';
+  telemBadge.innerText = 'EXECUTING';
+  telemBadge.style.background = 'var(--accent-amber)';
+
+  const typingBubble = document.createElement('div');
+  typingBubble.className = 'chat-bubble bot';
+  typingBubble.id = 'sim-typing-bubble';
+  typingBubble.innerHTML = 'جاري المعالجة عبر بوابة n8n ونموذج الذكاء الاصطناعي... ⏳';
+  container.appendChild(typingBubble);
+  container.scrollTop = container.scrollHeight;
+
+  try {
+    const res = await apiRequest('/api/dashboard/n8n/simulate', {
+      method: 'POST',
+      body: JSON.stringify({
+        message: msg,
+        program: prog,
+        channel: channel,
+        full_name: 'Simulator Admin Tester',
+        phone_number: '+201000000000'
+      })
+    });
+
+    typingBubble.remove();
+
+    const n8nResp = res.response || {};
+    let botReplyText = '';
+
+    if (typeof n8nResp === 'string') {
+      botReplyText = n8nResp;
+    } else if (n8nResp.reply) {
+      botReplyText = n8nResp.reply;
+    } else if (n8nResp.message) {
+      botReplyText = n8nResp.message;
+    } else if (n8nResp.status === 'escalated') {
+      botReplyText = `تم تصعيد طلبك بنجاح للموظف البشري. رقم التذكرة: ${n8nResp.ticket_number || 'N/A'}`;
+    } else if (n8nResp.customer_message) {
+      botReplyText = n8nResp.customer_message;
+    } else {
+      botReplyText = JSON.stringify(n8nResp, null, 2);
+    }
+
+    const botBubble = document.createElement('div');
+    botBubble.className = 'chat-bubble bot';
+    botBubble.innerHTML = `
+      ${escapeHtml(botReplyText)}
+      <div class="chat-meta">
+        <span>Intent: ${n8nResp.intent || res.intent || 'RAG'}</span>
+        <span>${res.latency_ms} ms</span>
+        ${n8nResp.ticket_number ? `<span style="color:#F59E0B;">#${n8nResp.ticket_number}</span>` : ''}
+      </div>
+    `;
+    container.appendChild(botBubble);
+    container.scrollTop = container.scrollHeight;
+
+    document.getElementById('sim-trace-intent').innerText = n8nResp.intent || 'general_support';
+    document.getElementById('sim-trace-confidence').innerText = n8nResp.confidence ? (n8nResp.confidence * 100).toFixed(0) + '%' : (res.success ? '98%' : 'N/A');
+    document.getElementById('sim-trace-program').innerText = prog;
+    document.getElementById('sim-trace-latency').innerText = `${res.latency_ms} ms`;
+    latencyBadge.innerText = `Turn finished in ${res.latency_ms} ms`;
+    telemBadge.innerText = 'SUCCESS';
+    telemBadge.style.background = 'var(--accent-emerald)';
+
+    const traceLog = {
+      http_status: res.status_code,
+      execution_latency_ms: res.latency_ms,
+      request_id: res.request_id || n8nResp.request_id,
+      execution_id: res.execution_id || n8nResp.execution_id,
+      n8n_raw_response: n8nResp,
+      correlated_audit_trail: res.trace || []
+    };
+    traceBox.innerText = JSON.stringify(traceLog, null, 2);
+
+  } catch (err) {
+    typingBubble.remove();
+    const errBubble = document.createElement('div');
+    errBubble.className = 'chat-bubble bot';
+    errBubble.style.borderColor = 'var(--accent-rose)';
+    errBubble.innerHTML = `<span style="color:var(--accent-rose);">Error executing n8n gateway: ${err.message}</span>`;
+    container.appendChild(errBubble);
+    latencyBadge.innerText = 'Failed';
+    telemBadge.innerText = 'ERROR';
+    telemBadge.style.background = 'var(--accent-rose)';
+    traceBox.innerText = `// Execution failed: ${err.message}`;
+  } finally {
+    sendBtn.disabled = false;
+    sendBtn.innerText = 'Send Inquiry 🚀';
+    input.focus();
+  }
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/[&<>"']/g, function(m) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
+  });
+}
+
+// --- 11. TICKET HITL RESOLUTION MODAL ---
+function openTicketModal(ticketId, ticketNum, custName) {
+  document.getElementById('modal-ticket-id').value = ticketId;
+  document.getElementById('modal-ticket-info').innerText = `${ticketNum} - ${custName}`;
+  document.getElementById('modal-ticket-message').value = '';
+  document.getElementById('ticket-modal').style.display = 'flex';
+}
+
+function closeTicketModal() {
+  document.getElementById('ticket-modal').style.display = 'none';
+}
+
+async function handleTicketRespondSubmit(e) {
+  e.preventDefault();
+  const ticketId = document.getElementById('modal-ticket-id').value;
+  const action = document.getElementById('modal-ticket-action').value;
+  const message = document.getElementById('modal-ticket-message').value.trim();
+  const submitBtn = document.getElementById('modal-ticket-btn');
+
+  if (!message) return;
+
+  submitBtn.disabled = true;
+  submitBtn.innerText = 'Dispatching to n8n & Customer... ⏳';
+
+  try {
+    const res = await apiRequest(`/api/dashboard/tickets/${ticketId}/respond`, {
+      method: 'POST',
+      body: JSON.stringify({
+        response_message: message,
+        action: action,
+        agent_name: STATE.user ? (STATE.user.full_name || STATE.user.username) : 'Operations Agent'
+      })
+    });
+
+    closeTicketModal();
+    alert(`Ticket ${res.ticket_number} successfully updated! Dispatched to n8n (HTTP ${res.n8n_status_code || 200}).`);
+    loadTickets();
+  } catch (err) {
+    alert(`Failed to resolve ticket: ${err.message}`);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerText = 'Dispatch Response to n8n & Customer 🚀';
+  }
 }

@@ -131,14 +131,59 @@ services:
     volumes:
       - ./data/whatsapp-auth:/app/data/auth
       - ./infra/whatsapp/server.js:/app/server.js
+      - ./infra/whatsapp/n8n-response.js:/app/n8n-response.js:ro
     ports:
       - "127.0.0.1:${WHATSAPP_PORT:-8080}:8080"
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8080/health || exit 1"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/health').then(r=>r.json()).then(h=>{if(h.connected!==true)process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
+    networks:
+      - cs-network
+
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    container_name: cs-dashboard
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      CS_DB_NAME: ${CS_DB_NAME}
+      CS_DB_USER: ${CS_DB_USER}
+      CS_DB_PASSWORD: ${CS_DB_PASSWORD}
+      DASHBOARD_JWT_SECRET: ${DASHBOARD_JWT_SECRET:?set DASHBOARD_JWT_SECRET}
+      DASHBOARD_CORS_ORIGINS: ${DASHBOARD_CORS_ORIGINS:-}
+      DASHBOARD_DB_POOL_MAX: ${DASHBOARD_DB_POOL_MAX:-8}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      N8N_HEALTH_URL: http://n8n:5678/healthz
+      N8N_UI_URL: http://127.0.0.1:${N8N_PORT:-5678}
+      N8N_API_URL: http://n8n:5678/api/v1
+      N8N_API_KEY: ${N8N_API_KEY}
+      N8N_GATEWAY_WEBHOOK: http://n8n:5678/webhook/customer-service
+      N8N_AGENT_WEBHOOK: http://n8n:5678/webhook/agent-response
+      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
+      EMBED_MODEL: ${EMBED_MODEL:-nomic-embed-text}
+      WHATSAPP_HEALTH_URL: http://whatsapp:8080/health
+    ports:
+      - "127.0.0.1:${DASHBOARD_PORT:-8090}:8090"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/health/ready', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 30s
     networks:
       - cs-network
 

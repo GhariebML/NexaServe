@@ -1,7 +1,7 @@
 {
   "id": "CSWF000000000003",
   "name": "SubWF 03 - AI Cognitive & Intent Engine",
-  "active": false,
+  "active": true,
   "nodes": [
     {
       "parameters": {},

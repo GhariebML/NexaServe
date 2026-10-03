@@ -36,3 +36,11 @@
 The final post-deployment ambiguous probe completed after correcting the 04B duplicate declaration found in execution 6133. Execution 6134 returned HTTP 200 with the Arabic clarification; 6135/6136/6137/6138/6139 completed through session, intent, RAG, output, and logger. Message content exactly matched the webhook response. This does not remove the separate generation/OOM readiness blocker.
 
 All active production data and Docker volumes were preserved. This audit does not claim production readiness based on service health or HTTP 200.
+
+## Dashboard integration update (2026-09-28)
+
+The operational dashboard is now part of the root Compose stack as `cs-dashboard`, bound only to `127.0.0.1:8090`. Its container reports healthy; `/health/live` and `/health/ready` passed, with the readiness endpoint checking PostgreSQL and Redis. The authenticated system-health endpoint correctly rejects an unauthenticated request (401). Dashboard service health and observed LLM generation status are distinct; unknown generation state is not reported as successful.
+
+The RAG panel now reads counts and measured latencies from database telemetry and returns unavailable values where telemetry is absent. The activity panel has authenticated, filtered execution-list and detail endpoints with allowlisted/redacted telemetry and n8n deep links. Dashboard pool use is threaded, superuser fallback was removed, CORS is allowlisted, and password-change authentication resolves through the auth module. Five focused observability tests pass; Compose configuration and dashboard image build succeeded.
+
+The latest n8n execution visible in the browser was 6195, but the browser explicitly denied access to it. It was not inspected or modified. Historical evidence above remains the last verified live workflow evidence. Workflow export files and WhatsApp source contain the proposed fixes, but they have not been imported/reloaded into their live services. The WhatsApp service was left running to avoid interrupting its current connection. Therefore the dashboard integration is deployed, while end-to-end customer response recovery and current n8n state remain unverified; the system remains **NOT READY**.

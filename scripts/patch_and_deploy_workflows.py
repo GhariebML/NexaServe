@@ -106,7 +106,12 @@ import glob
 import os
 
 project_dir = "e:/NexaServe"
-workflows = glob.glob("infra/n8n/workflows/*.json")
+# The legacy monolithic Master_ exports contain duplicate customer-service
+# webhook paths. Deploy the modular canonical workflows only.
+workflows = [
+    path for path in glob.glob("infra/n8n/workflows/*.json")
+    if not os.path.basename(path).startswith("Master_")
+]
 
 # Get project ID
 res = subprocess.run(["docker", "exec", "cs-postgres", "psql", "-U", "postgres", "-d", "n8n", "-t", "-c", "SELECT id FROM project LIMIT 1;"], capture_output=True, text=True)

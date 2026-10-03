@@ -6,6 +6,9 @@ import os
 import re
 import time
 import urllib.request
+import urllib.error
+import socket
+import json
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any, List, Tuple
 from fastapi import APIRouter, Depends, Query, HTTPException, status
@@ -16,6 +19,110 @@ from database import query_all, query_one, execute_commit
 from auth import get_current_user, require_role
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
+
+N8N_HEALTH_URL = os.getenv("N8N_HEALTH_URL", "http://127.0.0.1:5678/healthz")
+N8N_UI_URL = os.getenv("N8N_UI_URL", "http://127.0.0.1:5678").rstrip("/")
+N8N_API_URL = os.getenv("N8N_API_URL", "http://n8n:5678/api/v1").rstrip("/")
+N8N_API_KEY = os.getenv("N8N_API_KEY", "")
+N8N_GATEWAY_WEBHOOK = os.getenv("N8N_GATEWAY_WEBHOOK", "http://n8n:5678/webhook/customer-service")
+N8N_AGENT_WEBHOOK = os.getenv("N8N_AGENT_WEBHOOK", "http://n8n:5678/webhook/agent-response")
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/")
+WHATSAPP_HEALTH_URL = os.getenv("WHATSAPP_HEALTH_URL", "http://127.0.0.1:8080/health")
+
+def _resolve_n8n_url(url: str) -> str:
+    """Fallback hostname if running locally outside Docker network."""
+    if "://n8n:5678" in url:
+        try:
+            socket.gethostbyname("n8n")
+        except Exception:
+            return url.replace("://n8n:5678", "://127.0.0.1:5678")
+    return url
+
+def _n8n_api_request(endpoint: str, method: str = "GET", payload: Optional[Dict[str, Any]] = None, timeout: float = 10.0) -> Tuple[int, Any, Optional[str]]:
+    base = _resolve_n8n_url(N8N_API_URL)
+    url = f"{base}{endpoint}"
+    headers = {
+        "X-N8N-API-KEY": N8N_API_KEY,
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
+    data = json.dumps(payload).encode("utf-8") if payload is not None else None
+    req = urllib.request.Request(url, data=data, headers=headers, method=method)
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as response:
+            res_body = response.read().decode("utf-8")
+            return response.getcode(), json.loads(res_body) if res_body else {}, None
+    except urllib.error.HTTPError as exc:
+        try:
+            err_body = exc.read().decode("utf-8")
+            return exc.code, json.loads(err_body), str(exc)
+        except Exception:
+            return exc.code, None, str(exc)
+    except Exception as exc:
+        return 0, None, type(exc).__name__
+
+def _n8n_webhook_post(url: str, payload: Dict[str, Any], timeout: float = 60.0) -> Tuple[int, Any, Optional[str], float]:
+    target_url = _resolve_n8n_url(url)
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+    }
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(target_url, data=data, headers=headers, method="POST")
+    t0 = time.time()
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as response:
+            lat = round((time.time() - t0) * 1000, 1)
+            raw = response.read().decode("utf-8")
+            try:
+                parsed = json.loads(raw) if raw else {}
+            except Exception:
+                parsed = {"raw": raw}
+            return response.getcode(), parsed, None, lat
+    except urllib.error.HTTPError as exc:
+        lat = round((time.time() - t0) * 1000, 1)
+        try:
+            err_raw = exc.read().decode("utf-8")
+            err_body = json.loads(err_raw)
+        except Exception:
+            err_body = {"error": str(exc)}
+        return exc.code, err_body, str(exc), lat
+    except Exception as exc:
+        lat = round((time.time() - t0) * 1000, 1)
+        return 0, None, str(exc), lat
+
+def _http_probe(url: str, timeout: float = 2.0) -> Tuple[int, Optional[str]]:
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as response:
+            return response.getcode(), None
+    except Exception as exc:
+        return 0, type(exc).__name__
+
+def _whatsapp_probe(url: str, timeout: float = 2.0) -> Tuple[int, bool, Optional[str]]:
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as response:
+            body = json.loads(response.read().decode("utf-8"))
+            return response.getcode(), body.get("connected") is True, None
+    except Exception as exc:
+        return 0, False, type(exc).__name__
+
+def _is_official_source(url: Optional[str]) -> bool:
+    if not url:
+        return False
+    match = re.match(r"^https://([^/:]+)", url.strip(), flags=re.IGNORECASE)
+    if not match:
+        return False
+    host = match.group(1).lower().rstrip(".")
+    return host == "gov.eg" or host.endswith(".gov.eg")
+
+def _execution_status(events: List[Dict[str, Any]]) -> str:
+    if any(e["event_type"] == "error" or e["payload"].get("llm_status") == "failed" for e in events):
+        return "failed"
+    if any(e["payload"].get("guardrail_decision") in {"verified_faq_fallback", "llm_failed_faq_fallback"} for e in events):
+        return "fallback"
+    if any(e["event_type"] == "turn_completed" for e in events):
+        return "completed"
+    return "unknown"
 
 # PII Masking Utility
 def mask_phone(phone: Optional[str], authorized: bool = False) -> Optional[str]:
@@ -129,16 +236,16 @@ async def get_summary(
     # Response Time (Latency from audit_logs) & RAG Success Rate
     perf_stats = query_one("""
         SELECT 
-            COALESCE(AVG(latency_ms), 0) as avg_latency,
+            AVG(latency_ms) as avg_latency,
             COUNT(CASE WHEN payload->>'status' = 'success' THEN 1 END) as success_turns,
             COUNT(*) as total_turns
         FROM audit_logs
         WHERE event_type = 'turn_completed'
     """)
-    avg_latency_ms = round(float(perf_stats["avg_latency"] or 0), 1) if perf_stats else 0.0
-    total_turns = perf_stats["total_turns"] if perf_stats and perf_stats["total_turns"] > 0 else 1
+    avg_latency_ms = round(float(perf_stats["avg_latency"]), 1) if perf_stats and perf_stats["avg_latency"] is not None else None
+    total_turns = perf_stats["total_turns"] if perf_stats else 0
     success_turns = perf_stats["success_turns"] if perf_stats else 0
-    rag_success_rate = round((success_turns / total_turns) * 100, 1)
+    rag_success_rate = round((success_turns / total_turns) * 100, 1) if total_turns else None
 
     return {
         "total_customers": total_customers,
@@ -460,33 +567,36 @@ async def get_tickets(
 # --- 5. RAG / AI QUALITY DASHBOARD ---
 @router.get("/rag")
 async def get_rag_metrics(user: Dict[str, Any] = Depends(get_current_user)):
-    # Query classification counts from messages and audit_logs
     msg_counts = query_one("""
-        SELECT 
-            COUNT(*) as total_queries,
-            COUNT(CASE WHEN intent = 'faq_query' THEN 1 END) as grounded_answers,
-            COUNT(CASE WHEN intent = 'human_escalation' THEN 1 END) as escalations
-        FROM messages
-    """)
+        SELECT
+            COUNT(*) FILTER (WHERE intent = 'faq_query') AS faq_responses,
+            COUNT(*) FILTER (WHERE intent = 'human_escalation') AS escalations
+        FROM messages WHERE sender_type = 'ai'
+    """) or {}
 
     audit_statuses = query_one("""
-        SELECT 
-            COUNT(CASE WHEN payload->>'status' = 'out_of_scope' THEN 1 END) as safe_deflections,
-            COUNT(CASE WHEN payload->>'status' = 'clarification_required' THEN 1 END) as clarification_requests,
-            COUNT(CASE WHEN payload->>'status' = 'general_faq' THEN 1 END) as fallbacks,
-            COUNT(CASE WHEN event_type = 'error' THEN 1 END) as error_count
+        SELECT
+            COUNT(*) FILTER (WHERE event_type = 'turn_completed' AND payload->>'status' = 'out_of_scope') AS safe_deflections,
+            COUNT(*) FILTER (WHERE event_type = 'turn_completed' AND payload->>'status' = 'clarification_required') AS clarification_requests,
+            COUNT(*) FILTER (WHERE event_type = 'turn_completed' AND payload->>'llm_status' = 'failed') AS llm_failures,
+            COUNT(*) FILTER (WHERE event_type = 'turn_completed' AND payload->>'guardrail_decision' IN ('verified_faq_fallback','llm_failed_faq_fallback')) AS fallbacks,
+            COUNT(*) FILTER (WHERE event_type = 'error' OR payload->>'llm_status' = 'failed') AS error_count,
+            COUNT(*) FILTER (WHERE event_type = 'turn_completed' AND payload->>'grounded' = 'true') AS grounded_answers,
+            COUNT(*) FILTER (WHERE payload ? 'llm_status') AS telemetry_turns
         FROM audit_logs
-    """)
+    """) or {}
 
-    # Latencies
     lat_stats = query_one("""
-        SELECT 
-            COALESCE(AVG(latency_ms), 0) as avg_latency,
-            COALESCE(PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY latency_ms), 0) as p50,
-            COALESCE(PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY latency_ms), 0) as p95
+        SELECT
+            AVG(latency_ms) FILTER (WHERE event_type = 'turn_completed' AND latency_ms > 0) AS avg_latency,
+            percentile_cont(0.50) WITHIN GROUP (ORDER BY latency_ms)
+                FILTER (WHERE event_type = 'turn_completed' AND latency_ms > 0) AS p50,
+            percentile_cont(0.95) WITHIN GROUP (ORDER BY latency_ms)
+                FILTER (WHERE event_type = 'turn_completed' AND latency_ms > 0) AS p95,
+            AVG(latency_ms) FILTER (WHERE event_type = 'rag_retrieved' AND latency_ms > 0) AS retrieval_latency,
+            AVG(latency_ms) FILTER (WHERE event_type IN ('llm_completed','llm_failed') AND latency_ms > 0) AS llm_latency
         FROM audit_logs
-        WHERE latency_ms IS NOT NULL AND latency_ms > 0
-    """)
+    """) or {}
 
     # Confidence distribution
     conf_rows = query_all("""
@@ -499,32 +609,135 @@ async def get_rag_metrics(user: Dict[str, Any] = Depends(get_current_user)):
             END as bracket,
             COUNT(*) as count
         FROM messages
-        WHERE confidence IS NOT NULL
+        WHERE sender_type = 'ai' AND confidence IS NOT NULL
         GROUP BY 1
         ORDER BY 1 DESC
     """)
 
-    # Cross-program isolation leakage test (Gate 8 verified: 0.0%)
     return {
-        "rag_queries": msg_counts["total_queries"] if msg_counts else 0,
-        "grounded_answers": msg_counts["grounded_answers"] if msg_counts else 0,
-        "safe_deflections": audit_statuses["safe_deflections"] if audit_statuses else 0,
-        "clarification_requests": audit_statuses["clarification_requests"] if audit_statuses else 0,
-        "escalations": msg_counts["escalations"] if msg_counts else 0,
-        "average_retrieval_latency_ms": 28.5,
-        "average_llm_latency_ms": round(float(lat_stats["p50"] or 1750), 1),
-        "total_latency_ms": round(float(lat_stats["avg_latency"] or 0), 1),
-        "p50_latency_ms": round(float(lat_stats["p50"] or 0), 1),
-        "p95_latency_ms": round(float(lat_stats["p95"] or 0), 1),
-        "cache_hit_rate": 84.6,
-        "fallback_count": audit_statuses["fallbacks"] if audit_statuses else 0,
-        "error_count": audit_statuses["error_count"] if audit_statuses else 0,
+        "rag_queries": int(msg_counts.get("faq_responses") or 0),
+        "grounded_answers": int(audit_statuses.get("grounded_answers") or 0),
+        "safe_deflections": int(audit_statuses.get("safe_deflections") or 0),
+        "clarification_requests": int(audit_statuses.get("clarification_requests") or 0),
+        "escalations": int(msg_counts.get("escalations") or 0),
+        "average_retrieval_latency_ms": round(float(lat_stats["retrieval_latency"]), 1) if lat_stats.get("retrieval_latency") is not None else None,
+        "average_llm_latency_ms": round(float(lat_stats["llm_latency"]), 1) if lat_stats.get("llm_latency") is not None else None,
+        "total_latency_ms": round(float(lat_stats["avg_latency"]), 1) if lat_stats.get("avg_latency") is not None else None,
+        "p50_latency_ms": round(float(lat_stats["p50"]), 1) if lat_stats.get("p50") is not None else None,
+        "p95_latency_ms": round(float(lat_stats["p95"]), 1) if lat_stats.get("p95") is not None else None,
+        "cache_hit_rate": None,
+        "fallback_count": int(audit_statuses.get("fallbacks") or 0),
+        "llm_failure_count": int(audit_statuses.get("llm_failures") or 0) if audit_statuses.get("telemetry_turns") else None,
+        "telemetry_turns": int(audit_statuses.get("telemetry_turns") or 0),
+        "error_count": int(audit_statuses.get("error_count") or 0),
         "program_isolation": {
-            "depi_leakage": 0.0,
-            "digilians_leakage": 0.0,
-            "target": "0.0% cross-program leakage"
+            "depi_leakage": None,
+            "digilians_leakage": None,
+            "status": "not_measured",
         },
         "confidence_distribution": conf_rows
+    }
+
+@router.get("/executions")
+async def list_executions(
+    status_filter: Optional[str] = Query(None, alias="status", pattern="^(completed|fallback|failed|unknown)$"),
+    channel: Optional[str] = Query(None, max_length=30),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    user: Dict[str, Any] = Depends(get_current_user),
+):
+    rows = query_all("""
+        SELECT
+            COALESCE(NULLIF(payload->>'request_id',''), execution_id) AS request_id,
+            MAX(execution_id) AS execution_id,
+            MAX(payload->>'workflow_id') AS workflow_id,
+            MAX(workflow_name) AS workflow_name,
+            MAX(channel) AS channel,
+            MAX(payload->>'program') AS program,
+            MAX(payload->>'intent') AS intent,
+            MAX(latency_ms) FILTER (WHERE event_type = 'turn_completed') AS latency_ms,
+            MAX(created_at) AS created_at,
+            ARRAY_AGG(DISTINCT event_type) AS events,
+            CASE
+              WHEN BOOL_OR(event_type = 'error' OR payload->>'llm_status' = 'failed') THEN 'failed'
+              WHEN BOOL_OR(event_type = 'turn_completed' AND payload->>'guardrail_decision' IN ('verified_faq_fallback','llm_failed_faq_fallback')) THEN 'fallback'
+              WHEN BOOL_OR(event_type = 'turn_completed') THEN 'completed'
+              ELSE 'unknown'
+            END AS status
+        FROM audit_logs
+        WHERE COALESCE(NULLIF(payload->>'request_id',''), execution_id) IS NOT NULL
+          AND (%s IS NULL OR channel = %s)
+        GROUP BY COALESCE(NULLIF(payload->>'request_id',''), execution_id)
+        HAVING (%s IS NULL OR
+          CASE
+            WHEN BOOL_OR(event_type = 'error' OR payload->>'llm_status' = 'failed') THEN 'failed'
+            WHEN BOOL_OR(event_type = 'turn_completed' AND payload->>'guardrail_decision' IN ('verified_faq_fallback','llm_failed_faq_fallback')) THEN 'fallback'
+            WHEN BOOL_OR(event_type = 'turn_completed') THEN 'completed'
+            ELSE 'unknown'
+          END = %s)
+        ORDER BY MAX(created_at) DESC
+        LIMIT %s OFFSET %s
+    """, (channel, channel, status_filter, status_filter, limit, offset))
+
+    return {
+        "items": [{
+            "request_id": row["request_id"],
+            "execution_id": row["execution_id"],
+            "workflow_id": row["workflow_id"],
+            "workflow_name": row["workflow_name"],
+            "channel": row["channel"],
+            "program": row["program"],
+            "intent": row["intent"],
+            "status": row["status"],
+            "events": row["events"] or [],
+            "latency_ms": row["latency_ms"],
+            "created_at": row["created_at"].isoformat() if row["created_at"] else None,
+            "n8n_url": f"{N8N_UI_URL}/workflow/{row['workflow_id']}/executions/{row['execution_id']}" if row["workflow_id"] and row["execution_id"] else None,
+        } for row in rows]
+    }
+
+@router.get("/executions/{request_id}")
+async def get_execution_detail(request_id: str, user: Dict[str, Any] = Depends(get_current_user)):
+    rows = query_all("""
+        SELECT execution_id, workflow_name, event_type, channel,
+               latency_ms, created_at, payload
+        FROM audit_logs
+        WHERE payload->>'request_id' = %s OR execution_id = %s
+        ORDER BY created_at ASC
+        LIMIT 100
+    """, (request_id, request_id))
+    if not rows:
+        raise HTTPException(status_code=404, detail="Execution not found")
+
+    allowed_payload_keys = (
+        "status", "intent", "program", "locale", "llm_status", "grounded",
+        "guardrail_decision", "fallback_reason", "retrieved_count", "source_ids",
+        "source_urls", "relevance_score", "error_code", "stage",
+    )
+    events = []
+    for row in rows:
+        payload = row["payload"] or {}
+        safe_payload = {key: payload[key] for key in allowed_payload_keys if key in payload}
+        if isinstance(safe_payload.get("source_urls"), list):
+            safe_payload["source_urls"] = [url for url in safe_payload["source_urls"] if _is_official_source(url)]
+        events.append({
+            "execution_id": row["execution_id"],
+            "workflow_id": payload.get("workflow_id"),
+            "workflow_name": row["workflow_name"],
+            "event_type": row["event_type"],
+            "channel": row["channel"],
+            "latency_ms": row["latency_ms"],
+            "created_at": row["created_at"].isoformat() if row["created_at"] else None,
+            "details": safe_payload,
+        })
+    last = rows[-1]
+    workflow_id = (last["payload"] or {}).get("workflow_id")
+    execution_id = last["execution_id"]
+    return {
+        "request_id": request_id,
+        "status": _execution_status([{"event_type": row["event_type"], "payload": row["payload"] or {}} for row in rows]),
+        "events": events,
+        "n8n_url": f"{N8N_UI_URL}/workflow/{workflow_id}/executions/{execution_id}" if workflow_id and execution_id else None,
     }
 
 # --- 6. KNOWLEDGE BASE DASHBOARD ---
@@ -576,34 +789,39 @@ async def get_system_health(user: Dict[str, Any] = Depends(get_current_user)):
     now = datetime.now(timezone.utc).isoformat()
     services = []
 
-    # 1. PostgreSQL
+    # Component availability is measured independently from workflow/model readiness.
     try:
         t0 = time.time()
         res = query_one("SELECT 1 as ok")
         lat = round((time.time() - t0) * 1000, 1)
         services.append({
             "name": "PostgreSQL (pgvector)",
-            "status": "ONLINE" if res else "DEGRADED",
+            "status": "ONLINE" if res and res.get("ok") == 1 else "DEGRADED",
             "latency_ms": lat,
             "last_check": now,
             "error": None
         })
-    except Exception as e:
+    except Exception as exc:
         services.append({
             "name": "PostgreSQL (pgvector)",
             "status": "OFFLINE",
             "latency_ms": None,
             "last_check": now,
-            "error": str(e)
+            "error": type(exc).__name__
         })
 
-    # 2. Redis
     try:
         t0 = time.time()
         redis_pw = os.getenv("REDIS_PASSWORD")
         if not redis_pw:
             raise RuntimeError("REDIS_PASSWORD environment variable must be set")
-        r = redis.Redis(host="127.0.0.1", port=6379, password=redis_pw, socket_timeout=2)
+        r = redis.Redis(
+            host=os.getenv("REDIS_HOST", "127.0.0.1"),
+            port=int(os.getenv("REDIS_PORT", "6379")),
+            password=redis_pw,
+            socket_connect_timeout=2,
+            socket_timeout=2,
+        )
         if r.ping():
             lat = round((time.time() - t0) * 1000, 1)
             services.append({
@@ -621,79 +839,89 @@ async def get_system_health(user: Dict[str, Any] = Depends(get_current_user)):
                 "last_check": now,
                 "error": "Ping returned False"
             })
-    except Exception as e:
+    except Exception as exc:
         services.append({
             "name": "Redis Cache",
             "status": "OFFLINE",
             "latency_ms": None,
             "last_check": now,
-            "error": str(e)
+            "error": type(exc).__name__
         })
 
-    # 3. n8n
+    for name, url in (("n8n Workflow Engine", N8N_HEALTH_URL),):
+        started = time.time()
+        code, error = _http_probe(url)
+        services.append({
+            "name": name,
+            "status": "ONLINE" if code == 200 else ("DEGRADED" if code else "OFFLINE"),
+            "latency_ms": round((time.time() - started) * 1000, 1) if code else None,
+            "last_check": now,
+            "error": error or (None if code == 200 else f"HTTP {code}"),
+        })
+
+    whatsapp_started = time.time()
+    whatsapp_code, whatsapp_connected, whatsapp_error = _whatsapp_probe(WHATSAPP_HEALTH_URL)
+    services.append({
+        "name": "WhatsApp Gateway Bridge",
+        "status": "ONLINE" if whatsapp_code == 200 and whatsapp_connected else ("DEGRADED" if whatsapp_code else "OFFLINE"),
+        "latency_ms": round((time.time() - whatsapp_started) * 1000, 1) if whatsapp_code else None,
+        "last_check": now,
+        "error": whatsapp_error or (None if whatsapp_connected else "Baileys session is disconnected"),
+    })
+
+    ollama_started = time.time()
+    code, error = 0, None
+    model_ready = False
     try:
-        t0 = time.time()
-        req = urllib.request.urlopen("http://127.0.0.1:5678/healthz", timeout=3)
-        lat = round((time.time() - t0) * 1000, 1)
-        services.append({
-            "name": "n8n Workflow Engine",
-            "status": "ONLINE" if req.getcode() == 200 else "DEGRADED",
-            "latency_ms": lat,
-            "last_check": now,
-            "error": None
-        })
-    except Exception as e:
-        services.append({
-            "name": "n8n Workflow Engine",
-            "status": "OFFLINE",
-            "latency_ms": None,
-            "last_check": now,
-            "error": str(e)
-        })
+        with urllib.request.urlopen(f"{OLLAMA_BASE_URL}/api/tags", timeout=2) as response:
+            code = response.getcode()
+            model_data = json.loads(response.read().decode("utf-8"))
+        if code == 200:
+            available = {model.get("name", "").split(":")[0] for model in model_data.get("models", [])}
+            required = {os.getenv("OLLAMA_MODEL", "qwen2.5:3b").split(":")[0], os.getenv("EMBED_MODEL", "nomic-embed-text").split(":")[0]}
+            model_ready = required.issubset(available)
+    except Exception as exc:
+        error = type(exc).__name__
+    services.append({
+        "name": "Ollama API and models",
+        "status": "ONLINE" if code == 200 and model_ready else ("DEGRADED" if code else "OFFLINE"),
+        "latency_ms": round((time.time() - ollama_started) * 1000, 1) if code else None,
+        "last_check": now,
+        "error": error or (None if model_ready else "Required chat or embedding model is not available"),
+    })
 
-    # 4. Ollama
+    # Do not run a costly generation request as a periodic health probe. Show
+    # inference readiness from real, correlated workflow telemetry instead.
     try:
-        t0 = time.time()
-        req = urllib.request.urlopen("http://127.0.0.1:11434/api/tags", timeout=3)
-        lat = round((time.time() - t0) * 1000, 1)
+        inference = query_one("""
+            SELECT payload->>'llm_status' AS status, payload->>'error_code' AS error_code,
+                   created_at
+            FROM audit_logs
+            WHERE payload ? 'llm_status'
+            ORDER BY created_at DESC LIMIT 1
+        """)
+        inference_status = "UNKNOWN"
+        inference_error = "No correlated model request has been recorded yet"
+        inference_time = None
+        if inference:
+            inference_status = "ONLINE" if inference.get("status") == "succeeded" else "DEGRADED"
+            inference_error = inference.get("error_code")
+            inference_time = inference["created_at"].isoformat() if inference.get("created_at") else None
         services.append({
-            "name": "Ollama LLM Engine",
-            "status": "ONLINE" if req.getcode() == 200 else "DEGRADED",
-            "latency_ms": lat,
-            "last_check": now,
-            "error": None
-        })
-    except Exception as e:
-        services.append({
-            "name": "Ollama LLM Engine",
-            "status": "OFFLINE",
+            "name": "Ollama generation (observed)",
+            "status": inference_status,
             "latency_ms": None,
-            "last_check": now,
-            "error": str(e)
+            "last_check": inference_time or now,
+            "error": inference_error,
+        })
+    except Exception as exc:
+        services.append({
+            "name": "Ollama generation (observed)", "status": "UNKNOWN",
+            "latency_ms": None, "last_check": now, "error": type(exc).__name__,
         })
 
-    # 5. WhatsApp Gateway
-    try:
-        t0 = time.time()
-        req = urllib.request.urlopen("http://127.0.0.1:8080/health", timeout=3)
-        lat = round((time.time() - t0) * 1000, 1)
-        services.append({
-            "name": "WhatsApp Gateway Bridge",
-            "status": "ONLINE" if req.getcode() == 200 else "DEGRADED",
-            "latency_ms": lat,
-            "last_check": now,
-            "error": None
-        })
-    except Exception as e:
-        services.append({
-            "name": "WhatsApp Gateway Bridge",
-            "status": "OFFLINE",
-            "latency_ms": None,
-            "last_check": now,
-            "error": str(e)
-        })
-
-    overall_status = "ONLINE" if all(s["status"] == "ONLINE" for s in services) else ("DEGRADED" if any(s["status"] == "ONLINE" for s in services) else "OFFLINE")
+    statuses = {service["status"] for service in services}
+    overall_status = "ONLINE" if statuses == {"ONLINE"} else ("OFFLINE" if statuses == {"OFFLINE"} else "DEGRADED")
 
     return {
         "overall_status": overall_status,
@@ -839,4 +1067,242 @@ async def get_conversation_detail(
             "sla_deadline": t["sla_due_at"].isoformat() if t["sla_due_at"] else None,
             "created_at": t["created_at"].isoformat() if t["created_at"] else None
         } for t in tickets]
+    }
+
+# --- 10. REAL-TIME N8N ORCHESTRATION & TELEMETRY ---
+
+class SimulateRequest(BaseModel):
+    message: str
+    full_name: Optional[str] = "Live Simulator User"
+    phone_number: Optional[str] = "+201000000000"
+    channel: Optional[str] = "simulator"
+    program: Optional[str] = "DEPI"
+
+class TicketRespondRequest(BaseModel):
+    response_message: str
+    agent_name: Optional[str] = "Support Agent"
+    action: Optional[str] = "resolve"
+    notes: Optional[str] = None
+
+@router.get("/n8n/overview")
+async def get_n8n_overview(user: Dict[str, Any] = Depends(get_current_user)):
+    """Provides consolidated operational status of n8n workflows and webhook endpoints."""
+    code, data, err = _n8n_api_request("/workflows")
+    connected = (code == 200)
+    workflows = data.get("data", []) if connected else []
+    active_count = sum(1 for w in workflows if w.get("active") is True)
+    
+    probe_code, probe_err = _http_probe(N8N_HEALTH_URL)
+    
+    return {
+        "connected": connected,
+        "api_code": code,
+        "health_status": "ONLINE" if probe_code == 200 else "OFFLINE",
+        "total_workflows": len(workflows),
+        "active_workflows": active_count,
+        "ui_url": N8N_UI_URL,
+        "api_url": N8N_API_URL,
+        "gateway_webhook": N8N_GATEWAY_WEBHOOK,
+        "agent_webhook": N8N_AGENT_WEBHOOK,
+        "error": err
+    }
+
+@router.get("/n8n/workflows")
+async def get_n8n_workflows(user: Dict[str, Any] = Depends(get_current_user)):
+    """Lists real n8n workflows from n8n REST API with active toggle state."""
+    code, data, err = _n8n_api_request("/workflows")
+    if code != 200:
+        raise HTTPException(status_code=502, detail=f"Failed to query n8n API: {err or code}")
+    
+    items = []
+    for wf in data.get("data", []):
+        wf_id = wf.get("id")
+        items.append({
+            "id": wf_id,
+            "name": wf.get("name"),
+            "active": wf.get("active", False),
+            "nodes_count": len(wf.get("nodes", [])),
+            "tags": [t.get("name") for t in wf.get("tags", [])] if wf.get("tags") else [],
+            "created_at": wf.get("createdAt"),
+            "updated_at": wf.get("updatedAt"),
+            "n8n_url": f"{N8N_UI_URL}/workflow/{wf_id}"
+        })
+    return {"items": items, "count": len(items)}
+
+@router.post("/n8n/workflows/{workflow_id}/activate")
+async def activate_n8n_workflow(workflow_id: str, user: Dict[str, Any] = Depends(require_role("admin", "supervisor"))):
+    """Activates a workflow in n8n live via API."""
+    code, data, err = _n8n_api_request(f"/workflows/{workflow_id}/activate", method="POST")
+    if code != 200:
+        raise HTTPException(status_code=502, detail=f"Failed to activate workflow: {err or code}")
+    return {"success": True, "workflow_id": workflow_id, "active": True}
+
+@router.post("/n8n/workflows/{workflow_id}/deactivate")
+async def deactivate_n8n_workflow(workflow_id: str, user: Dict[str, Any] = Depends(require_role("admin", "supervisor"))):
+    """Deactivates a workflow in n8n live via API."""
+    code, data, err = _n8n_api_request(f"/workflows/{workflow_id}/deactivate", method="POST")
+    if code != 200:
+        raise HTTPException(status_code=502, detail=f"Failed to deactivate workflow: {err or code}")
+    return {"success": True, "workflow_id": workflow_id, "active": False}
+
+@router.get("/n8n/executions")
+async def get_n8n_executions(
+    limit: int = Query(25, ge=1, le=100),
+    user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Fetches real live executions directly from n8n REST API."""
+    code, data, err = _n8n_api_request(f"/executions?limit={limit}")
+    if code != 200:
+        raise HTTPException(status_code=502, detail=f"Failed to query n8n executions: {err or code}")
+    
+    raw_list = data.get("data", [])
+    executions = []
+    for ex in raw_list:
+        exec_id = ex.get("id")
+        wf_id = ex.get("workflowId")
+        st_at = ex.get("startedAt")
+        sp_at = ex.get("stoppedAt")
+        duration_ms = None
+        if st_at and sp_at:
+            try:
+                t0 = datetime.fromisoformat(st_at.replace("Z", "+00:00"))
+                t1 = datetime.fromisoformat(sp_at.replace("Z", "+00:00"))
+                duration_ms = int((t1 - t0).total_seconds() * 1000)
+            except Exception:
+                pass
+        
+        executions.append({
+            "id": exec_id,
+            "workflow_id": wf_id,
+            "status": ex.get("status", "unknown"),
+            "mode": ex.get("mode", "unknown"),
+            "finished": ex.get("finished", False),
+            "started_at": st_at,
+            "stopped_at": sp_at,
+            "duration_ms": duration_ms,
+            "n8n_url": f"{N8N_UI_URL}/workflow/{wf_id}/executions/{exec_id}" if wf_id and exec_id else None
+        })
+    return {"items": executions, "count": len(executions)}
+
+@router.post("/n8n/simulate")
+async def simulate_system_interaction(
+    req: SimulateRequest,
+    user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Sends a real customer message directly into n8n Master Gateway webhook, receives response, and correlates trace."""
+    payload = {
+        "customer_message": req.message,
+        "full_name": req.full_name,
+        "phone_number": req.phone_number,
+        "channel": req.channel,
+        "program": req.program
+    }
+    
+    code, n8n_resp, err, latency = _n8n_webhook_post(N8N_GATEWAY_WEBHOOK, payload, timeout=60.0)
+    if code != 200:
+        return {
+            "success": False,
+            "status_code": code,
+            "error": err or "n8n Gateway execution failed",
+            "latency_ms": latency,
+            "response": n8n_resp,
+            "trace": []
+        }
+    
+    time.sleep(0.15)
+    
+    req_id = None
+    exec_id = None
+    if isinstance(n8n_resp, dict):
+        req_id = n8n_resp.get("request_id")
+        exec_id = n8n_resp.get("execution_id")
+    
+    correlated_events = []
+    if req_id or exec_id:
+        correlated_events = query_all("""
+            SELECT execution_id, workflow_name, event_type, channel, latency_ms, payload, created_at
+            FROM audit_logs
+            WHERE (payload->>'request_id' = %s OR execution_id = %s)
+            ORDER BY created_at ASC
+            LIMIT 50
+        """, (req_id or "", exec_id or ""))
+    
+    return {
+        "success": True,
+        "status_code": code,
+        "latency_ms": latency,
+        "response": n8n_resp,
+        "request_id": req_id,
+        "execution_id": exec_id,
+        "trace": [{
+            "execution_id": r["execution_id"],
+            "workflow_name": r["workflow_name"],
+            "event_type": r["event_type"],
+            "channel": r["channel"],
+            "latency_ms": r["latency_ms"],
+            "payload": r["payload"],
+            "created_at": r["created_at"].isoformat() if r["created_at"] else None
+        } for r in correlated_events]
+    }
+
+@router.post("/tickets/{ticket_id}/respond")
+async def respond_to_ticket(
+    ticket_id: str,
+    req: TicketRespondRequest,
+    user: Dict[str, Any] = Depends(require_role("admin", "agent", "supervisor"))
+):
+    """Directly resolves or updates a ticket, dispatches agent response to n8n HITL webhook, and updates PostgreSQL."""
+    ticket = query_one("""
+        SELECT t.id, t.ticket_number, t.customer_id, t.conversation_id, t.status, c.full_name
+        FROM tickets t
+        JOIN customers c ON t.customer_id = c.id
+        WHERE t.id::text = %s OR t.ticket_number = %s
+    """, (ticket_id, ticket_id))
+    
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    
+    agent_payload = {
+        "ticket_number": ticket["ticket_number"],
+        "agent_message": req.response_message,
+        "agent_name": req.agent_name or user.get("full_name", "Support Agent"),
+        "action": req.action or "resolve"
+    }
+    
+    n8n_code, n8n_data, n8n_err, n8n_lat = _n8n_webhook_post(N8N_AGENT_WEBHOOK, agent_payload, timeout=20.0)
+    
+    new_status = "resolved" if req.action == "resolve" else "in_progress"
+    execute_commit("""
+        UPDATE tickets
+        SET status = %s,
+            assigned_agent = %s,
+            resolution_notes = %s,
+            updated_at = NOW()
+        WHERE id = %s
+    """, (new_status, req.agent_name, req.response_message, ticket["id"]))
+    
+    if ticket.get("conversation_id"):
+        execute_commit("""
+            INSERT INTO messages (conversation_id, customer_id, sender_type, content, intent)
+            VALUES (%s, %s, 'agent', %s, 'agent_portal_resolution')
+        """, (ticket["conversation_id"], ticket["customer_id"], req.response_message))
+    
+    execute_commit("""
+        INSERT INTO audit_logs (workflow_name, event_type, channel, payload)
+        VALUES ('dashboard_hitl_portal', %s, 'dashboard', %s)
+    """, ("ticket_resolved" if new_status == "resolved" else "ticket_replied", json.dumps({
+        "ticket_number": ticket["ticket_number"],
+        "agent": req.agent_name,
+        "action": req.action,
+        "n8n_dispatched": n8n_code == 200,
+        "n8n_status_code": n8n_code
+    })))
+    
+    return {
+        "success": True,
+        "ticket_number": ticket["ticket_number"],
+        "status": new_status,
+        "n8n_status_code": n8n_code,
+        "n8n_dispatched": n8n_code == 200,
+        "latency_ms": n8n_lat
     }

@@ -1,7 +1,7 @@
 {
   "id": "CSWF000000000002",
   "name": "SubWF 02 - Customer Profile & Session Manager",
-  "active": false,
+  "active": true,
   "nodes": [
     {
       "parameters": {},
@@ -26,7 +26,13 @@
       "position": [
         380,
         300
-      ]
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_CRED_01",
+          "name": "CustomerService Postgres"
+        }
+      }
     },
     {
       "parameters": {
@@ -40,7 +46,13 @@
       "position": [
         600,
         300
-      ]
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_CRED_01",
+          "name": "CustomerService Postgres"
+        }
+      }
     },
     {
       "parameters": {

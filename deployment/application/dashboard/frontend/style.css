@@ -413,6 +413,9 @@ tr:hover td {
   color: #FBBF24;
   border: 1px solid rgba(245, 158, 11, 0.3);
 }
+.badge-failed { color: #FCA5A5; background: rgba(239, 68, 68, 0.14); }
+.badge-fallback { color: #FCD34D; background: rgba(245, 158, 11, 0.14); }
+.badge-completed { color: #6EE7B7; background: rgba(16, 185, 129, 0.14); }
 
 .badge-resolved, .badge-normal, .badge-low {
   background: rgba(16, 185, 129, 0.15);
@@ -537,6 +540,7 @@ tr:hover td {
 .status-dot.online { background-color: var(--status-online); box-shadow: 0 0 8px var(--status-online); }
 .status-dot.degraded { background-color: var(--status-degraded); box-shadow: 0 0 8px var(--status-degraded); }
 .status-dot.offline { background-color: var(--status-offline); box-shadow: 0 0 8px var(--status-offline); }
+.status-dot.unknown { background-color: #94A3B8; }
 
 /* Login Overlay */
 .login-overlay {

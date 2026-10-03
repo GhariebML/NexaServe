@@ -148,7 +148,8 @@ def check_ollama():
     result = {"service": "ollama", "status": "UNKNOWN", "details": {}}
     try:
         # Check tags endpoint
-        resp = requests.get("http://localhost:11434/api/tags", timeout=10)
+        ollama_base = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
+        resp = requests.get(f"{ollama_base}/api/tags", timeout=10)
         if resp.status_code == 200:
             tags = resp.json()
             models = [m.get("name", "") for m in tags.get("models", [])]

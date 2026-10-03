@@ -1,6 +1,6 @@
 {
   "test": "disaster_recovery",
-  "timestamp": "2026-09-27T17:02:32.936739",
+  "timestamp": "2026-10-01T09:36:41.245682",
   "passed": 5,
   "failed": 0,
   "other": 0,
@@ -9,16 +9,17 @@
     {
       "test": "backup_directory",
       "status": "PASS",
-      "backup_count": 1,
+      "backup_count": 2,
       "latest_backups": [
+        "clean_backup.sql",
         "manual_dr_test.sql"
       ]
     },
     {
       "test": "fresh_backup",
       "status": "PASS",
-      "backup_file": "E:\\NexaServe\\backups\\dr_test_20260927_170231.sql",
-      "size_bytes": 1766955
+      "backup_file": "E:\\NexaServe\\backups\\dr_test_20261001_093639.sql",
+      "size_bytes": 2238491
     },
     {
       "test": "backup_validation",
@@ -35,12 +36,12 @@
       "test": "data_integrity",
       "status": "PASS",
       "row_counts": {
-        "knowledge_base": 66,
-        "customers": 54,
-        "conversations": 56,
-        "messages": 1553,
-        "tickets": 89,
-        "audit_logs": 1310,
+        "knowledge_base": 73,
+        "customers": 95,
+        "conversations": 97,
+        "messages": 2215,
+        "tickets": 102,
+        "audit_logs": 1859,
         "customer_memory": 0
       }
     },

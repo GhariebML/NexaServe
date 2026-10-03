@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from database import init_db_pool
+from database import init_db_pool, query_one
 import auth
 from routes import router as dashboard_router
 
@@ -32,6 +32,30 @@ app.add_middleware(
 @app.on_event("startup")
 def on_startup():
     init_db_pool()
+
+@app.get("/health/live")
+async def health_live():
+    return {"status": "ok"}
+
+@app.get("/health/ready")
+async def health_ready():
+    try:
+        query_one("SELECT 1 AS ok")
+        redis_pw = os.getenv("REDIS_PASSWORD")
+        if not redis_pw:
+            raise RuntimeError("Redis health check is not configured")
+        import redis
+        client = redis.Redis(
+            host=os.getenv("REDIS_HOST", "127.0.0.1"),
+            port=int(os.getenv("REDIS_PORT", "6379")),
+            password=redis_pw,
+            socket_connect_timeout=2,
+            socket_timeout=2,
+        )
+        client.ping()
+        return {"status": "ready"}
+    except Exception:
+        raise HTTPException(status_code=503, detail="Dashboard dependencies are not ready")
 
 class LoginRequest(BaseModel):
     username: str

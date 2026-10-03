@@ -16,38 +16,25 @@ POSTGRES_PASSWORD = os.getenv("CS_DB_PASSWORD")
 if not POSTGRES_PASSWORD:
     raise RuntimeError("CS_DB_PASSWORD environment variable must be set")
 
-# Fallback to superuser if app user permission is limited
-POSTGRES_SUPER_USER = os.getenv("POSTGRES_USER", "postgres")
-POSTGRES_SUPER_PASSWORD = os.getenv("POSTGRES_PASSWORD")
-if not POSTGRES_SUPER_PASSWORD:
-    raise RuntimeError("POSTGRES_PASSWORD environment variable must be set")
+POOL_MAX_CONNECTIONS = max(2, int(os.getenv("DASHBOARD_DB_POOL_MAX", "8")))
 
-db_pool: Optional[pool.SimpleConnectionPool] = None
+db_pool: Optional[pool.ThreadedConnectionPool] = None
 
 def init_db_pool():
     global db_pool
     if db_pool is None:
         try:
-            db_pool = pool.SimpleConnectionPool(
-                minconn=2,
-                maxconn=20,
+            db_pool = pool.ThreadedConnectionPool(
+                minconn=1,
+                maxconn=POOL_MAX_CONNECTIONS,
                 host=POSTGRES_HOST,
                 port=POSTGRES_PORT,
                 dbname=POSTGRES_DB,
                 user=POSTGRES_USER,
                 password=POSTGRES_PASSWORD
             )
-        except Exception:
-            # Fallback to postgres superuser
-            db_pool = pool.SimpleConnectionPool(
-                minconn=2,
-                maxconn=20,
-                host=POSTGRES_HOST,
-                port=POSTGRES_PORT,
-                dbname=POSTGRES_DB,
-                user=POSTGRES_SUPER_USER,
-                password=POSTGRES_SUPER_PASSWORD
-            )
+        except Exception as exc:
+            raise RuntimeError("Dashboard database connection failed for configured application user") from exc
 
 @contextmanager
 def get_db() -> Generator[psycopg2.extensions.connection, None, None]:
@@ -57,7 +44,13 @@ def get_db() -> Generator[psycopg2.extensions.connection, None, None]:
     try:
         yield conn
     finally:
-        db_pool.putconn(conn)
+        close_connection = bool(conn.closed)
+        if not close_connection:
+            try:
+                conn.rollback()
+            except psycopg2.Error:
+                close_connection = True
+        db_pool.putconn(conn, close=close_connection)
 
 def query_all(sql: str, params: Optional[Tuple[Any, ...]] = None) -> List[Dict[str, Any]]:
     with get_db() as conn:

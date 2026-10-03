@@ -1,6 +1,6 @@
 {
   "test": "infrastructure_health",
-  "timestamp": "2026-09-27T15:39:44.847215",
+  "timestamp": "2026-10-01T09:36:56.861302",
   "verdict": "ALL_HEALTHY",
   "healthy_count": 5,
   "down_count": 0,
@@ -10,7 +10,7 @@
       "status": "HEALTHY",
       "details": {
         "version": "PostgreSQL 16.15 (Debian 16.15-1.pgdg12+2) on x86_64-pc-linux-gnu, compiled by g",
-        "tables_found": 18,
+        "tables_found": 19,
         "missing_tables": [],
         "extensions": [
           "plpgsql",
@@ -20,8 +20,8 @@
         ],
         "has_vector": true,
         "has_pg_trgm": true,
-        "kb_rows": 66,
-        "kb_embedded": 66,
+        "kb_rows": 73,
+        "kb_embedded": 73,
         "embedding_dimension": 768,
         "hnsw_indexes": [
           "idx_kb_embedding_hnsw"
@@ -34,7 +34,7 @@
       "details": {
         "ping": true,
         "version": "7.4.11",
-        "uptime_seconds": 383
+        "uptime_seconds": 90833
       }
     },
     {

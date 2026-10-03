@@ -34,6 +34,11 @@ const I18N = {
     nav_kb: "Knowledge Base",
     nav_health: "System Health",
     nav_activity: "Recent Activity",
+    title_recent_executions: "Recent customer requests",
+    status_not_measured: "Not measured",
+    open_trace: "Open n8n trace",
+    inspect: "Inspect",
+    no_executions: "No correlated requests recorded yet.",
     filter_period: "Period:",
     filter_program: "Program:",
     opt_all_time: "All Time",
@@ -95,6 +100,11 @@ const I18N = {
     nav_kb: "قاعدة المعرفة والوثائق",
     nav_health: "سلامة وخوادم النظام",
     nav_activity: "سجل العمليات الأخير",
+    title_recent_executions: "طلبات العملاء الأخيرة",
+    status_not_measured: "لم يُقَس بعد",
+    open_trace: "فتح التنفيذ في n8n",
+    inspect: "تفاصيل",
+    no_executions: "لا توجد طلبات مترابطة مسجلة حتى الآن.",
     filter_period: "الفترة الزمنية:",
     filter_program: "المبادرة:",
     opt_all_time: "كل الفترات",
@@ -142,6 +152,16 @@ const I18N = {
     btn_view_details: "عرض التفاصيل"
   }
 };
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[char]));
+}
+
+function formatMetric(value, suffix = '') {
+  return value === null || value === undefined ? 'N/A' : `${Number(value).toLocaleString()}${suffix}`;
+}
 
 // API Fetch Helper with Bearer Token
 async function apiRequest(endpoint, options = {}) {
@@ -334,12 +354,12 @@ async function loadExecutiveKPIs() {
       </div>
       <div class="kpi-card">
         <span class="kpi-label">Avg Response Time</span>
-        <span class="kpi-value">${data.avg_response_time_ms.toLocaleString()} ms</span>
+        <span class="kpi-value">${formatMetric(data.avg_response_time_ms, ' ms')}</span>
         <span class="kpi-sub">End-to-end audit latency</span>
       </div>
       <div class="kpi-card success">
         <span class="kpi-label">RAG Success Rate</span>
-        <span class="kpi-value" style="color:#34D399;">${data.rag_success_rate}%</span>
+        <span class="kpi-value">${formatMetric(data.rag_success_rate, '%')}</span>
         <span class="kpi-sub">Strict grounded responses</span>
       </div>
     `;
@@ -552,12 +572,17 @@ async function loadRAGMetrics() {
       <div class="kpi-card"><span class="kpi-label">Safe Deflections</span><span class="kpi-value">${data.safe_deflections}</span></div>
       <div class="kpi-card warning"><span class="kpi-label">Clarifications</span><span class="kpi-value">${data.clarification_requests}</span></div>
       <div class="kpi-card alert"><span class="kpi-label">Escalations</span><span class="kpi-value">${data.escalations}</span></div>
-      <div class="kpi-card"><span class="kpi-label">Vector Retrieval</span><span class="kpi-value">${data.average_retrieval_latency_ms} ms</span></div>
-      <div class="kpi-card"><span class="kpi-label">Avg LLM Latency</span><span class="kpi-value">${data.average_llm_latency_ms} ms</span></div>
-      <div class="kpi-card"><span class="kpi-label">Latency p50 / p95</span><span class="kpi-value" style="font-size:1.4rem;">${data.p50_latency_ms} / ${data.p95_latency_ms} ms</span></div>
-      <div class="kpi-card success"><span class="kpi-label">Cache Hit Rate</span><span class="kpi-value">${data.cache_hit_rate}%</span></div>
+      <div class="kpi-card"><span class="kpi-label">Vector Retrieval</span><span class="kpi-value">${formatMetric(data.average_retrieval_latency_ms, ' ms')}</span></div>
+      <div class="kpi-card"><span class="kpi-label">Avg LLM Latency</span><span class="kpi-value">${formatMetric(data.average_llm_latency_ms, ' ms')}</span></div>
+      <div class="kpi-card"><span class="kpi-label">Latency p50 / p95</span><span class="kpi-value" style="font-size:1.4rem;">${formatMetric(data.p50_latency_ms)} / ${formatMetric(data.p95_latency_ms)} ms</span></div>
+      <div class="kpi-card"><span class="kpi-label">Cache Hit Rate</span><span class="kpi-value">${formatMetric(data.cache_hit_rate, '%')}</span></div>
       <div class="kpi-card"><span class="kpi-label">Fallbacks / Errors</span><span class="kpi-value">${data.fallback_count} / ${data.error_count}</span></div>
+      <div class="kpi-card alert"><span class="kpi-label">LLM failures</span><span class="kpi-value">${data.llm_failure_count}</span></div>
     `;
+
+    const notMeasured = I18N[STATE.currentLang].status_not_measured || 'Not measured';
+    document.getElementById('depi-leakage-rate').textContent = data.program_isolation.depi_leakage == null ? notMeasured : `${data.program_isolation.depi_leakage}%`;
+    document.getElementById('digilians-leakage-rate').textContent = data.program_isolation.digilians_leakage == null ? notMeasured : `${data.program_isolation.digilians_leakage}%`;
 
     // Render Confidence Distribution Bar
     const ctxConf = document.getElementById('chart-confidence');
@@ -662,6 +687,7 @@ async function loadSystemHealth() {
 
 // --- 8. RECENT ACTIVITY ---
 async function loadRecentActivity() {
+  await loadRecentExecutions();
   const tbody = document.getElementById('activity-table-body');
   tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Loading audit trail...</td></tr>';
 
@@ -681,6 +707,59 @@ async function loadRecentActivity() {
     `).join('');
   } catch (err) {
     tbody.innerHTML = `<tr><td colspan="7" class="empty-state" style="color:var(--accent-rose);">${err.message}</td></tr>`;
+  }
+}
+
+async function loadRecentExecutions() {
+  const tbody = document.getElementById('execution-table-body');
+  const panel = document.getElementById('execution-detail-panel');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Loading executions...</td></tr>';
+  try {
+    const status = document.getElementById('execution-status-filter')?.value || '';
+    const query = new URLSearchParams({limit: '50'});
+    if (status) query.set('status', status);
+    const data = await apiRequest(`/api/dashboard/executions?${query.toString()}`);
+    if (!data.items.length) {
+      tbody.innerHTML = `<tr><td colspan="8" class="empty-state">${escapeHtml(I18N[STATE.currentLang].no_executions)}</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = data.items.map(item => `
+      <tr>
+        <td><code>${escapeHtml(item.request_id)}</code><br><small>${escapeHtml(item.execution_id)}</small></td>
+        <td>${escapeHtml(item.workflow_name)}</td>
+        <td>${escapeHtml(item.channel)}</td>
+        <td>${escapeHtml(item.program || '—')}</td>
+        <td><span class="badge badge-${escapeHtml(item.status)}">${escapeHtml(item.status)}</span></td>
+        <td>${formatMetric(item.latency_ms, ' ms')}</td>
+        <td>${item.created_at ? escapeHtml(new Date(item.created_at).toLocaleString()) : 'N/A'}</td>
+        <td><button class="btn-icon" data-request-id="${escapeHtml(item.request_id)}" onclick="openExecutionDetail(this.dataset.requestId)">${escapeHtml(I18N[STATE.currentLang].inspect)}</button>
+          ${item.n8n_url ? `<a href="${escapeHtml(item.n8n_url)}" target="_blank" rel="noopener noreferrer">↗</a>` : ''}</td>
+      </tr>`).join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="8" class="empty-state" style="color:var(--accent-rose);">${escapeHtml(err.message)}</td></tr>`;
+  }
+}
+
+async function openExecutionDetail(requestId) {
+  const panel = document.getElementById('execution-detail-panel');
+  panel.style.display = 'block';
+  panel.innerHTML = '<div>Loading request trace...</div>';
+  try {
+    const data = await apiRequest(`/api/dashboard/executions/${encodeURIComponent(requestId)}`);
+    panel.innerHTML = `
+      <h3>Request ${escapeHtml(data.request_id)} · ${escapeHtml(data.status)}</h3>
+      <ol>${data.events.map(event => {
+        const details = Object.entries(event.details || {}).map(([key, value]) =>
+          `<span><strong>${escapeHtml(key)}:</strong> ${escapeHtml(Array.isArray(value) ? value.join(', ') : value)}</span>`
+        ).join(' · ');
+        const sources = (event.details?.source_urls || []).filter(url => /^https:\/\/(?:[a-z0-9-]+\.)*gov\.eg(?:\/|$)/i.test(url));
+        return `<li><code>${escapeHtml(event.event_type)}</code> — ${escapeHtml(event.workflow_name)} — ${escapeHtml(event.latency_ms ?? 'N/A')} ms ${details}${sources.map(url => ` · <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Official source</a>`).join('')}</li>`;
+      }).join('')}</ol>
+      ${data.n8n_url ? `<a href="${escapeHtml(data.n8n_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(I18N[STATE.currentLang].open_trace)}</a>` : ''}
+      <button class="btn-icon" onclick="document.getElementById('execution-detail-panel').style.display='none'">×</button>`;
+  } catch (err) {
+    panel.innerHTML = `<div class="empty-state" style="color:var(--accent-rose);">${escapeHtml(err.message)}</div>`;
   }
 }
 

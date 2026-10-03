@@ -10,10 +10,11 @@ dc pull postgres redis ollama n8n
 dc --profile tools build whatsapp dashboard scraper kb-ingest
 docker pull alpine:3.21
 docker pull nginx:stable-alpine
+docker pull ubuntu:24.04
 dc up -d ollama
 chat=$(grep '^OLLAMA_MODEL=' "$ENV_FILE"|cut -d= -f2-); embed=$(grep '^EMBED_MODEL=' "$ENV_FILE"|cut -d= -f2-)
 dc exec ollama ollama pull "$chat"; dc exec ollama ollama pull "$embed"
-docker image save pgvector/pgvector:pg16 redis:7-bookworm ollama/ollama:latest docker.n8n.io/n8nio/n8n:2.38.1 nginx:stable-alpine alpine:3.21 -o "$out/.staging/images/nexaserve-images.tar"
+docker image save pgvector/pgvector:pg16 redis:7-bookworm ollama/ollama:latest docker.n8n.io/n8nio/n8n:2.38.1 nginx:stable-alpine alpine:3.21 ubuntu:24.04 -o "$out/.staging/images/nexaserve-images.tar"
 docker image save nexaserve-whatsapp nexaserve-dashboard nexaserve-scraper nexaserve-kb-ingest -o "$out/.staging/images/nexaserve-app-images.tar"
 cid=$(dc ps -q ollama)
 docker exec "$cid" ollama list >/dev/null

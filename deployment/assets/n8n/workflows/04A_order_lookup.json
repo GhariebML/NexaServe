@@ -1,7 +1,7 @@
 {
   "id": "CSWF000000000004",
   "name": "SubWF 04A - Order Lookup & Tracking",
-  "active": false,
+  "active": true,
   "nodes": [
     {
       "parameters": {},
@@ -26,7 +26,13 @@
       "position": [
         380,
         300
-      ]
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_CRED_01",
+          "name": "CustomerService Postgres"
+        }
+      }
     },
     {
       "parameters": {

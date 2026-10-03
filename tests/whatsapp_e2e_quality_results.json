@@ -1,0 +1,226 @@
+{
+  "test": "whatsapp_e2e_quality",
+  "timestamp": "2026-10-03T00:31:04.074130",
+  "simulate_url": "http://localhost:8080/simulate",
+  "total": 19,
+  "passed": 18,
+  "failed": 1,
+  "pass_rate": 94.7,
+  "avg_latency_ms": 7049,
+  "duplicate_responses": 0,
+  "verdict": "FAIL",
+  "results": [
+    {
+      "id": "DEPI_AR_01",
+      "category": "DEPI FAQ (Arabic)",
+      "message": "ما هي شروط التقديم في مبادرة رواد مصر الرقمية؟",
+      "status": "PASS",
+      "source": "n8n",
+      "latency_ms": 8832,
+      "reply_preview": "شروط التقديم في مبادرة رواد مصر الرقمية (DEBI) هي:",
+      "failures": [],
+      "warnings": []
+    },
+    {
+      "id": "DEPI_AR_02",
+      "category": "DEPI FAQ (Arabic)",
+      "message": "ما هي التخصصات المتاحة في DEPI؟",
+      "status": "PASS",
+      "source": "n8n",
+      "latency_ms": 8444,
+      "reply_preview": "تتضمن مبادرة DEPI التخصصات التكنولوجية المتقدمة التالية للحصول على الماجستير:\n1. الذكاء الاصطناعي وعلوم البيانات (Artificial Intelligence & Data Science)\n2. الأمن السيبراني (Cybersecurity)\n3. الروبوتات والأتمتة الذكية (Robotics & Automation)\n4. هندسة البرمجيات (Software Engineering)\n5. الفنون الرقمي",
+      "failures": [],
+      "warnings": []
+    },
+    {
+      "id": "DEPI_AR_03",
+      "category": "DEPI FAQ (Arabic)",
+      "message": "هل الدورات في DEPI مجانية ولا بفلوس؟",
+      "status": "PASS",
+      "source": "n8n",
+      "latency_ms": 8245,
+      "reply_preview": "نعم، الدورات في DEPI هي مجانية ولا تتطلب أي رسوم.",
+      "failures": [],
+      "warnings": []
+    },
+    {
+      "id": "DEPI_AR_04",
+      "category": "DEPI FAQ (Arabic)",
+      "message": "إيه المستندات المطلوبة للتقديم في DEPI؟",
+      "status": "PASS",
+      "source": "n8n",
+      "latency_ms": 4418,
+      "reply_preview": "المستندات المطلوبة للتقديم في DEPI هي:",
+      "failures": [],
+      "warnings": []
+    },
+    {
+      "id": "DEPI_AR_05",
+      "category": "DEPI FAQ (Arabic)",
+      "message": "ما هو نظام الإقامة والدراسة في DEPI؟",
+      "status": "PASS",
+      "source": "n8n",
+      "latency_ms": 5842,
+      "reply_preview": "لا يوجد نظام إقامة أو دراسة محدد في DEPI Industry Track. يتم التدريب والدراسة بشكل مباشر مع الشركات والمؤسسات الرائدة في القطاعات المهنية الحيوية، مما يضمن مواءمة أفضل مع احتياجات سوق العمل.",
+      "failures": [],
+      "warnings": []
+    },
+    {
+      "id": "DEPI_EN_01",
+      "category": "DEPI FAQ (English)",
+      "message": "What are the admission requirements for DEPI?",
+      "status": "FAIL",
+      "source": "n8n",
+      "latency_ms": 12832,
+      "reply_preview": "Admission requirements for DEPI include Egyptian citizenship, a Bachelor's degree in Engineering (Computers, Electronics, Communications, Mechatronics) or Computers & Artificial Intelligence / Informatics, a minimum cumulative GPA of 'Very Good' (3.0/4.0 or above), a maximum age of 26 years old (27 ",
+      "failures": [
+        "Raw data leak detected: \"SELECT \""
+      ],
+      "warnings": []
+    },
+    {
+      "id": "DEPI_EN_02",
+      "category": "DEPI FAQ (English)",
+      "message": "What tracks are available in the Digital Egypt Pioneers Initiative?",
+      "status": "PASS",
+      "source": "n8n",
+      "latency_ms": 2516,
+      "reply_preview": "I could not find an active service request or order matching \"your requested order\". Please verify the reference number (e.g. SRV-1001 or ORD-1001) or provide your registered contact details.",
+      "failures": [],
+      "warnings": []
+    },
+    {
+      "id": "DEPI_EN_03",
+      "category": "DEPI FAQ (English)",
+      "message": "How do I register for the DEPI program?",
+      "status": "PASS",
+      "source": "n8n",
+      "latency_ms": 8548,
+      "reply_preview": "To register for the DEPI program, please visit the official website of the Ministry of Communications and Information Technology (MCIT) and follow the registration process.",
+      "failures": [],
+      "warnings": []
+    },
+    {
+      "id": "DIGILIANS_AR_01",
+      "category": "Digilians (Arabic)",
+      "message": "ما هي منصة ديجيليانز وما الفرق بينها وبين DEPI؟",
+      "status": "PASS",
+      "source": "n8n",
+      "latency_ms": 13448,
+      "reply_preview": "{\n  \"answer\": \"مقدمة منصة Digilians Digilians هي مبادرة وطنية أطلقتها وزارة الاتصالات وتكنولوجيا المعلومات بالتعاون مع الأكاديمية العسكرية المصرية. تهدف المبادرة إلى تطوير مهارات الشباب المصري (من 18 إلى 32 سنة) في مجالات تكنولوجيا المعلومات والاتصالات، وبناء المهارات الشخصية والقيادية واللغوية، وإب",
+      "failures": [],
+      "warnings": []
+    },
+    {
+      "id": "DEBI_AR_01",
+      "category": "DEBI (Arabic)",
+      "message": "ما هي مبادرة براعم مصر الرقمية DEBI؟",
+      "status": "PASS",
+      "source": "n8n",
+      "latency_ms": 14943,
+      "reply_preview": "مبادرة براعم مصر الرقمية (DEBI - Digital Egypt Builders Initiative) هي منحة دراسية كاملة أطلقتها وزارة الاتصالات وتكنولوجيا المعلومات المصرية. تهدف المنحة إلى تمكين جيل متميز من خريجي كليات الهندسة والحاسبات في مصر من الحصول على درجة الماجستير في العلوم المهنية والتكنولوجيا المتقدمة من كبرى الجامعات",
+      "failures": [],
+      "warnings": []
+    },
+    {
+      "id": "LMS_AR_01",
+      "category": "LMS & Exams (Arabic)",
+      "message": "مش عارف أفتح صفحة الامتحان وبرنامج SEB مش شغال",
+      "status": "PASS",
+      "source": "n8n",
+      "latency_ms": 8192,
+      "reply_preview": "للحصول على صفحة الامتحان وبرنامج SEB، اتبع الخطوات التالية:\n1. افتح نظام Windows 10 (إصدار 1803 فأحدث) أو Windows 11.\n2. انتقل إلى الواجهة الرئيسية للبوابة الإلكترونية للامتحانات.\n3. اضغط على زر 'Launch Safe Exam Browser' من داخل صفحة الامتحان بالبوابة.\n4. اتبع الإرشادات المذكورة في الإجابة السابقة ",
+      "failures": [],
+      "warnings": []
+    },
+    {
+      "id": "ORDER_AR_01",
+      "category": "Order Tracking (Arabic)",
+      "message": "أريد معرفة حالة طلبي رقم SRV-1001",
+      "status": "PASS",
+      "source": "n8n",
+      "latency_ms": 2602,
+      "reply_preview": "أهلاً بك John Doe،\nحالة طلبك/طلب الخدمة رقم **SRV-1001** هي: **تم الشحن والإرسال**.\n\n📦 جهة التوصيل/الناقل: Saudi Post (SPL)\n🔍 رقم التتبع: SPL-992817263\n📅 تاريخ الوصول المتوقع: ١٢ سبتمبر ٢٠٢٦\n📋 نوع الخدمة: Digital Identity Hardware\n\nنسعد بخدمتك دائماً. هل لديك أي استفسار آخر؟",
+      "failures": [],
+      "warnings": []
+    },
+    {
+      "id": "ORDER_EN_01",
+      "category": "Order Tracking (English)",
+      "message": "Can you check the status of my order SRV-2050?",
+      "status": "PASS",
+      "source": "n8n",
+      "latency_ms": 2577,
+      "reply_preview": "I could not find an active service request or order matching \"SRV-2050\". Please verify the reference number (e.g. SRV-1001 or ORD-1001) or provide your registered contact details.",
+      "failures": [],
+      "warnings": []
+    },
+    {
+      "id": "ESCALATION_AR_01",
+      "category": "Escalation (Arabic)",
+      "message": "عندي مشكلة كبيرة ومحتاج أتكلم مع موظف بشري",
+      "status": "PASS",
+      "source": "n8n",
+      "latency_ms": 2525,
+      "reply_preview": "تم استلام طلبك وتصعيده إلى الفريق المختص. تم فتح تذكرة دعم ذات أولوية برقم **#TICK-67335** (درجة الأولوية: عالية).\nيقوم أحد مسؤولي خدمة العملاء بمراجعة تفاصيل استفسارك حالياً وسيتواصل معك مباشرة.",
+      "failures": [],
+      "warnings": []
+    },
+    {
+      "id": "ESCALATION_EN_01",
+      "category": "Escalation (English)",
+      "message": "This is unacceptable! I need to speak to a human representative immediately!",
+      "status": "PASS",
+      "source": "n8n",
+      "latency_ms": 2522,
+      "reply_preview": "I understand this requires specialist attention. I have opened priority support ticket **#TICK-40001** for you (Priority: HIGH).\nA customer support representative has been assigned and is reviewing your request to assist you directly.",
+      "failures": [],
+      "warnings": []
+    },
+    {
+      "id": "GREETING_AR_01",
+      "category": "Greeting (Arabic)",
+      "message": "السلام عليكم",
+      "status": "PASS",
+      "source": "n8n",
+      "latency_ms": 4112,
+      "reply_preview": "مرحبا! كيف يمكنني مساعدتك اليوم؟",
+      "failures": [],
+      "warnings": []
+    },
+    {
+      "id": "GREETING_EN_01",
+      "category": "Greeting (English)",
+      "message": "Hello",
+      "status": "PASS",
+      "source": "n8n",
+      "latency_ms": 3637,
+      "reply_preview": "Hello! How can I assist you today?",
+      "failures": [],
+      "warnings": []
+    },
+    {
+      "id": "UNIQUE_AR_01",
+      "category": "Uniqueness Check",
+      "message": "ما هي مراحل القبول في مبادرة DEPI؟",
+      "status": "PASS",
+      "source": "n8n",
+      "latency_ms": 10967,
+      "reply_preview": "القبول في مبادرة DEPI يمر عبر مرحلتين: المرحلة الأولى تتعلق بالتقديم، حيث يتم التقييم على أساس الشروط المحددة، وتتضمن هذه الشروط الجنسية، المؤهل الدراسي، التقدير التراكمي، السن، اللغة الإنجليزية، الموقف التجنيدي للذكور، والفرغ. المرحلة الثانية تتعلق بالقبول، حيث يتم التقييم على أساس المعايير المحددة",
+      "failures": [],
+      "warnings": []
+    },
+    {
+      "id": "UNIQUE_AR_02",
+      "category": "Uniqueness Check",
+      "message": "ما هي الشهادات اللي هاخدها بعد التخرج من DEPI؟",
+      "status": "PASS",
+      "source": "n8n",
+      "latency_ms": 8731,
+      "reply_preview": "بعد التخرج من DEPI، يتمكن الطلاب من الحصول على درجة الماجستير في العلوم المهنية والتكنولوجيا المتقدمة من كبرى الجامعات الدولية المرموقة، بالتوازي مع تدريب عملي مع كبرى شركات التكنولوجيا العالمية وتطوير المهارات القيادية واللغوية.",
+      "failures": [],
+      "warnings": []
+    }
+  ],
+  "duplicates": []
+}

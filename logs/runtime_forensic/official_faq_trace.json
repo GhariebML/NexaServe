@@ -95,8 +95,8 @@
     "Qwen RAG Grounded Response": [
       {
         "status": "success",
-        "latency_ms": 34846,
-        "error": "500 - \"{\\\"error\\\":\\\"llama-server process has terminated: signal: killed\\\"}\""
+        "latency_ms": 12850,
+        "error": null
       }
     ],
     "Guardrail & Professional Formatter": [

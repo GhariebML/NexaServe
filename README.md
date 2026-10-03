@@ -1,356 +1,303 @@
-<div align="center">
+# NexaServe
 
-# 🏛️ NexaServe - Sovereign AI Customer Service Platform
-### Local-First • Omnichannel WhatsApp • Dual-Initiative Hybrid RAG • SLA-Governed HITL
+**Local-first customer service automation with WhatsApp, n8n workflows, retrieval-augmented answers, and human escalation.**
 
-[![n8n](https://img.shields.io/badge/Orchestrator-n8n_v2.38+-EA4B71?logo=n8n&logoColor=white)](https://n8n.io)
-[![Ollama](https://img.shields.io/badge/AI_Engine-Ollama_Local_LLM-000000?logo=ollama&logoColor=white)](https://ollama.ai)
-[![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL_16-336791?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![Redis](https://img.shields.io/badge/Cache-Redis_7-DC382D?logo=redis&logoColor=white)](https://redis.io)
-[![Docker](https://img.shields.io/badge/Infrastructure-Docker_Compose-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
-[![WhatsApp](https://img.shields.io/badge/Channel-WhatsApp_Live_Gateway-25D366?logo=whatsapp&logoColor=white)](http://localhost:8080/qr)
-[![Data Protection](https://img.shields.io/badge/Compliance-Egyptian_Data_Privacy_PII_Shield-006C35?logo=shield&logoColor=white)](https://mcit.gov.eg)
-[![Bilingual](https://img.shields.io/badge/Language-Arabic_%26_English-blue)](https://digilians.gov.eg)
-[![Verification](https://img.shields.io/badge/Verification-23%2F23_Passed-success)](https://github.com/GhariebML/NexaServe)
+NexaServe is a self-hostable customer support system for teams operating the DEPI and Digilians initiatives. It accepts customer messages through a Baileys-based WhatsApp bridge and an n8n webhook, routes requests through session and intent workflows, retrieves knowledge from PostgreSQL with pgvector, and calls a locally hosted Ollama model. It also includes workflow paths for order lookup, human escalation, agent responses, output dispatch, and conversation logging, plus a FastAPI operations dashboard.
 
-<br/>
+The repository includes a Ministry-oriented Ubuntu deployment bundle. The bundle is a **deployment candidate**, not a production-readiness certification. Target GPU/model behavior, source provenance, full workflow activation, and real WhatsApp delivery require environment-specific validation before public use.
 
-<img src="docs/images/nexaserve_banner.png" alt="NexaServe Enterprise Header Banner" width="100%"/>
+![Docker Compose](https://img.shields.io/badge/Docker%20Compose-configured-2496ED?logo=docker&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%20%2B%20pgvector-4169E1?logo=postgresql&logoColor=white)
+![n8n](https://img.shields.io/badge/n8n-2.38.1-EA4B71?logo=n8n&logoColor=white)
+![Status](https://img.shields.io/badge/production%20readiness-not%20certified-orange)
 
-<p align="center">
-  <b>A 100% air-gapped, sovereign AI Customer Service automation platform engineered for the Ministry of Communications and Information Technology (MCIT). Powered by modular n8n workflow pipelines, local Ollama cognitive inference, bilingual Hybrid RAG knowledge retrieval, real-time WhatsApp Gateway, and SLA-governed Human-in-the-Loop (HITL) ticket resolution.</b>
-</p>
+> [!IMPORTANT]
+> Do not use the presence of healthy containers or an HTTP 200 as evidence that customer answers are correct. See [deployment/BUILD_REPORT.md](deployment/BUILD_REPORT.md) and [deployment/DEPLOYMENT.md](deployment/DEPLOYMENT.md) for verified checks, known issues, and the acceptance procedure.
 
-</div>
+## Contents
 
----
+- [Overview](#overview)
+- [Project status](#project-status)
+- [Key capabilities](#key-capabilities)
+- [Architecture](#architecture)
+- [System components](#system-components)
+- [Requirements](#requirements)
+- [Quick start](#quick-start)
+- [Ministry server deployment](#ministry-server-deployment)
+- [GPU and local models](#gpu-and-local-models)
+- [Configuration](#configuration)
+- [Database and knowledge retrieval](#database-and-knowledge-retrieval)
+- [n8n workflows](#n8n-workflows)
+- [WhatsApp bridge](#whatsapp-bridge)
+- [Dashboard](#dashboard)
+- [Security and operations](#security-and-operations)
+- [Health checks and testing](#health-checks-and-testing)
+- [Backup, upgrade, and rollback](#backup-upgrade-and-rollback)
+- [Offline deployment](#offline-deployment)
+- [Troubleshooting](#troubleshooting)
+- [Repository layout](#repository-layout)
+- [Documentation](#documentation)
+- [Contributing](#contributing)
+- [License](#license)
 
-## 📑 Table of Contents
-1. [Executive Overview](#1-executive-overview)
-2. [Target Architecture & System Blueprint](#2-target-architecture--system-blueprint)
-3. [Real WhatsApp Live Gateway](#3-real-whatsapp-live-gateway)
-4. [Bilingual Hybrid RAG Knowledge Engine](#4-bilingual-hybrid-rag-knowledge-engine)
-5. [End-to-End Execution Sequence](#5-end-to-end-execution-sequence)
-6. [Deployed Workflow Suite (10 Workflows)](#6-deployed-workflow-suite-10-workflows)
-7. [Enterprise Security & PII Sanitizer Shield](#7-enterprise-security--pii-sanitizer-shield)
-8. [Bidirectional Human-in-the-Loop (HITL)](#8-bidirectional-human-in-the-loop-hitl)
-9. [Relational Data Layer & PostgreSQL Schema](#9-relational-data-layer--postgresql-schema)
-10. [Quickstart & Operations Guide](#10-quickstart--operations-guide)
-11. [Verification Suite & Live Test Results](#11-verification-suite--live-test-results)
+## Overview
 
----
+NexaServe coordinates a customer-service conversation across a WhatsApp bridge, workflow automation, local language-model inference, PostgreSQL-backed application and knowledge data, and human support workflows. Its current deployment package targets Ubuntu Server 24.04 on x86_64 and uses Docker Compose.
 
-## 1. Executive Overview
+The deployment bundle packages the existing WhatsApp bridge, FastAPI dashboard, scraper and ingestion code, database schema and additive migrations, and ten canonical n8n workflow exports. It does not contain a live customer database, runtime credentials, a linked WhatsApp session, or n8n credential records.
 
-The **NexaServe Sovereign AI Customer Service Platform** replaces cloud-dependent customer support bots with a fully private, on-premises automation infrastructure tailored for national initiatives and enterprise governance.
+## Project status
 
-```
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│                                   NEXASERVE CORE VALUES                                │
-├───────────────────────────────┬───────────────────────────────┬────────────────────────┤
-│ 🔒 100% Air-Gapped Sovereignty│ 📱 Real-Time WhatsApp Gateway │ 📚 Dual-Initiative RAG │
-│ Zero external cloud API calls │ Baileys socket + QR pairing   │ Digilians vs DEPI      │
-│ Zero citizen data leakage     │ Local autonomous AI fallback  │ Strict domain isolation│
-├───────────────────────────────┼───────────────────────────────┼────────────────────────┤
-│ 🛡️ PII Privacy Protection     │ ⏱️ SLA Priority Escalations  │ 🔄 Live HITL Bridge    │
-│ Masks 14-digit IDs & IBANs    │ 30m Urgent / 2h High SLA      │ Two-way agent webhooks │
-│ Deflects prompt injections    │ Automated ticket generation   │ Direct citizen replies │
-└───────────────────────────────┴───────────────────────────────┴────────────────────────┘
-```
+| State | Evidence |
+|---|---|
+| **Verified locally** | Deployment Compose variants parse; static bundle, checksum, secret-pattern, permissions, and workflow JSON checks pass. These checks do not start the deployment or prove answer quality. |
+| **In development / deployment candidate** | Ubuntu deployment scripts, optional proxy, dashboard packaging, and online/offline deployment paths are included. |
+| **Requires environment validation** | Ministry target installation, GPU inference, model quality and concurrency, database migration on target, workflow credentials and activation, official-source traceability, WhatsApp outbound delivery, backup restore, and final operational sign-off. |
 
-### 🌟 Key Pillars:
-- **🔒 100% Local & Air-Gapped**: Runs entirely within local Docker containers and host Ollama instances. Zero external calls to OpenAI, Anthropic, or external clouds.
-- **📱 Real WhatsApp Live Gateway**: Integrated Baileys socket bridge with web-based QR pairing at `http://localhost:8080/qr` and autonomous AI fallback.
-- **📚 Dual-Initiative Sovereign RAG**: Custom bilingual Hybrid RAG engine supporting both **مبادرة الرواد الرقميون (Digilians)** and **مبادرة رواد مصر الرقمية (DEPI)** with strict domain isolation and confidence scoring.
-- **🛡️ Egyptian Personal Data Privacy Shield**: Automatically scans and anonymizes citizen personal data (Egyptian 14-digit National IDs, Egyptian IBANs, Credit Cards) before database persistence or model processing.
-- **🇸🇦 Native Bilingual Fluency**: Dual-language comprehension and grounded generation in Modern Standard Arabic and English with automatic language alignment.
-- **⏱️ SLA-Governed Human-in-the-Loop**: Detects angry sentiment and complex technical inquiries, auto-generates priority support tickets (`urgent` 30m SLA, `high` 2h SLA), and alerts human agents.
-- **🔄 Live Bidirectional Agent Bridge**: Provides a live webhook (`POST /webhook/agent-response`) allowing human support agents to resolve tickets and reply directly to citizen WhatsApp channels.
+The current readiness finding is **NOT READY for production use**. Previous runtime observations include Ollama generation failures under resource pressure, overload responses, incomplete Digilians source lineage, and no verified real WhatsApp outbound end-to-end test. The bundle does not claim to have fixed these runtime findings. See [the build report](deployment/BUILD_REPORT.md).
 
----
+## Key capabilities
 
-## 2. Target Architecture & System Blueprint
+| Capability | What is present in the repository |
+|---|---|
+| Message intake | Baileys WhatsApp bridge and n8n customer-service webhook. |
+| Workflow routing | Gateway, customer session, AI intent, order lookup, knowledge/FAQ, human escalation, agent response, output, logger, and global error workflow exports. |
+| RAG and knowledge | PostgreSQL knowledge schema with `vector(768)`, packaged ingestion code, FAQ/PDF/XLSX materials, and DEPI scraper output. |
+| Local inference | Ollama deployment configured for `qwen2.5:3b` and `nomic-embed-text`; actual model performance depends on target resources. |
+| Human support | Escalation and agent response workflow paths are included; operational notification and end-to-end behavior must be tested in the target environment. |
+| Operations dashboard | Existing FastAPI/static dashboard packaged as a Compose service, with additive admin schema migration. |
+| Service state | PostgreSQL 16 with pgvector and Redis 7. |
+| Deployment operations | Ubuntu runbook, Compose overlays, health and smoke scripts, backup/restore scripts, integrity checks, and an offline packaging path. |
 
-The platform implements a 5-tier resilient architecture:
-
-<div align="center">
-  <img src="docs/images/system_blueprint.png" alt="Reference Blueprint" width="900"/>
-</div>
-
-### Architecture Layers:
-1. **Ingress & Gateway Layer**: Multi-channel gateway handling WhatsApp Business Web, Telegram Bot, Webchat REST API, and Email.
-2. **Orchestration Layer (n8n)**: Normalizes payloads, scrubs PII, queries session memory, routes intents, and coordinates parallel egress/audit logging.
-3. **Cognitive AI Layer (Ollama)**: High-speed local LLM inference (`qwen2.5:3b` / `llama3.1:8b`), prompt injection defense, structured JSON schema classification, and grounded response synthesis.
-4. **Knowledge & Data Layer (PostgreSQL 16 & Redis 7)**: Hybrid RAG knowledge base, customer session memory, ticket records, and millisecond caching.
-5. **Human-in-the-Loop (HITL) & Egress Layer**: SLA escalation dispatcher, human agent live response webhook bridge, and channel-specific outbound formatting.
-
----
-
-## 3. Real WhatsApp Live Gateway
-
-NexaServe features a production-ready WhatsApp gateway powered by Baileys, complete with QR code device pairing and a resilient dual-path routing engine:
-
-<div align="center">
-  <img src="docs/images/whatsapp_gateway_architecture.png" alt="WhatsApp Gateway Architecture" width="100%"/>
-</div>
-
-### Resilient Dual-Path Architecture:
-- **Path A (Primary - Advanced n8n RAG)**: Inbound messages are dispatched synchronously to the n8n Master Gateway webhook (`POST /webhook/customer-service`), executing full PII masking, session resolution, intent classification, and database RAG.
-- **Path B (Fallback - Direct Autonomous AI Engine)**: If the n8n container is under maintenance or unreachable, the WhatsApp bridge immediately falls back to its built-in local Autonomous AI engine powered directly by host Ollama (`qwen2.5:3b`), ensuring zero downtime for citizens.
-
-### Pairing Your WhatsApp Account:
-1. Open the WhatsApp connection portal at **[http://localhost:8080/qr](http://localhost:8080/qr)** in your browser.
-2. Open **WhatsApp** on your phone > **Settings** (or **Menu ⋮**) > **Linked Devices** > **Link a Device**.
-3. Point your phone camera at the QR code on screen.
-4. Once scanned, the status automatically switches to `CONNECTED`, and all incoming inquiries are immediately answered by the AI agent!
-
----
-
-## 4. Bilingual Hybrid RAG Knowledge Engine
-
-To eliminate hallucinations and maintain accuracy across government initiatives, NexaServe utilizes a strict domain-isolated Hybrid RAG architecture:
-
-<div align="center">
-  <img src="docs/images/rag_knowledge_engine.png" alt="Bilingual Hybrid RAG Knowledge Engine" width="100%"/>
-</div>
-
-### Strict Domain Isolation Rules:
-```
-                                 [Citizen Question]
-                                         │
-                   ┌─────────────────────┴─────────────────────┐
-                   ▼                                           ▼
-       [Digilians Query Filter]                     [DEPI Query Filter]
-       • Egyptian Citizens (18-32)                  • Egyptian Undergrads / Faculty
-       • Military Academy Accommodation             • Free University Degrees & Master's
-       • Strict 100% On-Campus                      • Hybrid & Online Learning Tracks
-       • No Master's Degree Confusion               • No Military Academy Confusion
-                   │                                           │
-                   └─────────────────────┬─────────────────────┘
-                                         ▼
-                            [Hybrid Scoring Engine]
-                         Lexical BM25 + Semantic Vector
-                                         │
-                                         ▼
-                         [Grounded Bilingual Generator]
-                         Output matched to User Language
-```
-
-1. **Digilians Knowledge Base**: Covers admission requirements (ages 18–32, Egyptian nationality, military service status), Military Academy on-campus residency in Heliopolis, intensive IT training tracks, and job placement.
-2. **DEPI Knowledge Base**: Covers university student programs, faculty tracks, foreign master's scholarship tracks, hybrid learning schedules, and certifications.
-3. **Language Matching**: Grounded prompts enforce that English questions receive accurate English responses and Arabic questions receive Modern Standard Arabic responses.
-
----
-
-## 5. End-to-End Execution Sequence
+## Architecture
 
 ```mermaid
-sequenceDiagram
-    autonumber
-    actor Citizen as 👤 Citizen
-    participant WA as 📱 WhatsApp Gateway (:8080)
-    participant GW as 🚪 Master 01 Gateway (:5678)
-    participant SM as 👤 SubWF 02 Session Manager
-    participant AI as 🧠 SubWF 03 Ollama AI
-    participant Core as 🔀 Intent Handlers (04A/04B/04C)
-    participant AGNT as 👨‍💼 Human Agent (04D)
-    participant OUT as 📤 SubWF 06 Egress Dispatcher
-    participant DB as 🗄️ PostgreSQL 16 & Audit
-
-    Citizen->>WA: Inbound WhatsApp message
-    WA->>GW: HTTP POST /webhook/customer-service
-    GW->>GW: Scans & masks PII (National ID / IBAN)
-    GW->>SM: SubWF 02 resolves citizen identity & loads memory
-    SM->>GW: Returns conversation history context
-    GW->>AI: Prompts local Ollama (qwen2.5:3b / llama3.1) with JSON schema
-    AI->>GW: Returns classified intent, sentiment & entities
-    
-    alt Intent: Knowledge Base FAQ (RAG)
-        GW->>Core: SubWF 04B queries bilingual knowledge base
-        Core->>GW: Returns official grounded answer with sources
-    else Intent: Service / Order Tracking
-        GW->>Core: SubWF 04A queries citizen services (SRV-1001)
-        Core->>GW: Returns carrier status (Saudi Post / Egypt Post)
-    else Intent: Human Escalation (SLA)
-        GW->>Core: SubWF 04C creates SLA ticket (#TICK-XXXXX)
-        Core->>GW: Returns comforting escalation message
-        Core-->>AGNT: Alerts support team (Urgent: 30m, High: 2h)
-        AGNT->>GW: Resolves ticket via POST /webhook/agent-response
-    end
-
-    par Parallel Egress & Audit
-        GW->>OUT: SubWF 06 formats payload for WhatsApp channel
-        OUT->>WA: Dispatches reply
-        WA->>Citizen: Inbound WhatsApp reply delivered
-    and
-        GW->>DB: SubWF 05 records conversation turn & audit telemetry
-    end
+flowchart LR
+    Citizen[Customer] <-->|WhatsApp| WA[Baileys bridge]
+    WA -->|POST customer-service| N8N[n8n gateway and workflows]
+    Client[Web client or approved caller] -->|Webhook| N8N
+    N8N --> Session[Session and memory]
+    Session --> Intent[Intent classification]
+    Intent -->|FAQ| RAG[Knowledge retrieval]
+    Intent -->|Order| Order[Order lookup]
+    Intent -->|Escalation| HITL[Human escalation and agent bridge]
+    RAG --> PG[(PostgreSQL + pgvector)]
+    N8N <--> Ollama[Ollama local inference]
+    N8N --> Output[Output dispatcher]
+    Output --> WA
+    N8N --> Logger[Conversation logger]
+    Logger --> PG
+    Dashboard[FastAPI dashboard] --> PG
+    Dashboard --> Redis[(Redis)]
+    Scraper[DEPI scraper] --> Source[Reviewed source files]
+    Source --> Ingest[Knowledge ingestion]
+    Ingest --> PG
 ```
 
----
+### Network exposure in the deployment bundle
 
-## 6. Deployed Workflow Suite (10 Workflows)
+PostgreSQL, Redis, and Ollama are internal to the Compose network and have no host-published ports. n8n, WhatsApp, and the dashboard bind to localhost by default: `5678`, `8080`, and `8090`. The optional Nginx `proxy` profile publishes `80` and `443`; it requires operator-provided TLS files and perimeter controls. The `/qr` route can link a WhatsApp account and must be restricted to an authorized administration network.
 
-All 10 workflows are deployed and actively running in the local n8n instance (`http://localhost:5678`):
+## System components
 
-| Workflow ID | Workflow Name | Description | Status |
-| :--- | :--- | :--- | :---: |
-| [`CSWF000000000001`](infra/n8n/workflows/01_gateway_dispatcher.json) | **Master 01: Gateway Dispatcher** | Multi-channel ingress, PII scrubber, language detector, parallel egress/audit branching | **Active** |
-| [`CSWF000000000002`](infra/n8n/workflows/02_customer_session_manager.json) | **SubWF 02: Session Manager** | Identity resolution (WhatsApp, Telegram, Phone, Email) & conversation history memory | **Active** |
-| [`CSWF000000000003`](infra/n8n/workflows/03_ai_intent_engine.json) | **SubWF 03: AI Cognitive Engine** | Prompt injection security filter + Ollama classifier with structured JSON schema | **Active** |
-| [`CSWF000000000004`](infra/n8n/workflows/04A_order_lookup.json) | **SubWF 04A: Order Lookup & Tracking** | Citizen e-service tracking (`SRV-1001`, `ORD-1001`) with carrier status | **Active** |
-| [`CSWF000000000005`](infra/n8n/workflows/04B_knowledge_base_faq.json) | **SubWF 04B: Knowledge Base & FAQ** | Bilingual hybrid RAG search over Digilians & DEPI knowledge repositories | **Active** |
-| [`CSWF000000000006`](infra/n8n/workflows/04C_human_escalation.json) | **SubWF 04C: Human Escalation** | SLA ticket generation (`TICK-XXXXX`) and escalation notification dispatch | **Active** |
-| [`RWLCadRzOPjTHXVo`](infra/n8n/workflows/04D_agent_response_bridge.json) | **SubWF 04D: Agent Response Bridge** | Live agent callback webhook (`POST /webhook/agent-response`) for ticket resolution | **Active** |
-| [`CSWF000000000007`](infra/n8n/workflows/05_conversation_logger.json) | **SubWF 05: Conversation Logger** | PII-masked message persistence, execution telemetry, and audit trail | **Active** |
-| [`F7kjakLJXmzBDsvS`](infra/n8n/workflows/06_output_channel_dispatcher.json) | **SubWF 06: Output Dispatcher** | Egress payload adapter routing to WhatsApp, Telegram, Webchat, and Email | **Active** |
-| [`CSWF000000000008`](infra/n8n/workflows/00_global_error_handler.json) | **Global Error Handler (DLQ)** | Enterprise error catcher and system incident dead letter logger | **Active** |
+| Component | Deployment role | Default image / port |
+|---|---|---|
+| `postgres` | Application databases and pgvector knowledge storage | `pgvector/pgvector:pg16`, internal `5432` |
+| `redis` | Cache/status support | `redis:7-bookworm`, internal `6379` |
+| `ollama` | Local chat and embedding inference | `ollama/ollama`, internal `11434` |
+| `n8n` | Workflow orchestration and webhooks | `n8nio/n8n:2.38.1`, localhost `5678` |
+| `whatsapp` | Baileys bridge and pairing portal | Built from `deployment/application/whatsapp`, localhost `8080` |
+| `dashboard` | FastAPI/static operations UI | Built from `deployment/application/dashboard`, localhost `8090` |
+| `proxy` | Optional Nginx TLS ingress | `nginx:stable-alpine`, profile `proxy`, host `80`/`443` |
+| `scraper`, `kb-ingest` | Optional source refresh and knowledge ingestion | Built from included source, profile `tools` |
 
----
+Compose image references in the deployment bundle are pinned by digest where applicable. The dashboard, WhatsApp bridge, scraper, and ingestion images are built from included sources.
 
-## 7. Enterprise Security & PII Sanitizer Shield
+## Requirements
 
-### PII Sanitization Engine:
-Implemented directly inside the Gateway Dispatcher before saving to the database or passing text to the local LLM:
+For the documented deployment target, use Ubuntu Server 24.04 LTS, x86_64, Docker Engine with Compose v2, and an NVIDIA GPU/runtime approved for the selected driver and model workload. The runbook gives planning guidance of at least 8 CPU cores, 32 GiB RAM, 100 GiB free disk, and approximately 12 GiB GPU VRAM; these are not guarantees of throughput or answer quality. Measure on the actual target.
 
-```javascript
-// Egyptian 14-digit National ID (starts with 2 or 3)
-sanitized = sanitized.replace(/\b[23]\d{13}\b/g, '[NATIONAL_ID_MASKED]');
+You will also need Ministry-approved DNS and time synchronization, package/image/model sources (or an offline bundle), firewall policy, TLS material for public ingress, an administration account, secret storage, backup destination, and a WhatsApp test account if that channel is being accepted.
 
-// Egyptian IBAN (EG followed by 27 digits)
-sanitized = sanitized.replace(/\bEG\d{27}\b/gi, '[EGYPTIAN_IBAN_MASKED]');
+See [deployment/docs/prerequisites.md](deployment/docs/prerequisites.md) and [deployment/docs/ubuntu_24_04.md](deployment/docs/ubuntu_24_04.md).
 
-// Credit Card Numbers (13 to 19 digits)
-sanitized = sanitized.replace(/\b(?:\d[ -]*?){13,19}\b/g, '[CARD_NUMBER_MASKED]');
+## Quick start
 
-// Email addresses
-sanitized = sanitized.replace(/[\w.-]+@[\w.-]+\.\w+/g, '[EMAIL_MASKED]');
-```
-
-### Prompt Injection & Jailbreak Defense:
-SubWF 03 contains an active heuristic security filter intercepting adversarial inputs (e.g., *"ignore previous instructions"*, *"system prompt leak"*). Attack attempts are immediately deflected without consuming local LLM resources.
-
----
-
-## 8. Bidirectional Human-in-the-Loop (HITL)
-
-When a citizen exhibits angry sentiment, submits an unresolved complaint, or explicitly requests human assistance:
-
-<div align="center">
-  <img src="docs/images/hitl_dashboard.png" alt="HITL Dashboard Architecture" width="100%"/>
-</div>
-
-### SLA Escalation Workflow:
-1. **Automated Ticket Creation**: SubWF 04C issues a priority SLA ticket in PostgreSQL (`tickets` table).
-   - **Urgent SLA**: 30 minutes (triggered for angry sentiment or high-severity issues).
-   - **High SLA**: 2 hours (triggered for standard escalations).
-2. **Conversation Hand-off**: Conversation state updates to `handed_off`.
-3. **Agent Live Bridge Webhook**: Tier-2 specialists submit replies via `POST /webhook/agent-response`:
+For a connected Ubuntu target with Docker and an available NVIDIA Container Toolkit:
 
 ```bash
-curl -X POST http://localhost:5678/webhook/agent-response \
-  -H "Content-Type: application/json" \
-  -d '{
-    "ticket_number": "TICK-74297",
-    "agent_name": "Karim Hassan (Tier-2 Support)",
-    "agent_message": "تمت مراجعة طلبكم والتحقق من حسابكم، تم حل المشكلة بنجاح.",
-    "action": "resolve"
-  }'
+cd deployment
+bash scripts/00_preflight.sh
+bash scripts/prepare_environment.sh
+bash scripts/deploy.sh gpu
+bash scripts/healthcheck.sh
+bash scripts/smoke.sh
 ```
 
-4. **Automated Citizen Delivery**: SubWF 04D updates the ticket status to `resolved`, records resolution notes, and transmits the agent's message directly to the citizen's active messaging channel.
+This brings up services and runs infrastructure checks. It does **not** import and activate workflows, establish n8n credentials, prove model generation quality, pair WhatsApp, or certify the system. Follow the full [deployment runbook](deployment/DEPLOYMENT.md) before using customer traffic.
 
----
+## Ministry server deployment
 
-## 9. Relational Data Layer & PostgreSQL Schema
+The package-specific guide is [`deployment/DEPLOYMENT.md`](deployment/DEPLOYMENT.md). Its high-level sequence is:
 
-All structured data is managed in the `customerservice` PostgreSQL 16 database:
+1. Transfer the bundle and verify `sha256sum -c MANIFEST.sha256`.
+2. Validate Ubuntu, storage, network policy, Docker, and GPU passthrough.
+3. Generate a new target `.env` with `bash scripts/prepare_environment.sh`; store secrets using Ministry policy.
+4. Review Compose configuration and deploy using the documented online or offline path.
+5. Check container health, PostgreSQL extensions, Ollama model generation, and dashboard access.
+6. Create n8n credentials, import and review workflow exports, and activate only after their credentials, subworkflow references, and webhook paths are verified.
+7. Review official knowledge sources and provenance, ingest approved materials, and replay grounded-answer test cases.
+8. Configure restricted ingress and TLS, test WhatsApp using an approved account, correlate the delivered answer to the execution and logs, and perform a restore drill.
+9. Complete the operational acceptance gate before opening public access.
 
-| Table Name | Description | Key Attributes |
-| :--- | :--- | :--- |
-| **`customers`** | Multi-channel citizen profiles | `id (UUID)`, `full_name`, `phone_number`, `telegram_id`, `whatsapp_id`, `preferred_language` |
-| **`conversations`** | Interaction sessions | `id (UUID)`, `customer_id`, `channel`, `status`, `language`, `current_intent` |
-| **`messages`** | Turn-by-turn history | `id (UUID)`, `conversation_id`, `sender_type`, `content`, `intent`, `pii_detected`, `metadata` |
-| **`tickets`** | SLA support escalations | `ticket_number`, `customer_id`, `priority`, `status`, `assigned_agent`, `sla_due_at`, `resolution_notes` |
-| **`knowledge_base`**| Bilingual RAG repository | `category`, `question`, `answer`, `question_ar`, `answer_ar`, `keywords_ar`, `embedding` |
-| **`orders`** | Citizen transactions | `order_number`, `service_type`, `status`, `carrier`, `tracking_number`, `estimated_delivery` |
-| **`audit_logs`** | Telemetry & audit trail | `workflow_name`, `execution_id`, `event_type`, `channel`, `pii_masked`, `latency_ms` |
+Do not reset a populated database or delete Docker volumes as part of deployment or troubleshooting. Fresh initialization SQL is for a new empty database volume; existing installations require a verified backup and reviewed additive migrations.
 
----
+## GPU and local models
 
-## 10. Quickstart & Operations Guide
+The optional GPU overlay is [`deployment/compose/docker-compose.gpu.yml`](deployment/compose/docker-compose.gpu.yml). Validate host drivers and container passthrough with:
 
-### Prerequisites
-- Windows / Linux / macOS with **Docker Engine** & **Docker Compose**.
-- **Ollama** installed locally with `qwen2.5:3b` or `llama3.1:8b`:
-  ```bash
-  ollama pull qwen2.5:3b
-  ```
-
-### 1. Launch the Stack
-```powershell
-# Windows PowerShell:
-docker compose up -d
-
-# Verify all 5 containers are healthy:
-docker compose ps
+```bash
+bash scripts/03_install_nvidia_toolkit.sh
+bash scripts/verify_gpu.sh
 ```
 
-### 2. Connect Your WhatsApp Account
-```powershell
-# Open the web QR dashboard in your browser:
-Start-Process "http://localhost:8080/qr"
-```
-Scan the QR code with WhatsApp on your phone.
+The packaged defaults are `qwen2.5:3b` for chat and `nomic-embed-text` for embeddings, with embedding dimension `768`. Initialize models using:
 
-### 3. Run the Live Test Suite
-```powershell
-python scripts/test-real-whatsapp.py
+```bash
+bash scripts/13_initialize_models.sh
 ```
 
----
+An `ollama list` result only proves model files are present. The deployment acceptance procedure requires a real generation request, measured resource use, and response-quality validation. Prior runtime evidence includes OOM/overload behavior, so target load testing is a release gate. See [model operations](deployment/docs/models.md), [Ollama](deployment/docs/ollama.md), and [GPU setup](deployment/docs/nvidia_gpu.md).
 
-## 11. Verification Suite & Live Test Results
+## Configuration
 
-The platform has been rigorously tested across all conversational dimensions:
+Start with [`deployment/.env.example`](deployment/.env.example). Generate a target-specific `.env` rather than copying workstation secrets. Important settings include database credentials, n8n encryption and JWT secrets, dashboard JWT secret, Redis password, model names/dimension, local service ports, timezone, webhook URL, and optional TLS directory.
 
+Do not commit `.env`, n8n credentials, WhatsApp session data, TLS private keys, database exports, or model archives containing restricted material. See [environment configuration](deployment/docs/environment.md) and [security operations](deployment/docs/security.md).
+
+## Database and knowledge retrieval
+
+The bundle provisions PostgreSQL 16 with pgvector and schema/migrations for the application, workflow database, knowledge base, and dashboard administration. The knowledge embedding column is `vector(768)`. Redis is configured as a private authenticated service. The ingestion tooling uses Ollama embeddings and the deployment runbook describes source review and migration handling.
+
+The deployment package includes DEPI scraper output and FAQ/PDF/XLSX materials. It does not include a dump of the live knowledge database. The available evidence does not establish complete official Digilians source lineage; validate source ownership and accuracy before ingesting or relying on those materials. Never infer freshness from the existence of scraper files—check source URL, crawl time, content hash, database row, active state, and embedding.
+
+See [database](deployment/docs/database.md), [pgvector](deployment/docs/pgvector.md), and [knowledge refresh](deployment/scripts/refresh_sources.sh).
+
+## n8n workflows
+
+Ten canonical workflow JSON exports are packaged under [`deployment/assets/n8n/workflows`](deployment/assets/n8n/workflows):
+
+1. Global Error Handler & Dead Letter Queue
+2. Customer Service Gateway & Dispatcher
+3. Customer Profile & Session Manager
+4. AI Cognitive & Intent Engine
+5. Order Lookup & Tracking
+6. Knowledge Base & FAQ
+7. Human in the Loop Escalation
+8. Human in the Loop Agent Bridge
+9. Conversation & Audit Logger
+10. Output Channel Dispatcher
+
+All ten exports are **inactive** and n8n credential records are omitted. Importing JSON is not deployment completion. Create and assign target credentials, inspect workflow/subworkflow IDs and URLs, run test executions, and only then activate reviewed workflows. See [n8n setup](deployment/docs/n8n.md) and [`deployment/scripts/deploy_workflows.sh`](deployment/scripts/deploy_workflows.sh).
+
+## WhatsApp bridge
+
+The included Node.js bridge uses Baileys and persists pairing state in the `whatsapp-auth` named volume. The deployment publishes its portal at `http://127.0.0.1:8080/qr` by default; access it through a protected local tunnel or approved private network. Do not expose the QR route publicly. A healthy bridge does not prove messages are being processed or that the generated response reaches the handset. Verify the full inbound-to-outbound path with an approved test account. See [WhatsApp operations](deployment/docs/whatsapp.md).
+
+## Dashboard
+
+The deployment builds the included FastAPI/static dashboard and publishes it at `http://127.0.0.1:8090` by default. Create the first operator account with `bash scripts/create_dashboard_admin.sh`; there is no packaged default password. The dashboard uses PostgreSQL and Redis configuration from the target environment. See [dashboard operations](deployment/docs/dashboard.md).
+
+## Security and operations
+
+- Keep PostgreSQL, Redis, Ollama, n8n administration, and WhatsApp pairing off public interfaces.
+- Restrict proxy ingress to Ministry-approved routes and networks; supply TLS keys through protected host paths.
+- Store `.env`, database backups, WhatsApp auth data, and n8n data as sensitive operational material.
+- Review workflow SQL, permissions, logging/retention, authentication, dependency and image provenance, and source-data licensing before production.
+- Docker health checks and static scans are useful diagnostics, not a penetration test or a privacy/compliance certification.
+
+Operational checklists are in [the runbook](deployment/docs/operations_runbook.md), [firewall guidance](deployment/docs/firewall.md), [networking](deployment/docs/networking.md), and [reverse proxy guidance](deployment/docs/reverse_proxy.md).
+
+## Health checks and testing
+
+From the deployment directory:
+
+```bash
+bash scripts/healthcheck.sh
+bash scripts/smoke.sh
+bash tests/smoke/compose_config.sh
+bash tests/deployment/check_bundle.sh
 ```
-======================================================================
- 📱 NexaServe AI - WhatsApp Live Channel Status & Test Utility
-======================================================================
-WhatsApp Bridge Status: CONNECTED
-  -> Connected Phone: +201503350999
-  -> Account Name:    Mohamed Gharieb
-  -> Status: Ready for bidirectional live messaging!
 
-----------------------------------------------------------------------
-Real Case 1: Citizen Inquiring about DEPI / Future Skills (Arabic FAQ)
-----------------------------------------------------------------------
-[+] AI Live Reply Generated (Latency: 4076ms):
-    - Source:   n8n
-    - Success:  True
-    - Response: [DIGILIANS] شروط التقديم في مبادرة الرواد الرقميون (DEPI)...
+The first scripts inspect container/extension/model presence; the latter checks Compose parsing and bundle integrity. None alone proves RAG relevance, grounded answers, workflow node execution, program isolation, WhatsApp delivery, or recovery. Run the target acceptance cases in the Ministry runbook and preserve redacted evidence. The verified local checks and checks not run are listed in [BUILD_REPORT.md](deployment/BUILD_REPORT.md).
 
-----------------------------------------------------------------------
-Real Case 2: Citizen Inquiring about Service Status (SRV-1001)
-----------------------------------------------------------------------
-[+] AI Live Reply Generated (Latency: 2848ms):
-    - Source:   n8n
-    - Success:  True
-    - Response: أهلاً بك John Doe، حالة طلبك/طلب الخدمة رقم SRV-1001 هي: تم الشحن والإرسال.
+## Backup, upgrade, and rollback
 
-----------------------------------------------------------------------
-Real Case 3: Citizen Escalation with Priority Ticket
-----------------------------------------------------------------------
-[+] AI Live Reply Generated (Latency: 3074ms):
-    - Source:   n8n
-    - Success:  True
-    - Response: تم استلام طلبك وتصعيده إلى الفريق المختص. تم فتح تذكرة دعم ذات أولوية برقم #TICK-74297 (درجة الأولوية: عالية).
-======================================================================
+Use `bash scripts/backup.sh` and store backups in approved encrypted off-host storage. A backup is not verified until restored in an isolated recovery environment. Do not copy a live PostgreSQL data directory as a backup.
+
+For upgrades, take and verify a backup, preserve the previous bundle and image references, apply reviewed additive migrations, deploy, and repeat acceptance tests before reopening ingress. `scripts/rollback.sh` requires explicit operator confirmation, redeploys a previous bundle while preserving named volumes, and does not reverse SQL changes. See [backup and restore](deployment/docs/backup_restore.md), [upgrade](deployment/docs/upgrade.md), and [rollback](deployment/docs/rollback.md).
+
+## Offline deployment
+
+An offline staging workflow is provided in [`deployment/scripts/prepare_offline_bundle.sh`](deployment/scripts/prepare_offline_bundle.sh). It is intended to run on an approved connected Linux builder and packages container images and the local Ollama model store. The target uses [`deployment/scripts/install_offline.sh`](deployment/scripts/install_offline.sh) with `deployment/compose/docker-compose.offline.yml`.
+
+Host Ubuntu/NVIDIA packages are not vendored. The image/model transfer path has not been validated on the Ministry target; confirm compatible Ollama versions and run generation and recovery checks after import. See [offline installation](deployment/docs/offline_install.md).
+
+## Troubleshooting
+
+| Symptom | First checks |
+|---|---|
+| Service is unhealthy | `docker compose ps` and `docker compose logs <service>`; then follow the component runbook. |
+| Model is listed but answers fail | Run a real generation test; inspect RAM/VRAM, model logs, concurrency, and prompt/context size. Do not accept `ollama list` alone. |
+| n8n webhook does not route | Check workflow activation, credentials, webhook URL, imported subworkflow references, and execution details. |
+| Knowledge answer is irrelevant | Trace selected program, active KB rows, source metadata, embedding, retrieval result, context, and final output. |
+| WhatsApp pairing or delivery fails | Check bridge health and persistent auth volume; restrict `/qr`; correlate bridge and n8n execution with the test handset. |
+| Disk or database issue | Check approved storage and backups. Do not run volume-pruning commands or delete database directories. |
+
+See [the detailed troubleshooting guide](deployment/docs/troubleshooting.md). Stop release acceptance for OOM, unsupported responses, cross-program leakage, untraceable sources, or failed message delivery.
+
+## Repository layout
+
+```text
+.
+├── dashboard/                 # Existing FastAPI/static dashboard source
+├── DEPI_Web_Scraper/          # Existing scraper project
+├── FAQs/                      # FAQ source materials
+├── infra/                     # Existing local Compose services and config
+├── scripts/                   # Repository operational utilities
+├── tests/                     # Existing repository tests
+├── docs/                       # Runtime audit and project documentation
+└── deployment/                # Ubuntu deployment candidate
+    ├── application/           # Packaged dashboard, WhatsApp, scraper, ingestion
+    ├── assets/                # Schema, Redis config, inactive n8n exports
+    ├── checks/                # Integrity, permissions, ports, storage, GPU checks
+    ├── compose/               # Base, GPU, and offline Compose files
+    ├── config/                # Optional Nginx and systemd examples
+    ├── docs/                  # Deployment and operations guides
+    ├── migrations/            # Additive SQL migrations
+    ├── scripts/               # Provisioning, deployment, backup, and recovery
+    └── tests/                 # Static bundle and health/smoke helpers
 ```
 
----
+## Documentation
 
-<div align="center">
-  <b>NexaServe</b> • Engineered with ❤️ for Sovereign Government Customer Service Automation.
-</div>
+| Topic | Guide |
+|---|---|
+| Full deployment sequence | [deployment/DEPLOYMENT.md](deployment/DEPLOYMENT.md) |
+| Package overview | [deployment/README.md](deployment/README.md) |
+| Quickstart | [deployment/QUICKSTART.md](deployment/QUICKSTART.md) |
+| Architecture | [deployment/docs/architecture.md](deployment/docs/architecture.md) |
+| Environment | [deployment/docs/environment.md](deployment/docs/environment.md) |
+| Database and pgvector | [database](deployment/docs/database.md) · [pgvector](deployment/docs/pgvector.md) |
+| Models and GPU | [models](deployment/docs/models.md) · [Ollama](deployment/docs/ollama.md) · [NVIDIA GPU](deployment/docs/nvidia_gpu.md) |
+| n8n and WhatsApp | [n8n](deployment/docs/n8n.md) · [WhatsApp](deployment/docs/whatsapp.md) |
+| Backup, restore, upgrade | [backup/restore](deployment/docs/backup_restore.md) · [upgrade](deployment/docs/upgrade.md) · [rollback](deployment/docs/rollback.md) |
+| Forensic build evidence | [deployment/BUILD_REPORT.md](deployment/BUILD_REPORT.md) |
+
+## Contributing
+
+Contributions should preserve existing customer data and distinguish static configuration checks from runtime behavior. For workflow, retrieval, model, or routing changes, include reproducible test cases and evidence for program selection, retrieved source, context sent to the model, final response, and delivery path. Do not include credentials, customer PII, WhatsApp session data, or production exports in pull requests.
+
+## License
+
+No repository license file was found during preparation of this README. Until a license is added, do not assume that the source is available for unrestricted reuse; consult the project owner.

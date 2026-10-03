@@ -28,7 +28,9 @@ Write-Host "[+] Target n8n Project ID: $projectId" -ForegroundColor Green
 docker exec cs-n8n mkdir -p /tmp/workflows
 
 # 3. Import each workflow
-$workflowFiles = Get-ChildItem -Path $workflowsDir -Filter "*.json" | Sort-Object Name
+$workflowFiles = Get-ChildItem -Path $workflowsDir -Filter "*.json" |
+    Where-Object { $_.BaseName -notlike 'Master_*' } |
+    Sort-Object Name
 foreach ($wf in $workflowFiles) {
     $containerDest = "/tmp/workflows/$($wf.Name)"
     Write-Host "[+] Copying and importing: $($wf.Name)..." -ForegroundColor Yellow
