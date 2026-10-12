@@ -37,7 +37,11 @@ def _summary_artifacts(tmp_path, *, passed=2, failed=1, blocked=1, runtime=None,
         "blocked": blocked,
         "timestamp": "2026-10-11T13:59:00",
     }
-    artifact = {"summary": summary, "results": [{"answer": "must not be returned"}]}
+    artifact = {"summary": summary, "results": [
+        {"status": status, "answer": "must not be returned"}
+        for status, count in (("PASS", passed), ("FAIL", failed), ("BLOCKED", blocked))
+        for _ in range(count)
+    ]}
     if runtime:
         artifact["runtime_identity"] = runtime
     if corpus:
@@ -102,7 +106,7 @@ def test_evaluation_is_only_linked_when_runtime_and_corpus_match(tmp_path):
     assert summarize_latest_rag_evaluation(master, result, "candidate-x", "kb-7")["status"] == "NEEDS_IMPROVEMENT"
     clean_master = tmp_path / "clean-master.json"
     clean_artifact = tmp_path / "clean-rag.json"
-    clean_master.write_text(json.dumps({"verdict": "READY", "suite_results": [{"test": "Golden RAG Suite", "status": "PASS"}]}), encoding="utf-8")
+    clean_master.write_text(json.dumps({"verdict": "READY", "finished": "2026-10-12T10:00:00+00:00", "suite_results": [{"test": "Golden RAG Suite", "status": "PASS"}]}), encoding="utf-8")
     clean_artifact.write_text(json.dumps({"runtime_identity": "candidate-x", "corpus_version": "kb-7", "summary": {"total": 2, "passed": 2, "failed": 0, "blocked": 0, "timestamp": "2026-10-12T10:00:00+00:00"}}), encoding="utf-8")
     result = summarize_latest_rag_evaluation(clean_master, clean_artifact, "candidate-x", "kb-7")
     assert result["status"] == "HEALTHY"
@@ -114,6 +118,9 @@ def test_runtime_linked_old_evaluation_is_stale(tmp_path):
     data = json.loads(result.read_text(encoding="utf-8"))
     data["summary"]["timestamp"] = "2026-10-01T10:00:00+00:00"
     result.write_text(json.dumps(data), encoding="utf-8")
+    master_data = json.loads(master.read_text(encoding="utf-8"))
+    master_data["finished"] = "2026-10-01T10:00:00+00:00"
+    master.write_text(json.dumps(master_data), encoding="utf-8")
     summary = summarize_latest_rag_evaluation(
         master, result, "candidate-x", "kb-7", now=datetime(2026, 10, 12, tzinfo=timezone.utc)
     )
