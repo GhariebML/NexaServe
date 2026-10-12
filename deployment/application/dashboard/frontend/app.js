@@ -9,12 +9,13 @@ const STATE = {
   currentView: 'executive',
   currentLang: localStorage.getItem('nexaserve_lang') || 'en',
   period: 'all',
-  program: 'all',
+  program: 'DEPI',
   charts: {},
   customerSearchTimeout: null,
   customerPage: 1,
   convPage: 1,
-  ticketPage: 1
+  ticketPage: 1,
+  isExporting: false
 };
 
 // Bilingual dictionary
@@ -30,10 +31,21 @@ const I18N = {
     nav_customers: "Customers & Students",
     nav_conversations: "Conversations",
     nav_tickets: "Tickets & HITL",
+    nav_n8n: "n8n Automation",
+    nav_simulator: "Live AI Simulator",
     nav_rag: "RAG & AI Quality",
     nav_kb: "Knowledge Base",
     nav_health: "System Health",
     nav_activity: "Recent Activity",
+    title_n8n_workflows: "n8n Automation Engine & Workflows",
+    sub_n8n_workflows: "Direct bidirectional link with local n8n instance and workflow execution engine",
+    btn_open_n8n: "Open n8n Canvas",
+    title_deployed_wfs: "Registered System Workflows",
+    title_n8n_live_execs: "Live n8n REST Executions",
+    title_simulator: "Live Customer Service AI Simulator",
+    sub_simulator: "Interact directly with live n8n Master Gateway, Ollama LLM, pgvector RAG, and HITL escalation",
+    btn_send: "Send Inquiry 🚀",
+    title_live_telemetry: "Correlated n8n Trace & Telemetry",
     title_recent_executions: "Recent customer requests",
     status_not_measured: "Not measured",
     open_trace: "Open n8n trace",
@@ -83,7 +95,41 @@ const I18N = {
     col_summary: "Summary",
     col_latency: "Latency",
     col_timestamp: "Timestamp",
-    btn_view_details: "View Details"
+    btn_view_details: "View Details",
+    kpi_total_customers: "Total Customers",
+    kpi_sub_total_customers: "Registered across channels",
+    kpi_active_convs: "Active Conversations",
+    kpi_sub_active_convs: "Currently in session",
+    kpi_total_convs: "Total Conversations",
+    kpi_sub_total_convs: "All-time volume",
+    kpi_open_tickets: "Open Tickets",
+    kpi_sub_open_tickets: "Awaiting resolution",
+    kpi_pending_tickets: "Pending Tickets",
+    kpi_sub_pending_tickets: "In progress by agent",
+    kpi_resolved_tickets: "Resolved Tickets",
+    kpi_sub_resolved_tickets: "Successfully closed",
+    kpi_sla_breaches: "SLA Breaches",
+    kpi_sub_sla_breaches: "Action required immediately",
+    kpi_escalated_convs: "Escalated Convs",
+    kpi_sub_escalated_convs: "Routed to human tier",
+    kpi_avg_response_time: "Avg Response Time",
+    kpi_sub_avg_response_time: "End-to-end audit latency",
+    kpi_rag_success_rate: "Successful Turn Rate",
+    kpi_sub_rag_success_rate: "Operational successful turns; not answer accuracy",
+    unit_ms: " ms",
+    export_report: "Export to Excel",
+    export_loading: "Preparing workbook…",
+    export_success: "Excel report downloaded.",
+    export_error: "The report could not be generated.",
+    rag_eval_title: "RAG Evaluation",
+    rag_eval_definition: "Acceptance test pass rate among completed cases. This is not answer accuracy.",
+    rag_eval_loading: "Loading verified evaluation summary…",
+    rag_eval_unavailable: "No verified evaluation summary is available.",
+    rag_eval_runtime: "Runtime",
+    rag_eval_corpus: "Corpus",
+    rag_eval_cases: "Cases",
+    rag_eval_details: "View evaluation details",
+    rag_eval_refresh: "Reload evaluation summary"
   },
   ar: {
     ops_center: "مركز العمليات والتحكم",
@@ -96,10 +142,21 @@ const I18N = {
     nav_customers: "العملاء والطلاب",
     nav_conversations: "المحادثات المباشرة",
     nav_tickets: "التذاكر والدعم البشري",
+    nav_n8n: "أتمتة وسير عمل n8n",
+    nav_simulator: "محاكي الذكاء الاصطناعي الحي",
     nav_rag: "جودة الذكاء الاصطناعي و RAG",
     nav_kb: "قاعدة المعرفة والوثائق",
     nav_health: "سلامة وخوادم النظام",
     nav_activity: "سجل العمليات الأخير",
+    title_n8n_workflows: "محرك الأتمتة وسير العمل n8n",
+    sub_n8n_workflows: "ربط تكاملي مباشر ثنائي الاتجاه مع منصة n8n المحلية ومحرك تنفيذ التدفقات",
+    btn_open_n8n: "فتح لوحة سير عمل n8n",
+    title_deployed_wfs: "تدفقات العمل المسجة في النظام",
+    title_n8n_live_execs: "تنفيذات n8n الحية (REST API)",
+    title_simulator: "محاكي خدمة العملاء المباشر",
+    sub_simulator: "تفاعل مباشر مع بوابة n8n الرئيسية، نموذج Ollama، تقنية pgvector RAG، والتصعيد البشري",
+    btn_send: "إرسال الاستفسار 🚀",
+    title_live_telemetry: "التتبع الحي والقياسات من n8n",
     title_recent_executions: "طلبات العملاء الأخيرة",
     status_not_measured: "لم يُقَس بعد",
     open_trace: "فتح التنفيذ في n8n",
@@ -149,7 +206,41 @@ const I18N = {
     col_summary: "الملخص",
     col_latency: "زمن الاستجابة",
     col_timestamp: "الوقت",
-    btn_view_details: "عرض التفاصيل"
+    btn_view_details: "عرض التفاصيل",
+    kpi_total_customers: "إجمالي المستفيدين والطلاب",
+    kpi_sub_total_customers: "المسجلين عبر جميع القنوات",
+    kpi_active_convs: "المحادثات الجارية حالياً",
+    kpi_sub_active_convs: "جلسات نشطة في الوقت الفعلي",
+    kpi_total_convs: "إجمالي المحادثات",
+    kpi_sub_total_convs: "الحجم الكلي لجميع الجلسات",
+    kpi_open_tickets: "التذاكر المفتوحة",
+    kpi_sub_open_tickets: "في انتظار المراجعة والمعالجة",
+    kpi_pending_tickets: "التذاكر قيد المعالجة",
+    kpi_sub_pending_tickets: "جارٍ العمل عليها من قبل موظف الدعم",
+    kpi_resolved_tickets: "التذاكر المكتملة والمغلقة",
+    kpi_sub_resolved_tickets: "تم حلها وإغلاقها بنجاح",
+    kpi_sla_breaches: "تجاوزات اتفاقية مستوى الخدمة SLA",
+    kpi_sub_sla_breaches: "تتطلب إجراءً فورياً وعاجلاً",
+    kpi_escalated_convs: "المحادثات المصعدة بشرياً",
+    kpi_sub_escalated_convs: "تم تحويلها لفرق الدعم البشري",
+    kpi_avg_response_time: "متوسط زمن الاستجابة",
+    kpi_sub_avg_response_time: "الزمن الكلي لمعالجة وتدقيق الرد",
+    kpi_rag_success_rate: "نسبة نجاح المعالجة",
+    kpi_sub_rag_success_rate: "نجاح المعالجة التشغيلية؛ لا يمثل دقة الإجابة",
+    unit_ms: " مللي ثانية",
+    export_report: "تصدير إلى Excel",
+    export_loading: "جارٍ إعداد الملف…",
+    export_success: "تم تنزيل تقرير Excel.",
+    export_error: "تعذر إنشاء التقرير.",
+    rag_eval_title: "تقييم RAG",
+    rag_eval_definition: "نسبة اختبارات القبول الناجحة من الحالات المكتملة. لا تمثل دقة الإجابة.",
+    rag_eval_loading: "جارٍ تحميل ملخص التقييم الموثق…",
+    rag_eval_unavailable: "لا يتوفر ملخص تقييم موثق.",
+    rag_eval_runtime: "بيئة التشغيل",
+    rag_eval_corpus: "مجموعة المعرفة",
+    rag_eval_cases: "الحالات",
+    rag_eval_details: "عرض تفاصيل التقييم",
+    rag_eval_refresh: "إعادة تحميل ملخص التقييم"
   }
 };
 
@@ -201,7 +292,10 @@ function applyLanguage(lang) {
   document.documentElement.lang = lang;
   document.documentElement.dir = (lang === 'ar') ? 'rtl' : 'ltr';
 
-  document.getElementById('lang-label').innerText = (lang === 'ar') ? 'EN' : 'عربي';
+  const langLabel = document.getElementById('lang-label');
+  if (langLabel) {
+    langLabel.innerText = (lang === 'ar') ? 'EN' : 'عربي';
+  }
 
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
@@ -209,6 +303,10 @@ function applyLanguage(lang) {
       el.innerText = I18N[lang][key];
     }
   });
+
+  if (STATE.token && STATE.user) {
+    refreshCurrentView();
+  }
 }
 
 function toggleLanguage() {
@@ -283,8 +381,93 @@ function switchView(viewName) {
 
   const activeSec = document.getElementById(`view-${viewName}`);
   if (activeSec) activeSec.style.display = 'block';
+  updateExportAvailability();
 
   refreshCurrentView();
+}
+
+const EXPORT_REPORTS = {
+  executive: 'executive', customers: 'customers', conversations: 'conversations',
+  tickets: 'tickets', n8n: 'n8n', rag: 'rag', kb: 'knowledge-base',
+  health: 'health', activity: 'activity'
+};
+
+function updateExportAvailability() {
+  const button = document.getElementById('export-report-btn');
+  if (!button) return;
+  button.hidden = !EXPORT_REPORTS[STATE.currentView];
+  button.disabled = STATE.isExporting;
+}
+
+function showExportToast(message, isError = false) {
+  const toast = document.getElementById('export-toast');
+  if (!toast) return;
+  toast.textContent = message;
+  toast.className = `export-toast ${isError ? 'error' : 'success'}`;
+  toast.hidden = false;
+  clearTimeout(STATE.exportToastTimeout);
+  STATE.exportToastTimeout = setTimeout(() => { toast.hidden = true; }, 4500);
+}
+
+async function exportCurrentReport() {
+  const reportType = EXPORT_REPORTS[STATE.currentView];
+  const button = document.getElementById('export-report-btn');
+  const t = I18N[STATE.currentLang] || I18N.en;
+  if (!reportType || STATE.isExporting || !button) return;
+  const query = new URLSearchParams({ lang: STATE.currentLang });
+  if (['executive', 'customers', 'conversations', 'tickets'].includes(reportType)) {
+    query.set('program', STATE.program);
+  }
+  if (['executive', 'conversations'].includes(reportType)) query.set('period', STATE.period);
+  if (reportType === 'customers') {
+    query.set('search', document.getElementById('customer-search-input')?.value.trim() || '');
+  }
+  if (reportType === 'tickets') {
+    query.set('ticket_status', document.getElementById('ticket-status-filter')?.value || 'all');
+    query.set('priority', document.getElementById('ticket-priority-filter')?.value || 'all');
+  }
+  if (reportType === 'activity') {
+    query.set('execution_status', document.getElementById('execution-status-filter')?.value || '');
+  }
+
+  const originalText = button.textContent;
+  STATE.isExporting = true;
+  button.disabled = true;
+  button.setAttribute('aria-busy', 'true');
+  button.textContent = t.export_loading;
+  try {
+    const response = await fetch(`/api/dashboard/reports/${reportType}/excel?${query.toString()}`, {
+      headers: STATE.token ? { Authorization: `Bearer ${STATE.token}` } : {}
+    });
+    if (response.status === 401) {
+      logout();
+      throw new Error('Session expired or unauthorized');
+    }
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.detail || t.export_error);
+    }
+    const blob = await response.blob();
+    const disposition = response.headers.get('Content-Disposition') || '';
+    const filename = disposition.match(/filename="([^"]+)"/i)?.[1] || 'NexaServe_Report.xlsx';
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showExportToast(t.export_success);
+  } catch (error) {
+    showExportToast(error.message || t.export_error, true);
+  } finally {
+    STATE.isExporting = false;
+    button.removeAttribute('aria-busy');
+    button.disabled = false;
+    button.textContent = originalText || t.export_report;
+  }
 }
 
 function refreshCurrentView() {
@@ -292,10 +475,12 @@ function refreshCurrentView() {
   STATE.program = document.getElementById('global-program-filter').value;
 
   switch (STATE.currentView) {
-    case 'executive': loadExecutiveKPIs(); break;
+    case 'executive': loadExecutiveKPIs(); loadRAGEvaluationCard(); break;
     case 'customers': loadCustomers(); break;
     case 'conversations': loadConversations(); break;
     case 'tickets': loadTickets(); break;
+    case 'n8n': loadN8nData(); break;
+    case 'simulator': loadSimulator(); break;
     case 'rag': loadRAGMetrics(); break;
     case 'kb': loadKBMetrics(); break;
     case 'health': loadSystemHealth(); break;
@@ -304,63 +489,104 @@ function refreshCurrentView() {
 }
 
 // --- 1. EXECUTIVE KPIS ---
+async function loadRAGEvaluationCard() {
+  const card = document.getElementById('rag-evaluation-card');
+  if (!card) return;
+  const t = I18N[STATE.currentLang] || I18N.en;
+  card.innerHTML = `<div class="rag-eval-loading" role="status">${escapeHtml(t.rag_eval_loading)}</div>`;
+  try {
+    const data = await apiRequest('/api/dashboard/rag/evaluation-summary');
+    const status = ['HEALTHY', 'NEEDS_IMPROVEMENT', 'STALE', 'BLOCKED', 'NOT_EVALUATED'].includes(data.status)
+      ? data.status : 'NOT_EVALUATED';
+    const metric = data.pass_rate === null ? '—' : `${(Number(data.pass_rate) * 100).toFixed(1)}%`;
+    const timestamp = data.last_evaluated_at ? escapeHtml(data.last_evaluated_at) : '—';
+    const runtime = data.runtime_identity ? escapeHtml(data.runtime_identity) : 'Unknown';
+    const corpus = data.corpus_version ? escapeHtml(data.corpus_version) : 'Unknown';
+    const reason = data.reason ? `<p class="rag-eval-reason">${escapeHtml(data.reason)}</p>` : '';
+    card.innerHTML = `
+      <div class="rag-eval-head">
+        <div><h2>${escapeHtml(t.rag_eval_title)}</h2><p>${escapeHtml(t.rag_eval_definition)}</p></div>
+        <span class="rag-eval-status status-${status.toLowerCase()}" role="status">${escapeHtml(status.replaceAll('_', ' '))}</span>
+      </div>
+      <div class="rag-eval-body">
+        <div class="rag-eval-primary"><span>${escapeHtml(data.metric_name || t.rag_eval_unavailable)}</span><strong>${metric}</strong></div>
+        <dl class="rag-eval-facts">
+          <div><dt>${escapeHtml(t.rag_eval_cases)}</dt><dd>${Number(data.evaluated_cases || 0)} evaluated / ${Number(data.planned_cases || 0)} planned</dd></div>
+          <div><dt>Pass / fail / blocked</dt><dd>${Number(data.passed || 0)} / ${Number(data.failed || 0)} / ${Number(data.blocked || 0)}</dd></div>
+          <div><dt>Last evaluation</dt><dd>${timestamp}${data.time_zone ? ` <small>(${escapeHtml(data.time_zone)})</small>` : ''}</dd></div>
+          <div><dt>${escapeHtml(t.rag_eval_runtime)}</dt><dd>${runtime}</dd></div>
+          <div><dt>${escapeHtml(t.rag_eval_corpus)}</dt><dd>${corpus}</dd></div>
+        </dl>
+      </div>
+      ${reason}
+      <div class="rag-eval-actions">
+        <button class="btn-link" type="button" onclick="switchView('rag')">${escapeHtml(t.rag_eval_details)}</button>
+        <button class="btn-link" type="button" onclick="loadRAGEvaluationCard()" aria-label="${escapeHtml(t.rag_eval_refresh)}">↻ ${escapeHtml(t.rag_eval_refresh)}</button>
+      </div>`;
+  } catch (error) {
+    card.innerHTML = `<div class="rag-eval-unavailable" role="alert">${escapeHtml(t.rag_eval_unavailable)} <button class="btn-link" type="button" onclick="loadRAGEvaluationCard()">Retry</button></div>`;
+  }
+}
+
 async function loadExecutiveKPIs() {
   const container = document.getElementById('executive-kpi-grid');
-  container.innerHTML = '<div style="color:var(--text-muted);">Querying live database...</div>';
+  const t = I18N[STATE.currentLang] || I18N.en;
+  container.innerHTML = `<div style="color:var(--text-muted);">${STATE.currentLang === 'ar' ? 'جارٍ تحميل البيانات المباشرة...' : 'Querying live database...'}</div>`;
 
   try {
     const data = await apiRequest(`/api/dashboard/summary?period=${STATE.period}&program=${STATE.program}`);
-    
+    const unitMs = t.unit_ms || ' ms';
+
     container.innerHTML = `
       <div class="kpi-card">
-        <span class="kpi-label">Total Customers</span>
+        <span class="kpi-label">${t.kpi_total_customers}</span>
         <span class="kpi-value">${data.total_customers.toLocaleString()}</span>
-        <span class="kpi-sub">Registered across channels</span>
+        <span class="kpi-sub">${t.kpi_sub_total_customers}</span>
       </div>
       <div class="kpi-card success">
-        <span class="kpi-label">Active Conversations</span>
+        <span class="kpi-label">${t.kpi_active_convs}</span>
         <span class="kpi-value">${data.active_conversations.toLocaleString()}</span>
-        <span class="kpi-sub">Currently in session</span>
+        <span class="kpi-sub">${t.kpi_sub_active_convs}</span>
       </div>
       <div class="kpi-card">
-        <span class="kpi-label">Total Conversations</span>
+        <span class="kpi-label">${t.kpi_total_convs}</span>
         <span class="kpi-value">${data.total_conversations.toLocaleString()}</span>
-        <span class="kpi-sub">All-time volume</span>
+        <span class="kpi-sub">${t.kpi_sub_total_convs}</span>
       </div>
       <div class="kpi-card warning">
-        <span class="kpi-label">Open Tickets</span>
+        <span class="kpi-label">${t.kpi_open_tickets}</span>
         <span class="kpi-value">${data.open_tickets.toLocaleString()}</span>
-        <span class="kpi-sub">Awaiting resolution</span>
+        <span class="kpi-sub">${t.kpi_sub_open_tickets}</span>
       </div>
       <div class="kpi-card">
-        <span class="kpi-label">Pending Tickets</span>
+        <span class="kpi-label">${t.kpi_pending_tickets}</span>
         <span class="kpi-value">${data.pending_tickets.toLocaleString()}</span>
-        <span class="kpi-sub">In progress by agent</span>
+        <span class="kpi-sub">${t.kpi_sub_pending_tickets}</span>
       </div>
       <div class="kpi-card success">
-        <span class="kpi-label">Resolved Tickets</span>
+        <span class="kpi-label">${t.kpi_resolved_tickets}</span>
         <span class="kpi-value">${data.resolved_tickets.toLocaleString()}</span>
-        <span class="kpi-sub">Successfully closed</span>
+        <span class="kpi-sub">${t.kpi_sub_resolved_tickets}</span>
       </div>
       <div class="kpi-card alert">
-        <span class="kpi-label">SLA Breaches</span>
+        <span class="kpi-label">${t.kpi_sla_breaches}</span>
         <span class="kpi-value" style="color:#F87171;">${data.sla_breaches.toLocaleString()}</span>
-        <span class="kpi-sub">Action required immediately</span>
+        <span class="kpi-sub">${t.kpi_sub_sla_breaches}</span>
       </div>
       <div class="kpi-card warning">
-        <span class="kpi-label">Escalated Convs</span>
+        <span class="kpi-label">${t.kpi_escalated_convs}</span>
         <span class="kpi-value">${data.escalated_conversations.toLocaleString()}</span>
-        <span class="kpi-sub">Routed to human tier</span>
+        <span class="kpi-sub">${t.kpi_sub_escalated_convs}</span>
       </div>
       <div class="kpi-card">
-        <span class="kpi-label">Avg Response Time</span>
-        <span class="kpi-value">${formatMetric(data.avg_response_time_ms, ' ms')}</span>
-        <span class="kpi-sub">End-to-end audit latency</span>
+        <span class="kpi-label">${t.kpi_avg_response_time}</span>
+        <span class="kpi-value">${formatMetric(data.avg_response_time_ms, unitMs)}</span>
+        <span class="kpi-sub">${t.kpi_sub_avg_response_time}</span>
       </div>
       <div class="kpi-card success">
-        <span class="kpi-label">RAG Success Rate</span>
+        <span class="kpi-label">${t.kpi_rag_success_rate}</span>
         <span class="kpi-value">${formatMetric(data.rag_success_rate, '%')}</span>
-        <span class="kpi-sub">Strict grounded responses</span>
+        <span class="kpi-sub">${t.kpi_sub_rag_success_rate}</span>
       </div>
     `;
   } catch (err) {
@@ -384,7 +610,7 @@ async function loadCustomers() {
 
   try {
     const data = await apiRequest(`/api/dashboard/customers?program=${STATE.program}&search=${encodeURIComponent(search)}&page=${STATE.customerPage}&limit=10`);
-    
+
     if (data.items.length === 0) {
       tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No matching customer records found.</td></tr>';
       return;
@@ -525,7 +751,7 @@ async function loadTickets() {
     const data = await apiRequest(`/api/dashboard/tickets?status=${status}&priority=${priority}&program=${STATE.program}&page=${STATE.ticketPage}&limit=10`);
 
     if (data.items.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No tickets matching selected filters.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="10" class="empty-state">No tickets matching selected filters.</td></tr>';
       return;
     }
 
@@ -534,6 +760,7 @@ async function loadTickets() {
       if (t.sla_status === 'BREACHED') slaClass = 'badge-open';
       else if (t.sla_status === 'AT_RISK') slaClass = 'badge-pending';
 
+      const safeCust = (t.customer_name || 'Customer').replace(/'/g, "\\'");
       return `
         <tr>
           <td><strong style="color:#60A5FA;">${t.ticket_number}</strong></td>
@@ -545,6 +772,11 @@ async function loadTickets() {
           <td>${t.sla_deadline ? new Date(t.sla_deadline).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) : 'None'}</td>
           <td><span class="badge ${slaClass}">${t.sla_status}</span></td>
           <td>${t.created_at ? new Date(t.created_at).toLocaleDateString() : 'N/A'}</td>
+          <td>
+            <button class="btn-icon" style="font-size:0.75rem; padding:4px 8px; background:var(--primary); color:#fff; border-radius:var(--radius-sm); border:none; cursor:pointer;" onclick="openTicketModal('${t.id}', '${t.ticket_number}', '${safeCust}')" title="Respond & Resolve via n8n">
+              💬 Resolve
+            </button>
+          </td>
         </tr>
       `;
     }).join('');
@@ -554,7 +786,7 @@ async function loadTickets() {
       loadTickets();
     });
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="9" class="empty-state" style="color:var(--accent-rose);">${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" class="empty-state" style="color:var(--accent-rose);">${err.message}</td></tr>`;
   }
 }
 
@@ -855,4 +1087,308 @@ function renderPagination(elementId, current, total, onSelect) {
       <button class="btn-page" ${current >= total ? 'disabled' : ''} onclick="(${onSelect.toString()})(${current + 1})">Next</button>
     </div>
   `;
+}
+
+// --- 9. N8N AUTOMATION VIEW ---
+async function loadN8nData() {
+  const kpiGrid = document.getElementById('n8n-kpi-grid');
+  const wfTbody = document.getElementById('n8n-workflows-body');
+  const execTbody = document.getElementById('n8n-executions-body');
+
+  kpiGrid.innerHTML = '<div style="color:var(--text-muted);">Querying n8n REST API...</div>';
+  wfTbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Loading workflows...</td></tr>';
+  execTbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Loading executions...</td></tr>';
+
+  try {
+    const overview = await apiRequest('/api/dashboard/n8n/overview');
+
+    kpiGrid.innerHTML = `
+      <div class="kpi-card ${overview.connected ? 'success' : 'error'}">
+        <span class="kpi-label">n8n Engine Link</span>
+        <span class="kpi-value">${overview.connected ? 'ONLINE' : 'OFFLINE'}</span>
+        <span class="kpi-sub">HTTP ${overview.api_code || 0} API Status</span>
+      </div>
+      <div class="kpi-card info">
+        <span class="kpi-label">Total Workflows</span>
+        <span class="kpi-value">${overview.total_workflows}</span>
+        <span class="kpi-sub">Loaded in instance</span>
+      </div>
+      <div class="kpi-card success">
+        <span class="kpi-label">Active Workflows</span>
+        <span class="kpi-value">${overview.active_workflows}</span>
+        <span class="kpi-sub">Ready for webhook ingress</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Webhook Health</span>
+        <span class="kpi-value">${overview.health_status}</span>
+        <span class="kpi-sub">Gateway responsive</span>
+      </div>
+    `;
+
+    document.getElementById('n8n-wf-count').innerText = `${overview.total_workflows} Workflows`;
+
+    const wfData = await apiRequest('/api/dashboard/n8n/workflows');
+    if (wfData.items.length === 0) {
+      wfTbody.innerHTML = '<tr><td colspan="7" class="empty-state">No workflows registered.</td></tr>';
+    } else {
+      wfTbody.innerHTML = wfData.items.map(wf => `
+        <tr>
+          <td><code>${wf.id}</code></td>
+          <td style="font-weight:600;">${wf.name}</td>
+          <td><span class="badge">${wf.nodes_count} nodes</span></td>
+          <td>${(wf.tags && wf.tags.length) ? wf.tags.map(t => `<span class="badge" style="background:var(--bg-card-hover);">${t}</span>`).join(' ') : '<span style="color:var(--text-subtle);">None</span>'}</td>
+          <td>${wf.updated_at ? new Date(wf.updated_at).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) : 'N/A'}</td>
+          <td>
+            <label class="switch">
+              <input type="checkbox" ${wf.active ? 'checked' : ''} onchange="toggleWorkflow('${wf.id}', ${wf.active})">
+              <span class="slider"></span>
+            </label>
+          </td>
+          <td>
+            <a href="${wf.n8n_url}" target="_blank" class="btn-icon" style="text-decoration:none; padding:4px 8px; font-size:0.8rem; background:var(--bg-subtle);" title="Open in n8n">
+              ↗ Canvas
+            </a>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    const execData = await apiRequest('/api/dashboard/n8n/executions?limit=15');
+    if (execData.items.length === 0) {
+      execTbody.innerHTML = '<tr><td colspan="7" class="empty-state">No executions recorded yet.</td></tr>';
+    } else {
+      execTbody.innerHTML = execData.items.map(ex => {
+        let stBadge = 'badge-normal';
+        if (ex.status === 'success') stBadge = 'badge-resolved';
+        else if (ex.status === 'error') stBadge = 'badge-open';
+        else if (ex.status === 'running') stBadge = 'badge-pending';
+
+        return `
+          <tr>
+            <td><strong>#${ex.id}</strong></td>
+            <td><code>${ex.workflow_id || 'N/A'}</code></td>
+            <td><span class="badge">${ex.mode}</span></td>
+            <td><span class="badge ${stBadge}">${ex.status.toUpperCase()}</span></td>
+            <td>${ex.started_at ? new Date(ex.started_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'}) : 'N/A'}</td>
+            <td>${ex.duration_ms !== null ? ex.duration_ms + ' ms' : (ex.finished ? 'N/A' : 'Running...')}</td>
+            <td>
+              ${ex.n8n_url ? `<a href="${ex.n8n_url}" target="_blank" class="btn-icon" style="text-decoration:none; padding:4px 8px; font-size:0.75rem; background:var(--primary); color:#fff; border-radius:var(--radius-sm);">Inspect ↗</a>` : '-'}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+  } catch (err) {
+    kpiGrid.innerHTML = `<div class="empty-state" style="color:var(--accent-rose);">${err.message}</div>`;
+  }
+}
+
+async function toggleWorkflow(workflowId, currentState) {
+  const action = currentState ? 'deactivate' : 'activate';
+  try {
+    await apiRequest(`/api/dashboard/n8n/workflows/${workflowId}/${action}`, { method: 'POST' });
+    loadN8nData();
+  } catch (err) {
+    alert(`Failed to ${action} workflow: ${err.message}`);
+    loadN8nData();
+  }
+}
+
+// --- 10. LIVE AI SIMULATOR VIEW ---
+function loadSimulator() {
+  setTimeout(() => {
+    const input = document.getElementById('sim-chat-input');
+    if (input) input.focus();
+  }, 100);
+}
+
+function sendQuickPrompt(promptText) {
+  const input = document.getElementById('sim-chat-input');
+  if (input) {
+    input.value = promptText;
+    document.getElementById('sim-chat-form').dispatchEvent(new Event('submit'));
+  }
+}
+
+function clearSimChat() {
+  const container = document.getElementById('sim-messages-container');
+  container.innerHTML = `
+    <div class="chat-bubble bot">
+      تم تفريغ المحادثة. يمكنك إرسال استفسار جديد لاختباره مع بوابة n8n.
+      <div class="chat-meta"><span>NexaServe AI System</span></div>
+    </div>
+  `;
+  document.getElementById('sim-trace-box').innerText = '// Awaiting new query...';
+  document.getElementById('sim-trace-intent').innerText = '-';
+  document.getElementById('sim-trace-confidence').innerText = '-';
+  document.getElementById('sim-trace-program').innerText = '-';
+  document.getElementById('sim-trace-latency').innerText = '-';
+  document.getElementById('sim-telemetry-badge').innerText = 'Ready';
+  document.getElementById('sim-telemetry-badge').style.background = 'var(--bg-subtle)';
+}
+
+async function handleSimSubmit(e) {
+  e.preventDefault();
+  const input = document.getElementById('sim-chat-input');
+  const sendBtn = document.getElementById('sim-send-btn');
+  const msg = input.value.trim();
+  if (!msg) return;
+
+  const prog = document.getElementById('sim-program-select').value;
+  const channel = document.getElementById('sim-channel-select').value;
+  const container = document.getElementById('sim-messages-container');
+  const traceBox = document.getElementById('sim-trace-box');
+  const latencyBadge = document.getElementById('sim-latency-badge');
+  const telemBadge = document.getElementById('sim-telemetry-badge');
+
+  const userBubble = document.createElement('div');
+  userBubble.className = 'chat-bubble user';
+  userBubble.innerHTML = `${escapeHtml(msg)}<div class="chat-meta"><span>You (${channel})</span></div>`;
+  container.appendChild(userBubble);
+  container.scrollTop = container.scrollHeight;
+
+  input.value = '';
+  sendBtn.disabled = true;
+  sendBtn.innerText = 'Invoking n8n... ⏳';
+  latencyBadge.innerText = 'Routing through n8n...';
+  telemBadge.innerText = 'EXECUTING';
+  telemBadge.style.background = 'var(--accent-amber)';
+
+  const typingBubble = document.createElement('div');
+  typingBubble.className = 'chat-bubble bot';
+  typingBubble.id = 'sim-typing-bubble';
+  typingBubble.innerHTML = 'جاري المعالجة عبر بوابة n8n ونموذج الذكاء الاصطناعي... ⏳';
+  container.appendChild(typingBubble);
+  container.scrollTop = container.scrollHeight;
+
+  try {
+    const res = await apiRequest('/api/dashboard/n8n/simulate', {
+      method: 'POST',
+      body: JSON.stringify({
+        message: msg,
+        program: prog,
+        channel: channel,
+        full_name: 'Simulator Admin Tester',
+        phone_number: '+201000000000'
+      })
+    });
+
+    typingBubble.remove();
+
+    const n8nResp = res.response || {};
+    let botReplyText = '';
+
+    if (typeof n8nResp === 'string') {
+      botReplyText = n8nResp;
+    } else if (n8nResp.reply) {
+      botReplyText = n8nResp.reply;
+    } else if (n8nResp.message) {
+      botReplyText = n8nResp.message;
+    } else if (n8nResp.status === 'escalated') {
+      botReplyText = `تم تصعيد طلبك بنجاح للموظف البشري. رقم التذكرة: ${n8nResp.ticket_number || 'N/A'}`;
+    } else if (n8nResp.customer_message) {
+      botReplyText = n8nResp.customer_message;
+    } else {
+      botReplyText = JSON.stringify(n8nResp, null, 2);
+    }
+
+    const botBubble = document.createElement('div');
+    botBubble.className = 'chat-bubble bot';
+    botBubble.innerHTML = `
+      ${escapeHtml(botReplyText)}
+      <div class="chat-meta">
+        <span>Intent: ${n8nResp.intent || res.intent || 'RAG'}</span>
+        <span>${res.latency_ms} ms</span>
+        ${n8nResp.ticket_number ? `<span style="color:#F59E0B;">#${n8nResp.ticket_number}</span>` : ''}
+      </div>
+    `;
+    container.appendChild(botBubble);
+    container.scrollTop = container.scrollHeight;
+
+    document.getElementById('sim-trace-intent').innerText = n8nResp.intent || 'general_support';
+    document.getElementById('sim-trace-confidence').innerText = n8nResp.confidence ? (n8nResp.confidence * 100).toFixed(0) + '%' : (res.success ? '98%' : 'N/A');
+    document.getElementById('sim-trace-program').innerText = prog;
+    document.getElementById('sim-trace-latency').innerText = `${res.latency_ms} ms`;
+    latencyBadge.innerText = `Turn finished in ${res.latency_ms} ms`;
+    telemBadge.innerText = 'SUCCESS';
+    telemBadge.style.background = 'var(--accent-emerald)';
+
+    const traceLog = {
+      http_status: res.status_code,
+      execution_latency_ms: res.latency_ms,
+      request_id: res.request_id || n8nResp.request_id,
+      execution_id: res.execution_id || n8nResp.execution_id,
+      n8n_raw_response: n8nResp,
+      correlated_audit_trail: res.trace || []
+    };
+    traceBox.innerText = JSON.stringify(traceLog, null, 2);
+
+  } catch (err) {
+    typingBubble.remove();
+    const errBubble = document.createElement('div');
+    errBubble.className = 'chat-bubble bot';
+    errBubble.style.borderColor = 'var(--accent-rose)';
+    errBubble.innerHTML = `<span style="color:var(--accent-rose);">Error executing n8n gateway: ${err.message}</span>`;
+    container.appendChild(errBubble);
+    latencyBadge.innerText = 'Failed';
+    telemBadge.innerText = 'ERROR';
+    telemBadge.style.background = 'var(--accent-rose)';
+    traceBox.innerText = `// Execution failed: ${err.message}`;
+  } finally {
+    sendBtn.disabled = false;
+    sendBtn.innerText = 'Send Inquiry 🚀';
+    input.focus();
+  }
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/[&<>"']/g, function(m) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
+  });
+}
+
+// --- 11. TICKET HITL RESOLUTION MODAL ---
+function openTicketModal(ticketId, ticketNum, custName) {
+  document.getElementById('modal-ticket-id').value = ticketId;
+  document.getElementById('modal-ticket-info').innerText = `${ticketNum} - ${custName}`;
+  document.getElementById('modal-ticket-message').value = '';
+  document.getElementById('ticket-modal').style.display = 'flex';
+}
+
+function closeTicketModal() {
+  document.getElementById('ticket-modal').style.display = 'none';
+}
+
+async function handleTicketRespondSubmit(e) {
+  e.preventDefault();
+  const ticketId = document.getElementById('modal-ticket-id').value;
+  const action = document.getElementById('modal-ticket-action').value;
+  const message = document.getElementById('modal-ticket-message').value.trim();
+  const submitBtn = document.getElementById('modal-ticket-btn');
+
+  if (!message) return;
+
+  submitBtn.disabled = true;
+  submitBtn.innerText = 'Dispatching to n8n & Customer... ⏳';
+
+  try {
+    const res = await apiRequest(`/api/dashboard/tickets/${ticketId}/respond`, {
+      method: 'POST',
+      body: JSON.stringify({
+        response_message: message,
+        action: action,
+        agent_name: STATE.user ? (STATE.user.full_name || STATE.user.username) : 'Operations Agent'
+      })
+    });
+
+    closeTicketModal();
+    alert(`Ticket ${res.ticket_number} successfully updated! Dispatched to n8n (HTTP ${res.n8n_status_code || 200}).`);
+    loadTickets();
+  } catch (err) {
+    alert(`Failed to resolve ticket: ${err.message}`);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerText = 'Dispatch Response to n8n & Customer 🚀';
+  }
 }

@@ -1,9 +1,9 @@
 # 📄 NexaServe FAQ-to-JSON Conversion Report
 
-**Generated At**: `2026-10-11T11:26:20.017494+00:00`  
+**Generated At**: `2026-10-12T02:40:14.764083+00:00`  
 **Discovered FAQ Directory**: `FAQs`  
-**Total Source Files**: `5`  
-**Total Records Extracted**: `452`  
+**Total Source Files**: `6`  
+**Total Records Extracted**: `1864`  
 
 ---
 
@@ -12,6 +12,7 @@
 | File Name | Format | Size (Bytes) | SHA-256 (Truncated) | Status | Records Extracted |
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | `DEPI HELPER.xlsx` | `XLSX` | 238,618 | `b754f154508b...` | **extracted** | 268 |
+| `DEPI_Content_Approval_Review.xlsx` | `XLSX` | 354,144 | `b4729989c4fa...` | **extracted** | 1412 |
 | `FAQ final-Digilians.pdf` | `PDF` | 405,865 | `e8bfdb2b3739...` | **extracted** | 162 |
 | `FAQ LMS-English Exam.pdf` | `PDF` | 2,630,889 | `588de073bd28...` | **extracted** | 22 |
 | `tickets.json` | `JSON` | 2,508,027 | `844ea1dec812...` | **supported** | 0 |
@@ -25,23 +26,23 @@
 
 | Program Scope | Record Count | Notes |
 | :--- | :---: | :--- |
-| **DEBI** | 290 | Digital Egypt Pioneers Initiative |
+| **DEBI** | 1702 | Digital Egypt Pioneers Initiative |
 | **DIGILIANS** | 162 | Digilians Initiative |
 
 ### By Language
 
 | Language | Record Count | Percentage |
 | :--- | :---: | :---: |
-| `ar` | 411 | 90.9% |
-| `bilingual` | 17 | 3.8% |
-| `en` | 24 | 5.3% |
+| `ar` | 411 | 22.0% |
+| `bilingual` | 17 | 0.9% |
+| `en` | 1436 | 77.0% |
 
 ---
 
 ## 3. 🔍 Deduplication & Quality Analysis
 
-- **Exact Content Duplicates**: 8 sets detected across files/sheets.
-- **Records Flagged for Review**: 63 records.
+- **Exact Content Duplicates**: 10 sets detected across files/sheets.
+- **Records Flagged for Review**: 69 records.
 
 ### Duplicate Groups (Preserved with Review Flag)
 
@@ -70,6 +71,16 @@
 - **Hash** `777df2e36820...`: 2 occurrences of *"التراجع عن الاعتذار"*
   - FAQs/DEPI HELPER.xlsx (تصنيف الميل المرحلة 3)
   - FAQs/DEPI HELPER.xlsx (email)
+- **Hash** `9cec2b4570aa...`: 4 occurrences of *"Review only. Reviewer fields are intentionally blank; no record is approved by this workbook."*
+  - FAQs/DEPI_Content_Approval_Review.xlsx (Owner Approval Queue)
+  - FAQs/DEPI_Content_Approval_Review.xlsx (Manual Content Review)
+  - FAQs/DEPI_Content_Approval_Review.xlsx (Scope Decisions)
+  - FAQs/DEPI_Content_Approval_Review.xlsx (Out of Scope)
+- **Hash** `889ea5a6c1a8...`: 4 occurrences of *"Stable Source Record ID"*
+  - FAQs/DEPI_Content_Approval_Review.xlsx (Owner Approval Queue)
+  - FAQs/DEPI_Content_Approval_Review.xlsx (Manual Content Review)
+  - FAQs/DEPI_Content_Approval_Review.xlsx (Scope Decisions)
+  - FAQs/DEPI_Content_Approval_Review.xlsx (Out of Scope)
 
 ---
 

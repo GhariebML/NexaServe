@@ -1,0 +1,998 @@
+{
+  "title": "NexaServe stale FAQ source hash investigation and proposal",
+  "version": "1.0.0",
+  "status": "REVIEW_REQUIRED",
+  "generated_by": "scripts/investigate_stale_faq_hashes.py",
+  "source_inputs_read_only": true,
+  "original_source_files_modified": false,
+  "approval_workbook_modified": false,
+  "original_ledger_modified": false,
+  "database_modified": false,
+  "records_investigated": 10,
+  "resolved_by_correct_source_specific_recomputation": 9,
+  "hash_rebinding_proposals_pending_review": 1,
+  "unexplained_mismatches": 0,
+  "stale_in_current_fail_closed_reconciliation": 1,
+  "workbook_explicit_decisions": 0,
+  "source_ledger_entries": 0,
+  "approved_records": 0,
+  "records": [
+    {
+      "source_dataset": "FAQs/converted/faqs.json",
+      "source_record_id": "debi_depi_helper_xlsx_round_5_r076_0fa675cca1ed",
+      "source_filename": "FAQs/DEPI HELPER.xlsx",
+      "source_locator": {
+        "source_sheet": "ROUND 5",
+        "source_row": 76
+      },
+      "provenance_content_hash": "0fa675cca1ed03f953f468c819763002d91c3c7a75c891eb10862e5e4347978d",
+      "approval_queue_content_hash": "0fa675cca1ed03f953f468c819763002d91c3c7a75c891eb10862e5e4347978d",
+      "previous_reconciler_current_hash": "ba2f7a5e5a3fa52c5e40d8612c1ff477ec0272cec7e5981f78310bbaf7f532b4",
+      "current_canonical_record_hash": "0fa675cca1ed03f953f468c819763002d91c3c7a75c891eb10862e5e4347978d",
+      "proposed_content_hash": "0fa675cca1ed03f953f468c819763002d91c3c7a75c891eb10862e5e4347978d",
+      "original_source_file_sha256": {
+        "provenance_sha256": "b754f154508b1d7408772ed7d2a8159087c176f0c84d152c5a079405d0dd433d",
+        "current_sha256": "b754f154508b1d7408772ed7d2a8159087c176f0c84d152c5a079405d0dd433d",
+        "matches": true
+      },
+      "converted_dataset_sha256_current": "d17c4020618908b9646b3eaff83ebc042f3eed64464f2365922cc444213719f7",
+      "question_comparison": {
+        "provenance_snapshot_equals_current_record": true,
+        "direct_source_check": true,
+        "current_length": 13
+      },
+      "answer_comparison": {
+        "provenance_snapshot_equals_current_record": true,
+        "direct_source_check": true,
+        "current_length": 0
+      },
+      "content_comparison": {
+        "provenance_snapshot_equals_current_record": true,
+        "current_length": 13
+      },
+      "metadata_comparison_to_provenance": {
+        "language": true,
+        "record_type": true,
+        "category": true,
+        "source_file": true,
+        "source_page": true,
+        "source_sheet": true,
+        "source_row": true,
+        "source_url": true,
+        "source_status": true,
+        "source_attribution": true,
+        "needs_review": true,
+        "review_notes": true
+      },
+      "metadata_changed_since_provenance_snapshot": false,
+      "source_locator_unchanged": true,
+      "record_fingerprint_matches_canonical_json_snapshot": true,
+      "unicode_nfc_changes_question": false,
+      "unicode_nfc_changes_answer": false,
+      "canonicalization_details": {
+        "previous_reconciliation_basis": "normalize(question)||normalize(answer)",
+        "converter_basis": "normalize(question)||normalize(answer or content)",
+        "answer_was_empty": true,
+        "content_equals_question": true,
+        "question_component_sha256": "53426415d44ee9136cf1ad07e1fa1b99a3bbc22deb05d2122760993788271e68",
+        "previous_answer_component_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "converter_answer_or_content_component_sha256": "53426415d44ee9136cf1ad07e1fa1b99a3bbc22deb05d2122760993788271e68"
+      },
+      "proposed_provenance_patch": {
+        "source_record_id": "debi_depi_helper_xlsx_round_5_r076_0fa675cca1ed",
+        "source_original_file": "FAQs/DEPI HELPER.xlsx",
+        "source_locator": {
+          "source_sheet": "ROUND 5",
+          "source_row": 76
+        },
+        "original_content_sha256_source_preserved": "0fa675cca1ed03f953f468c819763002d91c3c7a75c891eb10862e5e4347978d",
+        "proposed_content_sha256_source": "0fa675cca1ed03f953f468c819763002d91c3c7a75c891eb10862e5e4347978d",
+        "proposed_content_sha256_recomputed_converter_compatible": "0fa675cca1ed03f953f468c819763002d91c3c7a75c891eb10862e5e4347978d",
+        "proposed_content_equivalence_hash": "0fa675cca1ed03f953f468c819763002d91c3c7a75c891eb10862e5e4347978d",
+        "proposal_applied": false,
+        "approval_decision": null,
+        "approval_inherited": false
+      },
+      "source_file_unchanged_since_provenance": true,
+      "direct_original_content_check": {
+        "verified": true,
+        "question_matches_source_row": true,
+        "answer_matches_source_row": true,
+        "source_row_cell_lengths": [
+          13,
+          0,
+          0,
+          0
+        ]
+      },
+      "disposition": "RESOLVED_RECOMPUTATION_RULE",
+      "diagnosis": "The original helper converter hashes normalized question plus answer-or-content. These records have an empty answer and content equal to the extracted question; the earlier reconciler hashed question plus empty answer. Raw source cells, Q/A, metadata snapshot, locator, and source-file SHA-256 match.",
+      "proposed_action": "correct_provenance_recomputed_hash_field_only",
+      "proposal_applied": false,
+      "approval_decision": null,
+      "approval_inherited": false,
+      "content_review_required": true,
+      "stable_id_suffix_matches_recorded_hash": true,
+      "stable_id_suffix_matches_proposed_hash": true
+    },
+    {
+      "source_dataset": "FAQs/converted/faqs.json",
+      "source_record_id": "debi_depi_helper_xlsx_round_4_r071_2ce31950da86",
+      "source_filename": "FAQs/DEPI HELPER.xlsx",
+      "source_locator": {
+        "source_sheet": "ROUND 4",
+        "source_row": 71
+      },
+      "provenance_content_hash": "2ce31950da8640c588c6289396b8196cdca5fd6b0dcac913317e933924b822ff",
+      "approval_queue_content_hash": "2ce31950da8640c588c6289396b8196cdca5fd6b0dcac913317e933924b822ff",
+      "previous_reconciler_current_hash": "3323950a24a0288057e0c14e39776ddd2f0dffa60b8da112d28454c2f0ee67dd",
+      "current_canonical_record_hash": "2ce31950da8640c588c6289396b8196cdca5fd6b0dcac913317e933924b822ff",
+      "proposed_content_hash": "2ce31950da8640c588c6289396b8196cdca5fd6b0dcac913317e933924b822ff",
+      "original_source_file_sha256": {
+        "provenance_sha256": "b754f154508b1d7408772ed7d2a8159087c176f0c84d152c5a079405d0dd433d",
+        "current_sha256": "b754f154508b1d7408772ed7d2a8159087c176f0c84d152c5a079405d0dd433d",
+        "matches": true
+      },
+      "converted_dataset_sha256_current": "d17c4020618908b9646b3eaff83ebc042f3eed64464f2365922cc444213719f7",
+      "question_comparison": {
+        "provenance_snapshot_equals_current_record": true,
+        "direct_source_check": true,
+        "current_length": 19
+      },
+      "answer_comparison": {
+        "provenance_snapshot_equals_current_record": true,
+        "direct_source_check": true,
+        "current_length": 0
+      },
+      "content_comparison": {
+        "provenance_snapshot_equals_current_record": true,
+        "current_length": 19
+      },
+      "metadata_comparison_to_provenance": {
+        "language": true,
+        "record_type": true,
+        "category": true,
+        "source_file": true,
+        "source_page": true,
+        "source_sheet": true,
+        "source_row": true,
+        "source_url": true,
+        "source_status": true,
+        "source_attribution": true,
+        "needs_review": true,
+        "review_notes": true
+      },
+      "metadata_changed_since_provenance_snapshot": false,
+      "source_locator_unchanged": true,
+      "record_fingerprint_matches_canonical_json_snapshot": true,
+      "unicode_nfc_changes_question": false,
+      "unicode_nfc_changes_answer": false,
+      "canonicalization_details": {
+        "previous_reconciliation_basis": "normalize(question)||normalize(answer)",
+        "converter_basis": "normalize(question)||normalize(answer or content)",
+        "answer_was_empty": true,
+        "content_equals_question": true,
+        "question_component_sha256": "aece40ce7f5464eaff7c0d095450abb84180a5c027bb90c15b0d0079b60e3bda",
+        "previous_answer_component_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "converter_answer_or_content_component_sha256": "aece40ce7f5464eaff7c0d095450abb84180a5c027bb90c15b0d0079b60e3bda"
+      },
+      "proposed_provenance_patch": {
+        "source_record_id": "debi_depi_helper_xlsx_round_4_r071_2ce31950da86",
+        "source_original_file": "FAQs/DEPI HELPER.xlsx",
+        "source_locator": {
+          "source_sheet": "ROUND 4",
+          "source_row": 71
+        },
+        "original_content_sha256_source_preserved": "2ce31950da8640c588c6289396b8196cdca5fd6b0dcac913317e933924b822ff",
+        "proposed_content_sha256_source": "2ce31950da8640c588c6289396b8196cdca5fd6b0dcac913317e933924b822ff",
+        "proposed_content_sha256_recomputed_converter_compatible": "2ce31950da8640c588c6289396b8196cdca5fd6b0dcac913317e933924b822ff",
+        "proposed_content_equivalence_hash": "2ce31950da8640c588c6289396b8196cdca5fd6b0dcac913317e933924b822ff",
+        "proposal_applied": false,
+        "approval_decision": null,
+        "approval_inherited": false
+      },
+      "source_file_unchanged_since_provenance": true,
+      "direct_original_content_check": {
+        "verified": true,
+        "question_matches_source_row": true,
+        "answer_matches_source_row": true,
+        "source_row_cell_lengths": [
+          20,
+          0,
+          0,
+          0
+        ]
+      },
+      "disposition": "RESOLVED_RECOMPUTATION_RULE",
+      "diagnosis": "The original helper converter hashes normalized question plus answer-or-content. These records have an empty answer and content equal to the extracted question; the earlier reconciler hashed question plus empty answer. Raw source cells, Q/A, metadata snapshot, locator, and source-file SHA-256 match.",
+      "proposed_action": "correct_provenance_recomputed_hash_field_only",
+      "proposal_applied": false,
+      "approval_decision": null,
+      "approval_inherited": false,
+      "content_review_required": true,
+      "stable_id_suffix_matches_recorded_hash": true,
+      "stable_id_suffix_matches_proposed_hash": true
+    },
+    {
+      "source_dataset": "FAQs/converted/faqs.json",
+      "source_record_id": "debi_depi_helper_xlsx_r4_cancel_r031_ec473cfc5c40",
+      "source_filename": "FAQs/DEPI HELPER.xlsx",
+      "source_locator": {
+        "source_sheet": "R4 CANCEL",
+        "source_row": 31
+      },
+      "provenance_content_hash": "ec473cfc5c40cb5569f8dad338a9333c03e1939517d6076b5a9fea7feae10967",
+      "approval_queue_content_hash": "ec473cfc5c40cb5569f8dad338a9333c03e1939517d6076b5a9fea7feae10967",
+      "previous_reconciler_current_hash": "5314344712fd6a9ee9b7521d9924d9f55e39fd58f4cf2d7fc12189cf4ae863a1",
+      "current_canonical_record_hash": "ec473cfc5c40cb5569f8dad338a9333c03e1939517d6076b5a9fea7feae10967",
+      "proposed_content_hash": "ec473cfc5c40cb5569f8dad338a9333c03e1939517d6076b5a9fea7feae10967",
+      "original_source_file_sha256": {
+        "provenance_sha256": "b754f154508b1d7408772ed7d2a8159087c176f0c84d152c5a079405d0dd433d",
+        "current_sha256": "b754f154508b1d7408772ed7d2a8159087c176f0c84d152c5a079405d0dd433d",
+        "matches": true
+      },
+      "converted_dataset_sha256_current": "d17c4020618908b9646b3eaff83ebc042f3eed64464f2365922cc444213719f7",
+      "question_comparison": {
+        "provenance_snapshot_equals_current_record": true,
+        "direct_source_check": true,
+        "current_length": 2
+      },
+      "answer_comparison": {
+        "provenance_snapshot_equals_current_record": true,
+        "direct_source_check": true,
+        "current_length": 0
+      },
+      "content_comparison": {
+        "provenance_snapshot_equals_current_record": true,
+        "current_length": 2
+      },
+      "metadata_comparison_to_provenance": {
+        "language": true,
+        "record_type": true,
+        "category": true,
+        "source_file": true,
+        "source_page": true,
+        "source_sheet": true,
+        "source_row": true,
+        "source_url": true,
+        "source_status": true,
+        "source_attribution": true,
+        "needs_review": true,
+        "review_notes": true
+      },
+      "metadata_changed_since_provenance_snapshot": false,
+      "source_locator_unchanged": true,
+      "record_fingerprint_matches_canonical_json_snapshot": true,
+      "unicode_nfc_changes_question": false,
+      "unicode_nfc_changes_answer": false,
+      "canonicalization_details": {
+        "previous_reconciliation_basis": "normalize(question)||normalize(answer)",
+        "converter_basis": "normalize(question)||normalize(answer or content)",
+        "answer_was_empty": true,
+        "content_equals_question": true,
+        "question_component_sha256": "d9a37366a195e2efef8c64a72b24d75e4e7eb395cc56f1bbcdf3bf03e48cd909",
+        "previous_answer_component_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "converter_answer_or_content_component_sha256": "d9a37366a195e2efef8c64a72b24d75e4e7eb395cc56f1bbcdf3bf03e48cd909"
+      },
+      "proposed_provenance_patch": {
+        "source_record_id": "debi_depi_helper_xlsx_r4_cancel_r031_ec473cfc5c40",
+        "source_original_file": "FAQs/DEPI HELPER.xlsx",
+        "source_locator": {
+          "source_sheet": "R4 CANCEL",
+          "source_row": 31
+        },
+        "original_content_sha256_source_preserved": "ec473cfc5c40cb5569f8dad338a9333c03e1939517d6076b5a9fea7feae10967",
+        "proposed_content_sha256_source": "ec473cfc5c40cb5569f8dad338a9333c03e1939517d6076b5a9fea7feae10967",
+        "proposed_content_sha256_recomputed_converter_compatible": "ec473cfc5c40cb5569f8dad338a9333c03e1939517d6076b5a9fea7feae10967",
+        "proposed_content_equivalence_hash": "ec473cfc5c40cb5569f8dad338a9333c03e1939517d6076b5a9fea7feae10967",
+        "proposal_applied": false,
+        "approval_decision": null,
+        "approval_inherited": false
+      },
+      "source_file_unchanged_since_provenance": true,
+      "direct_original_content_check": {
+        "verified": true,
+        "question_matches_source_row": true,
+        "answer_matches_source_row": true,
+        "source_row_cell_lengths": [
+          2,
+          0,
+          0,
+          0
+        ]
+      },
+      "disposition": "RESOLVED_RECOMPUTATION_RULE",
+      "diagnosis": "The original helper converter hashes normalized question plus answer-or-content. These records have an empty answer and content equal to the extracted question; the earlier reconciler hashed question plus empty answer. Raw source cells, Q/A, metadata snapshot, locator, and source-file SHA-256 match.",
+      "proposed_action": "correct_provenance_recomputed_hash_field_only",
+      "proposal_applied": false,
+      "approval_decision": null,
+      "approval_inherited": false,
+      "content_review_required": true,
+      "stable_id_suffix_matches_recorded_hash": true,
+      "stable_id_suffix_matches_proposed_hash": true
+    },
+    {
+      "source_dataset": "FAQs/converted/faqs.json",
+      "source_record_id": "debi_depi_helper_xlsx_3_r015_05cc34e0a2b7",
+      "source_filename": "FAQs/DEPI HELPER.xlsx",
+      "source_locator": {
+        "source_sheet": "تصنيف الميل المرحلة 3",
+        "source_row": 15
+      },
+      "provenance_content_hash": "05cc34e0a2b721a27a932c31b60d7059450b99a78b27be9125b9603526045482",
+      "approval_queue_content_hash": "05cc34e0a2b721a27a932c31b60d7059450b99a78b27be9125b9603526045482",
+      "previous_reconciler_current_hash": "d1259123bb8169e0a2e0cc7a2e682fddf723fc1cc9dc5de8b8c58d0f563bea06",
+      "current_canonical_record_hash": "05cc34e0a2b721a27a932c31b60d7059450b99a78b27be9125b9603526045482",
+      "proposed_content_hash": "05cc34e0a2b721a27a932c31b60d7059450b99a78b27be9125b9603526045482",
+      "original_source_file_sha256": {
+        "provenance_sha256": "b754f154508b1d7408772ed7d2a8159087c176f0c84d152c5a079405d0dd433d",
+        "current_sha256": "b754f154508b1d7408772ed7d2a8159087c176f0c84d152c5a079405d0dd433d",
+        "matches": true
+      },
+      "converted_dataset_sha256_current": "d17c4020618908b9646b3eaff83ebc042f3eed64464f2365922cc444213719f7",
+      "question_comparison": {
+        "provenance_snapshot_equals_current_record": true,
+        "direct_source_check": true,
+        "current_length": 42
+      },
+      "answer_comparison": {
+        "provenance_snapshot_equals_current_record": true,
+        "direct_source_check": true,
+        "current_length": 0
+      },
+      "content_comparison": {
+        "provenance_snapshot_equals_current_record": true,
+        "current_length": 42
+      },
+      "metadata_comparison_to_provenance": {
+        "language": true,
+        "record_type": true,
+        "category": true,
+        "source_file": true,
+        "source_page": true,
+        "source_sheet": true,
+        "source_row": true,
+        "source_url": true,
+        "source_status": true,
+        "source_attribution": true,
+        "needs_review": true,
+        "review_notes": true
+      },
+      "metadata_changed_since_provenance_snapshot": false,
+      "source_locator_unchanged": true,
+      "record_fingerprint_matches_canonical_json_snapshot": true,
+      "unicode_nfc_changes_question": false,
+      "unicode_nfc_changes_answer": false,
+      "canonicalization_details": {
+        "previous_reconciliation_basis": "normalize(question)||normalize(answer)",
+        "converter_basis": "normalize(question)||normalize(answer or content)",
+        "answer_was_empty": true,
+        "content_equals_question": true,
+        "question_component_sha256": "e645a896f648d4e780de62442313e0666c69d031c30e9718d305f664e180fbd5",
+        "previous_answer_component_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "converter_answer_or_content_component_sha256": "e645a896f648d4e780de62442313e0666c69d031c30e9718d305f664e180fbd5"
+      },
+      "proposed_provenance_patch": {
+        "source_record_id": "debi_depi_helper_xlsx_3_r015_05cc34e0a2b7",
+        "source_original_file": "FAQs/DEPI HELPER.xlsx",
+        "source_locator": {
+          "source_sheet": "تصنيف الميل المرحلة 3",
+          "source_row": 15
+        },
+        "original_content_sha256_source_preserved": "05cc34e0a2b721a27a932c31b60d7059450b99a78b27be9125b9603526045482",
+        "proposed_content_sha256_source": "05cc34e0a2b721a27a932c31b60d7059450b99a78b27be9125b9603526045482",
+        "proposed_content_sha256_recomputed_converter_compatible": "05cc34e0a2b721a27a932c31b60d7059450b99a78b27be9125b9603526045482",
+        "proposed_content_equivalence_hash": "05cc34e0a2b721a27a932c31b60d7059450b99a78b27be9125b9603526045482",
+        "proposal_applied": false,
+        "approval_decision": null,
+        "approval_inherited": false
+      },
+      "source_file_unchanged_since_provenance": true,
+      "direct_original_content_check": {
+        "verified": true,
+        "question_matches_source_row": true,
+        "answer_matches_source_row": true,
+        "source_row_cell_lengths": [
+          4,
+          42,
+          0,
+          0
+        ]
+      },
+      "disposition": "RESOLVED_RECOMPUTATION_RULE",
+      "diagnosis": "The original helper converter hashes normalized question plus answer-or-content. These records have an empty answer and content equal to the extracted question; the earlier reconciler hashed question plus empty answer. Raw source cells, Q/A, metadata snapshot, locator, and source-file SHA-256 match.",
+      "proposed_action": "correct_provenance_recomputed_hash_field_only",
+      "proposal_applied": false,
+      "approval_decision": null,
+      "approval_inherited": false,
+      "content_review_required": true,
+      "stable_id_suffix_matches_recorded_hash": true,
+      "stable_id_suffix_matches_proposed_hash": true
+    },
+    {
+      "source_dataset": "FAQs/converted/faqs.json",
+      "source_record_id": "debi_depi_helper_xlsx_3_r022_9b6427177ac0",
+      "source_filename": "FAQs/DEPI HELPER.xlsx",
+      "source_locator": {
+        "source_sheet": "تصنيف الميل المرحلة 3",
+        "source_row": 22
+      },
+      "provenance_content_hash": "9b6427177ac08985e5487b669452e02f04b84742d92681fd59990de3d711542f",
+      "approval_queue_content_hash": "9b6427177ac08985e5487b669452e02f04b84742d92681fd59990de3d711542f",
+      "previous_reconciler_current_hash": "b47c01499bc74441812dbb4d77c99e7018843e3346312e38cdea22b759509cc8",
+      "current_canonical_record_hash": "9b6427177ac08985e5487b669452e02f04b84742d92681fd59990de3d711542f",
+      "proposed_content_hash": "9b6427177ac08985e5487b669452e02f04b84742d92681fd59990de3d711542f",
+      "original_source_file_sha256": {
+        "provenance_sha256": "b754f154508b1d7408772ed7d2a8159087c176f0c84d152c5a079405d0dd433d",
+        "current_sha256": "b754f154508b1d7408772ed7d2a8159087c176f0c84d152c5a079405d0dd433d",
+        "matches": true
+      },
+      "converted_dataset_sha256_current": "d17c4020618908b9646b3eaff83ebc042f3eed64464f2365922cc444213719f7",
+      "question_comparison": {
+        "provenance_snapshot_equals_current_record": true,
+        "direct_source_check": true,
+        "current_length": 43
+      },
+      "answer_comparison": {
+        "provenance_snapshot_equals_current_record": true,
+        "direct_source_check": true,
+        "current_length": 0
+      },
+      "content_comparison": {
+        "provenance_snapshot_equals_current_record": true,
+        "current_length": 43
+      },
+      "metadata_comparison_to_provenance": {
+        "language": true,
+        "record_type": true,
+        "category": true,
+        "source_file": true,
+        "source_page": true,
+        "source_sheet": true,
+        "source_row": true,
+        "source_url": true,
+        "source_status": true,
+        "source_attribution": true,
+        "needs_review": true,
+        "review_notes": true
+      },
+      "metadata_changed_since_provenance_snapshot": false,
+      "source_locator_unchanged": true,
+      "record_fingerprint_matches_canonical_json_snapshot": true,
+      "unicode_nfc_changes_question": false,
+      "unicode_nfc_changes_answer": false,
+      "canonicalization_details": {
+        "previous_reconciliation_basis": "normalize(question)||normalize(answer)",
+        "converter_basis": "normalize(question)||normalize(answer or content)",
+        "answer_was_empty": true,
+        "content_equals_question": true,
+        "question_component_sha256": "1abe708e07bf364218ff6820864b49ea9d0b0357dd4628a99cd9c684a9619dba",
+        "previous_answer_component_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "converter_answer_or_content_component_sha256": "1abe708e07bf364218ff6820864b49ea9d0b0357dd4628a99cd9c684a9619dba"
+      },
+      "proposed_provenance_patch": {
+        "source_record_id": "debi_depi_helper_xlsx_3_r022_9b6427177ac0",
+        "source_original_file": "FAQs/DEPI HELPER.xlsx",
+        "source_locator": {
+          "source_sheet": "تصنيف الميل المرحلة 3",
+          "source_row": 22
+        },
+        "original_content_sha256_source_preserved": "9b6427177ac08985e5487b669452e02f04b84742d92681fd59990de3d711542f",
+        "proposed_content_sha256_source": "9b6427177ac08985e5487b669452e02f04b84742d92681fd59990de3d711542f",
+        "proposed_content_sha256_recomputed_converter_compatible": "9b6427177ac08985e5487b669452e02f04b84742d92681fd59990de3d711542f",
+        "proposed_content_equivalence_hash": "9b6427177ac08985e5487b669452e02f04b84742d92681fd59990de3d711542f",
+        "proposal_applied": false,
+        "approval_decision": null,
+        "approval_inherited": false
+      },
+      "source_file_unchanged_since_provenance": true,
+      "direct_original_content_check": {
+        "verified": true,
+        "question_matches_source_row": true,
+        "answer_matches_source_row": true,
+        "source_row_cell_lengths": [
+          0,
+          44,
+          0,
+          0
+        ]
+      },
+      "disposition": "RESOLVED_RECOMPUTATION_RULE",
+      "diagnosis": "The original helper converter hashes normalized question plus answer-or-content. These records have an empty answer and content equal to the extracted question; the earlier reconciler hashed question plus empty answer. Raw source cells, Q/A, metadata snapshot, locator, and source-file SHA-256 match.",
+      "proposed_action": "correct_provenance_recomputed_hash_field_only",
+      "proposal_applied": false,
+      "approval_decision": null,
+      "approval_inherited": false,
+      "content_review_required": true,
+      "stable_id_suffix_matches_recorded_hash": true,
+      "stable_id_suffix_matches_proposed_hash": true
+    },
+    {
+      "source_dataset": "FAQs/converted/faqs.json",
+      "source_record_id": "debi_depi_helper_xlsx_email_r010_cfb73d767155",
+      "source_filename": "FAQs/DEPI HELPER.xlsx",
+      "source_locator": {
+        "source_sheet": "email",
+        "source_row": 10
+      },
+      "provenance_content_hash": "cfb73d767155a9050537b95c103e39db430e0f33e86e558e20b0731053b125ee",
+      "approval_queue_content_hash": "cfb73d767155a9050537b95c103e39db430e0f33e86e558e20b0731053b125ee",
+      "previous_reconciler_current_hash": "1b3f77c952503024bac8d9486b080e6582b08001920158636f47906528a5b009",
+      "current_canonical_record_hash": "cfb73d767155a9050537b95c103e39db430e0f33e86e558e20b0731053b125ee",
+      "proposed_content_hash": "cfb73d767155a9050537b95c103e39db430e0f33e86e558e20b0731053b125ee",
+      "original_source_file_sha256": {
+        "provenance_sha256": "b754f154508b1d7408772ed7d2a8159087c176f0c84d152c5a079405d0dd433d",
+        "current_sha256": "b754f154508b1d7408772ed7d2a8159087c176f0c84d152c5a079405d0dd433d",
+        "matches": true
+      },
+      "converted_dataset_sha256_current": "d17c4020618908b9646b3eaff83ebc042f3eed64464f2365922cc444213719f7",
+      "question_comparison": {
+        "provenance_snapshot_equals_current_record": true,
+        "direct_source_check": true,
+        "current_length": 64
+      },
+      "answer_comparison": {
+        "provenance_snapshot_equals_current_record": true,
+        "direct_source_check": true,
+        "current_length": 0
+      },
+      "content_comparison": {
+        "provenance_snapshot_equals_current_record": true,
+        "current_length": 64
+      },
+      "metadata_comparison_to_provenance": {
+        "language": true,
+        "record_type": true,
+        "category": true,
+        "source_file": true,
+        "source_page": true,
+        "source_sheet": true,
+        "source_row": true,
+        "source_url": true,
+        "source_status": true,
+        "source_attribution": true,
+        "needs_review": true,
+        "review_notes": true
+      },
+      "metadata_changed_since_provenance_snapshot": false,
+      "source_locator_unchanged": true,
+      "record_fingerprint_matches_canonical_json_snapshot": true,
+      "unicode_nfc_changes_question": false,
+      "unicode_nfc_changes_answer": false,
+      "canonicalization_details": {
+        "previous_reconciliation_basis": "normalize(question)||normalize(answer)",
+        "converter_basis": "normalize(question)||normalize(answer or content)",
+        "answer_was_empty": true,
+        "content_equals_question": true,
+        "question_component_sha256": "667e8c32f35d57f651dbfd3f3d6b5612f080f61351eb1c125ad96748be8ad679",
+        "previous_answer_component_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "converter_answer_or_content_component_sha256": "667e8c32f35d57f651dbfd3f3d6b5612f080f61351eb1c125ad96748be8ad679"
+      },
+      "proposed_provenance_patch": {
+        "source_record_id": "debi_depi_helper_xlsx_email_r010_cfb73d767155",
+        "source_original_file": "FAQs/DEPI HELPER.xlsx",
+        "source_locator": {
+          "source_sheet": "email",
+          "source_row": 10
+        },
+        "original_content_sha256_source_preserved": "cfb73d767155a9050537b95c103e39db430e0f33e86e558e20b0731053b125ee",
+        "proposed_content_sha256_source": "cfb73d767155a9050537b95c103e39db430e0f33e86e558e20b0731053b125ee",
+        "proposed_content_sha256_recomputed_converter_compatible": "cfb73d767155a9050537b95c103e39db430e0f33e86e558e20b0731053b125ee",
+        "proposed_content_equivalence_hash": "cfb73d767155a9050537b95c103e39db430e0f33e86e558e20b0731053b125ee",
+        "proposal_applied": false,
+        "approval_decision": null,
+        "approval_inherited": false
+      },
+      "source_file_unchanged_since_provenance": true,
+      "direct_original_content_check": {
+        "verified": true,
+        "question_matches_source_row": true,
+        "answer_matches_source_row": true,
+        "source_row_cell_lengths": [
+          66,
+          0,
+          0,
+          0
+        ]
+      },
+      "disposition": "RESOLVED_RECOMPUTATION_RULE",
+      "diagnosis": "The original helper converter hashes normalized question plus answer-or-content. These records have an empty answer and content equal to the extracted question; the earlier reconciler hashed question plus empty answer. Raw source cells, Q/A, metadata snapshot, locator, and source-file SHA-256 match.",
+      "proposed_action": "correct_provenance_recomputed_hash_field_only",
+      "proposal_applied": false,
+      "approval_decision": null,
+      "approval_inherited": false,
+      "content_review_required": true,
+      "stable_id_suffix_matches_recorded_hash": true,
+      "stable_id_suffix_matches_proposed_hash": true
+    },
+    {
+      "source_dataset": "FAQs/converted/faqs.json",
+      "source_record_id": "debi_depi_helper_xlsx_email_r014_0be6cebc0ca3",
+      "source_filename": "FAQs/DEPI HELPER.xlsx",
+      "source_locator": {
+        "source_sheet": "email",
+        "source_row": 14
+      },
+      "provenance_content_hash": "0be6cebc0ca3acc3037edc44aeaa8ec8029d01d246785810c6733543d907e1ec",
+      "approval_queue_content_hash": "0be6cebc0ca3acc3037edc44aeaa8ec8029d01d246785810c6733543d907e1ec",
+      "previous_reconciler_current_hash": "335322483dfa56cdf0f9cc3fac3adc713814aef124892f8b0007f87ef1c06c60",
+      "current_canonical_record_hash": "0be6cebc0ca3acc3037edc44aeaa8ec8029d01d246785810c6733543d907e1ec",
+      "proposed_content_hash": "0be6cebc0ca3acc3037edc44aeaa8ec8029d01d246785810c6733543d907e1ec",
+      "original_source_file_sha256": {
+        "provenance_sha256": "b754f154508b1d7408772ed7d2a8159087c176f0c84d152c5a079405d0dd433d",
+        "current_sha256": "b754f154508b1d7408772ed7d2a8159087c176f0c84d152c5a079405d0dd433d",
+        "matches": true
+      },
+      "converted_dataset_sha256_current": "d17c4020618908b9646b3eaff83ebc042f3eed64464f2365922cc444213719f7",
+      "question_comparison": {
+        "provenance_snapshot_equals_current_record": true,
+        "direct_source_check": true,
+        "current_length": 36
+      },
+      "answer_comparison": {
+        "provenance_snapshot_equals_current_record": true,
+        "direct_source_check": true,
+        "current_length": 0
+      },
+      "content_comparison": {
+        "provenance_snapshot_equals_current_record": true,
+        "current_length": 36
+      },
+      "metadata_comparison_to_provenance": {
+        "language": true,
+        "record_type": true,
+        "category": true,
+        "source_file": true,
+        "source_page": true,
+        "source_sheet": true,
+        "source_row": true,
+        "source_url": true,
+        "source_status": true,
+        "source_attribution": true,
+        "needs_review": true,
+        "review_notes": true
+      },
+      "metadata_changed_since_provenance_snapshot": false,
+      "source_locator_unchanged": true,
+      "record_fingerprint_matches_canonical_json_snapshot": true,
+      "unicode_nfc_changes_question": false,
+      "unicode_nfc_changes_answer": false,
+      "canonicalization_details": {
+        "previous_reconciliation_basis": "normalize(question)||normalize(answer)",
+        "converter_basis": "normalize(question)||normalize(answer or content)",
+        "answer_was_empty": true,
+        "content_equals_question": true,
+        "question_component_sha256": "7324776db464d9442c0adbe9aef18580abe4d193bc48dd1a8de63fd3fc414008",
+        "previous_answer_component_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "converter_answer_or_content_component_sha256": "7324776db464d9442c0adbe9aef18580abe4d193bc48dd1a8de63fd3fc414008"
+      },
+      "proposed_provenance_patch": {
+        "source_record_id": "debi_depi_helper_xlsx_email_r014_0be6cebc0ca3",
+        "source_original_file": "FAQs/DEPI HELPER.xlsx",
+        "source_locator": {
+          "source_sheet": "email",
+          "source_row": 14
+        },
+        "original_content_sha256_source_preserved": "0be6cebc0ca3acc3037edc44aeaa8ec8029d01d246785810c6733543d907e1ec",
+        "proposed_content_sha256_source": "0be6cebc0ca3acc3037edc44aeaa8ec8029d01d246785810c6733543d907e1ec",
+        "proposed_content_sha256_recomputed_converter_compatible": "0be6cebc0ca3acc3037edc44aeaa8ec8029d01d246785810c6733543d907e1ec",
+        "proposed_content_equivalence_hash": "0be6cebc0ca3acc3037edc44aeaa8ec8029d01d246785810c6733543d907e1ec",
+        "proposal_applied": false,
+        "approval_decision": null,
+        "approval_inherited": false
+      },
+      "source_file_unchanged_since_provenance": true,
+      "direct_original_content_check": {
+        "verified": true,
+        "question_matches_source_row": true,
+        "answer_matches_source_row": true,
+        "source_row_cell_lengths": [
+          37,
+          0,
+          0,
+          0
+        ]
+      },
+      "disposition": "RESOLVED_RECOMPUTATION_RULE",
+      "diagnosis": "The original helper converter hashes normalized question plus answer-or-content. These records have an empty answer and content equal to the extracted question; the earlier reconciler hashed question plus empty answer. Raw source cells, Q/A, metadata snapshot, locator, and source-file SHA-256 match.",
+      "proposed_action": "correct_provenance_recomputed_hash_field_only",
+      "proposal_applied": false,
+      "approval_decision": null,
+      "approval_inherited": false,
+      "content_review_required": true,
+      "stable_id_suffix_matches_recorded_hash": true,
+      "stable_id_suffix_matches_proposed_hash": true
+    },
+    {
+      "source_dataset": "FAQs/converted/faqs.json",
+      "source_record_id": "debi_depi_helper_xlsx_email_r016_7f96ad6ebf5c",
+      "source_filename": "FAQs/DEPI HELPER.xlsx",
+      "source_locator": {
+        "source_sheet": "email",
+        "source_row": 16
+      },
+      "provenance_content_hash": "7f96ad6ebf5cce60e921f10db3a77555fe53925f9764bf49960c9038d3e74429",
+      "approval_queue_content_hash": "7f96ad6ebf5cce60e921f10db3a77555fe53925f9764bf49960c9038d3e74429",
+      "previous_reconciler_current_hash": "bfc40e8e10561ba643092441fbe88443ee29f8d2545a4077d090b4a1bd0e9ea9",
+      "current_canonical_record_hash": "7f96ad6ebf5cce60e921f10db3a77555fe53925f9764bf49960c9038d3e74429",
+      "proposed_content_hash": "7f96ad6ebf5cce60e921f10db3a77555fe53925f9764bf49960c9038d3e74429",
+      "original_source_file_sha256": {
+        "provenance_sha256": "b754f154508b1d7408772ed7d2a8159087c176f0c84d152c5a079405d0dd433d",
+        "current_sha256": "b754f154508b1d7408772ed7d2a8159087c176f0c84d152c5a079405d0dd433d",
+        "matches": true
+      },
+      "converted_dataset_sha256_current": "d17c4020618908b9646b3eaff83ebc042f3eed64464f2365922cc444213719f7",
+      "question_comparison": {
+        "provenance_snapshot_equals_current_record": true,
+        "direct_source_check": true,
+        "current_length": 39
+      },
+      "answer_comparison": {
+        "provenance_snapshot_equals_current_record": true,
+        "direct_source_check": true,
+        "current_length": 0
+      },
+      "content_comparison": {
+        "provenance_snapshot_equals_current_record": true,
+        "current_length": 39
+      },
+      "metadata_comparison_to_provenance": {
+        "language": true,
+        "record_type": true,
+        "category": true,
+        "source_file": true,
+        "source_page": true,
+        "source_sheet": true,
+        "source_row": true,
+        "source_url": true,
+        "source_status": true,
+        "source_attribution": true,
+        "needs_review": true,
+        "review_notes": true
+      },
+      "metadata_changed_since_provenance_snapshot": false,
+      "source_locator_unchanged": true,
+      "record_fingerprint_matches_canonical_json_snapshot": true,
+      "unicode_nfc_changes_question": false,
+      "unicode_nfc_changes_answer": false,
+      "canonicalization_details": {
+        "previous_reconciliation_basis": "normalize(question)||normalize(answer)",
+        "converter_basis": "normalize(question)||normalize(answer or content)",
+        "answer_was_empty": true,
+        "content_equals_question": true,
+        "question_component_sha256": "e494e80e2c889f23ccf103ea1d29db2158d1f841684003a8090204d3976f0f35",
+        "previous_answer_component_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "converter_answer_or_content_component_sha256": "e494e80e2c889f23ccf103ea1d29db2158d1f841684003a8090204d3976f0f35"
+      },
+      "proposed_provenance_patch": {
+        "source_record_id": "debi_depi_helper_xlsx_email_r016_7f96ad6ebf5c",
+        "source_original_file": "FAQs/DEPI HELPER.xlsx",
+        "source_locator": {
+          "source_sheet": "email",
+          "source_row": 16
+        },
+        "original_content_sha256_source_preserved": "7f96ad6ebf5cce60e921f10db3a77555fe53925f9764bf49960c9038d3e74429",
+        "proposed_content_sha256_source": "7f96ad6ebf5cce60e921f10db3a77555fe53925f9764bf49960c9038d3e74429",
+        "proposed_content_sha256_recomputed_converter_compatible": "7f96ad6ebf5cce60e921f10db3a77555fe53925f9764bf49960c9038d3e74429",
+        "proposed_content_equivalence_hash": "7f96ad6ebf5cce60e921f10db3a77555fe53925f9764bf49960c9038d3e74429",
+        "proposal_applied": false,
+        "approval_decision": null,
+        "approval_inherited": false
+      },
+      "source_file_unchanged_since_provenance": true,
+      "direct_original_content_check": {
+        "verified": true,
+        "question_matches_source_row": true,
+        "answer_matches_source_row": true,
+        "source_row_cell_lengths": [
+          39,
+          0,
+          0,
+          0
+        ]
+      },
+      "disposition": "RESOLVED_RECOMPUTATION_RULE",
+      "diagnosis": "The original helper converter hashes normalized question plus answer-or-content. These records have an empty answer and content equal to the extracted question; the earlier reconciler hashed question plus empty answer. Raw source cells, Q/A, metadata snapshot, locator, and source-file SHA-256 match.",
+      "proposed_action": "correct_provenance_recomputed_hash_field_only",
+      "proposal_applied": false,
+      "approval_decision": null,
+      "approval_inherited": false,
+      "content_review_required": true,
+      "stable_id_suffix_matches_recorded_hash": true,
+      "stable_id_suffix_matches_proposed_hash": true
+    },
+    {
+      "source_dataset": "FAQs/converted/faqs.json",
+      "source_record_id": "debi_depi_helper_xlsx_email_r022_621ea021ecf4",
+      "source_filename": "FAQs/DEPI HELPER.xlsx",
+      "source_locator": {
+        "source_sheet": "email",
+        "source_row": 22
+      },
+      "provenance_content_hash": "621ea021ecf47481043397efaf9ee38aafc03960f9e4438e3d2853823315583a",
+      "approval_queue_content_hash": "621ea021ecf47481043397efaf9ee38aafc03960f9e4438e3d2853823315583a",
+      "previous_reconciler_current_hash": "eaf804f6c0fb85ce05991d9f011efe980c55f31838370e9b43f35a867f8ba210",
+      "current_canonical_record_hash": "621ea021ecf47481043397efaf9ee38aafc03960f9e4438e3d2853823315583a",
+      "proposed_content_hash": "621ea021ecf47481043397efaf9ee38aafc03960f9e4438e3d2853823315583a",
+      "original_source_file_sha256": {
+        "provenance_sha256": "b754f154508b1d7408772ed7d2a8159087c176f0c84d152c5a079405d0dd433d",
+        "current_sha256": "b754f154508b1d7408772ed7d2a8159087c176f0c84d152c5a079405d0dd433d",
+        "matches": true
+      },
+      "converted_dataset_sha256_current": "d17c4020618908b9646b3eaff83ebc042f3eed64464f2365922cc444213719f7",
+      "question_comparison": {
+        "provenance_snapshot_equals_current_record": true,
+        "direct_source_check": true,
+        "current_length": 18
+      },
+      "answer_comparison": {
+        "provenance_snapshot_equals_current_record": true,
+        "direct_source_check": true,
+        "current_length": 0
+      },
+      "content_comparison": {
+        "provenance_snapshot_equals_current_record": true,
+        "current_length": 18
+      },
+      "metadata_comparison_to_provenance": {
+        "language": true,
+        "record_type": true,
+        "category": true,
+        "source_file": true,
+        "source_page": true,
+        "source_sheet": true,
+        "source_row": true,
+        "source_url": true,
+        "source_status": true,
+        "source_attribution": true,
+        "needs_review": true,
+        "review_notes": true
+      },
+      "metadata_changed_since_provenance_snapshot": false,
+      "source_locator_unchanged": true,
+      "record_fingerprint_matches_canonical_json_snapshot": true,
+      "unicode_nfc_changes_question": false,
+      "unicode_nfc_changes_answer": false,
+      "canonicalization_details": {
+        "previous_reconciliation_basis": "normalize(question)||normalize(answer)",
+        "converter_basis": "normalize(question)||normalize(answer or content)",
+        "answer_was_empty": true,
+        "content_equals_question": true,
+        "question_component_sha256": "b86c57c7d8c994fe99ff1ef141d6005b82fe75e7708e8e6b8a919d2dd729f073",
+        "previous_answer_component_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "converter_answer_or_content_component_sha256": "b86c57c7d8c994fe99ff1ef141d6005b82fe75e7708e8e6b8a919d2dd729f073"
+      },
+      "proposed_provenance_patch": {
+        "source_record_id": "debi_depi_helper_xlsx_email_r022_621ea021ecf4",
+        "source_original_file": "FAQs/DEPI HELPER.xlsx",
+        "source_locator": {
+          "source_sheet": "email",
+          "source_row": 22
+        },
+        "original_content_sha256_source_preserved": "621ea021ecf47481043397efaf9ee38aafc03960f9e4438e3d2853823315583a",
+        "proposed_content_sha256_source": "621ea021ecf47481043397efaf9ee38aafc03960f9e4438e3d2853823315583a",
+        "proposed_content_sha256_recomputed_converter_compatible": "621ea021ecf47481043397efaf9ee38aafc03960f9e4438e3d2853823315583a",
+        "proposed_content_equivalence_hash": "621ea021ecf47481043397efaf9ee38aafc03960f9e4438e3d2853823315583a",
+        "proposal_applied": false,
+        "approval_decision": null,
+        "approval_inherited": false
+      },
+      "source_file_unchanged_since_provenance": true,
+      "direct_original_content_check": {
+        "verified": true,
+        "question_matches_source_row": true,
+        "answer_matches_source_row": true,
+        "source_row_cell_lengths": [
+          18,
+          0,
+          0,
+          0
+        ]
+      },
+      "disposition": "RESOLVED_RECOMPUTATION_RULE",
+      "diagnosis": "The original helper converter hashes normalized question plus answer-or-content. These records have an empty answer and content equal to the extracted question; the earlier reconciler hashed question plus empty answer. Raw source cells, Q/A, metadata snapshot, locator, and source-file SHA-256 match.",
+      "proposed_action": "correct_provenance_recomputed_hash_field_only",
+      "proposal_applied": false,
+      "approval_decision": null,
+      "approval_inherited": false,
+      "content_review_required": true,
+      "stable_id_suffix_matches_recorded_hash": true,
+      "stable_id_suffix_matches_proposed_hash": true
+    },
+    {
+      "source_dataset": "FAQs/converted/faqs.json",
+      "source_record_id": "debi_lms_exam_pdf_support_contact_note_f0057b3ff593",
+      "source_filename": "FAQs/FAQ LMS-English Exam.pdf",
+      "source_locator": {
+        "source_page": 10
+      },
+      "provenance_content_hash": "f0057b3ff593a29b5717d9e7982cd20f7bd9e19da9411bf2724536ed300f5f5e",
+      "approval_queue_content_hash": "f0057b3ff593a29b5717d9e7982cd20f7bd9e19da9411bf2724536ed300f5f5e",
+      "previous_reconciler_current_hash": "d8b2e7240f39daa73a9aac5cfeba1eff1a6190453b4cb7940e32889911934f8d",
+      "current_canonical_record_hash": "d8b2e7240f39daa73a9aac5cfeba1eff1a6190453b4cb7940e32889911934f8d",
+      "proposed_content_hash": "d8b2e7240f39daa73a9aac5cfeba1eff1a6190453b4cb7940e32889911934f8d",
+      "original_source_file_sha256": {
+        "provenance_sha256": "588de073bd28b47f36c573f883b35c0cb68f11cf43ed8b9f273388da8ee3002b",
+        "current_sha256": "588de073bd28b47f36c573f883b35c0cb68f11cf43ed8b9f273388da8ee3002b",
+        "matches": true
+      },
+      "converted_dataset_sha256_current": "d17c4020618908b9646b3eaff83ebc042f3eed64464f2365922cc444213719f7",
+      "question_comparison": {
+        "provenance_snapshot_equals_current_record": true,
+        "direct_source_check": "generated_question",
+        "current_length": 60
+      },
+      "answer_comparison": {
+        "provenance_snapshot_equals_current_record": true,
+        "direct_source_check": true,
+        "current_length": 76
+      },
+      "content_comparison": {
+        "provenance_snapshot_equals_current_record": true,
+        "current_length": 123
+      },
+      "metadata_comparison_to_provenance": {
+        "language": true,
+        "record_type": true,
+        "category": true,
+        "source_file": true,
+        "source_page": true,
+        "source_sheet": true,
+        "source_row": true,
+        "source_url": true,
+        "source_status": true,
+        "source_attribution": true,
+        "needs_review": true,
+        "review_notes": true
+      },
+      "metadata_changed_since_provenance_snapshot": false,
+      "source_locator_unchanged": true,
+      "record_fingerprint_matches_canonical_json_snapshot": true,
+      "unicode_nfc_changes_question": false,
+      "unicode_nfc_changes_answer": false,
+      "canonicalization_details": {
+        "historical_converter_basis": "normalize(hard-coded topic label)||normalize(extracted answer)",
+        "proposed_persisted_record_basis": "normalize(persisted question)||normalize(persisted answer)",
+        "historical_hash_question_input": "قنوات الدعم الفني والخط الساخن للمنحة",
+        "current_persisted_question": "ما هي قنوات الدعم الفني والخط الساخن لمشاكل منصة الامتحانات؟",
+        "historical_question_component_sha256": "40a01c22f1b9d5cb9f8ef9d7378bdbf4af2f179a1cd3e28fca870696de60462a",
+        "persisted_question_component_sha256": "48f0a834420d7ba3af9c1a66e0413b054efc00deb21471cca53a20fff9ef0af7",
+        "answer_component_unchanged": true,
+        "historical_answer_component_sha256": "691e6842739fa8677c7cc79291cfbf7cc7fae903cd1f6282e534308383d21aa8",
+        "persisted_answer_component_sha256": "691e6842739fa8677c7cc79291cfbf7cc7fae903cd1f6282e534308383d21aa8"
+      },
+      "proposed_provenance_patch": {
+        "source_record_id": "debi_lms_exam_pdf_support_contact_note_f0057b3ff593",
+        "source_original_file": "FAQs/FAQ LMS-English Exam.pdf",
+        "source_locator": {
+          "source_page": 10
+        },
+        "original_content_sha256_source_preserved": "f0057b3ff593a29b5717d9e7982cd20f7bd9e19da9411bf2724536ed300f5f5e",
+        "proposed_content_sha256_source": "d8b2e7240f39daa73a9aac5cfeba1eff1a6190453b4cb7940e32889911934f8d",
+        "proposed_content_sha256_recomputed_converter_compatible": "d8b2e7240f39daa73a9aac5cfeba1eff1a6190453b4cb7940e32889911934f8d",
+        "proposed_content_equivalence_hash": "d8b2e7240f39daa73a9aac5cfeba1eff1a6190453b4cb7940e32889911934f8d",
+        "proposal_applied": false,
+        "approval_decision": null,
+        "approval_inherited": false
+      },
+      "source_file_unchanged_since_provenance": true,
+      "direct_original_content_check": {
+        "verified": true,
+        "answer_found_in_original_document": true,
+        "answer_found_at_recorded_page": true,
+        "recorded_page_number_is_one_based": 10,
+        "extracted_answer_length": 76
+      },
+      "disposition": "PROPOSED_CANONICAL_HASH_CORRECTION",
+      "diagnosis": "The PDF converter hashed its hard-coded topic label plus the extracted answer, but persisted a different generated question plus the same answer. The original PDF bytes and extracted answer are unchanged. Rebinding the hash to persisted question-and-answer fields yields a new hash; this proposal is not applied.",
+      "proposed_action": "propose_new_hash_pending_human_review",
+      "proposal_applied": false,
+      "approval_decision": null,
+      "approval_inherited": false,
+      "content_review_required": true,
+      "stable_id_suffix_matches_recorded_hash": true,
+      "stable_id_suffix_matches_proposed_hash": false
+    }
+  ],
+  "policy": "Proposal only. No content hash or provenance entry is changed, no approval is created or inherited, and unresolved records remain stale."
+}

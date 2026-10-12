@@ -14,7 +14,8 @@ const STATE = {
   customerSearchTimeout: null,
   customerPage: 1,
   convPage: 1,
-  ticketPage: 1
+  ticketPage: 1,
+  isExporting: false
 };
 
 // Bilingual dictionary
@@ -113,9 +114,22 @@ const I18N = {
     kpi_sub_escalated_convs: "Routed to human tier",
     kpi_avg_response_time: "Avg Response Time",
     kpi_sub_avg_response_time: "End-to-end audit latency",
-    kpi_rag_success_rate: "RAG Success Rate",
-    kpi_sub_rag_success_rate: "Strict grounded responses",
-    unit_ms: " ms"
+    kpi_rag_success_rate: "Successful Turn Rate",
+    kpi_sub_rag_success_rate: "Operational successful turns; not answer accuracy",
+    unit_ms: " ms",
+    export_report: "Export to Excel",
+    export_loading: "Preparing workbook…",
+    export_success: "Excel report downloaded.",
+    export_error: "The report could not be generated.",
+    rag_eval_title: "RAG Evaluation",
+    rag_eval_definition: "Acceptance test pass rate among completed cases. This is not answer accuracy.",
+    rag_eval_loading: "Loading verified evaluation summary…",
+    rag_eval_unavailable: "No verified evaluation summary is available.",
+    rag_eval_runtime: "Runtime",
+    rag_eval_corpus: "Corpus",
+    rag_eval_cases: "Cases",
+    rag_eval_details: "View evaluation details",
+    rag_eval_refresh: "Reload evaluation summary"
   },
   ar: {
     ops_center: "مركز العمليات والتحكم",
@@ -211,9 +225,22 @@ const I18N = {
     kpi_sub_escalated_convs: "تم تحويلها لفرق الدعم البشري",
     kpi_avg_response_time: "متوسط زمن الاستجابة",
     kpi_sub_avg_response_time: "الزمن الكلي لمعالجة وتدقيق الرد",
-    kpi_rag_success_rate: "نسبة دقة إجابات المعرفة (RAG)",
-    kpi_sub_rag_success_rate: "إجابات موثقة ومطابقة لقواعد البيانات",
-    unit_ms: " مللي ثانية"
+    kpi_rag_success_rate: "نسبة نجاح المعالجة",
+    kpi_sub_rag_success_rate: "نجاح المعالجة التشغيلية؛ لا يمثل دقة الإجابة",
+    unit_ms: " مللي ثانية",
+    export_report: "تصدير إلى Excel",
+    export_loading: "جارٍ إعداد الملف…",
+    export_success: "تم تنزيل تقرير Excel.",
+    export_error: "تعذر إنشاء التقرير.",
+    rag_eval_title: "تقييم RAG",
+    rag_eval_definition: "نسبة اختبارات القبول الناجحة من الحالات المكتملة. لا تمثل دقة الإجابة.",
+    rag_eval_loading: "جارٍ تحميل ملخص التقييم الموثق…",
+    rag_eval_unavailable: "لا يتوفر ملخص تقييم موثق.",
+    rag_eval_runtime: "بيئة التشغيل",
+    rag_eval_corpus: "مجموعة المعرفة",
+    rag_eval_cases: "الحالات",
+    rag_eval_details: "عرض تفاصيل التقييم",
+    rag_eval_refresh: "إعادة تحميل ملخص التقييم"
   }
 };
 
@@ -354,8 +381,93 @@ function switchView(viewName) {
 
   const activeSec = document.getElementById(`view-${viewName}`);
   if (activeSec) activeSec.style.display = 'block';
+  updateExportAvailability();
 
   refreshCurrentView();
+}
+
+const EXPORT_REPORTS = {
+  executive: 'executive', customers: 'customers', conversations: 'conversations',
+  tickets: 'tickets', n8n: 'n8n', rag: 'rag', kb: 'knowledge-base',
+  health: 'health', activity: 'activity'
+};
+
+function updateExportAvailability() {
+  const button = document.getElementById('export-report-btn');
+  if (!button) return;
+  button.hidden = !EXPORT_REPORTS[STATE.currentView];
+  button.disabled = STATE.isExporting;
+}
+
+function showExportToast(message, isError = false) {
+  const toast = document.getElementById('export-toast');
+  if (!toast) return;
+  toast.textContent = message;
+  toast.className = `export-toast ${isError ? 'error' : 'success'}`;
+  toast.hidden = false;
+  clearTimeout(STATE.exportToastTimeout);
+  STATE.exportToastTimeout = setTimeout(() => { toast.hidden = true; }, 4500);
+}
+
+async function exportCurrentReport() {
+  const reportType = EXPORT_REPORTS[STATE.currentView];
+  const button = document.getElementById('export-report-btn');
+  const t = I18N[STATE.currentLang] || I18N.en;
+  if (!reportType || STATE.isExporting || !button) return;
+  const query = new URLSearchParams({ lang: STATE.currentLang });
+  if (['executive', 'customers', 'conversations', 'tickets'].includes(reportType)) {
+    query.set('program', STATE.program);
+  }
+  if (['executive', 'conversations'].includes(reportType)) query.set('period', STATE.period);
+  if (reportType === 'customers') {
+    query.set('search', document.getElementById('customer-search-input')?.value.trim() || '');
+  }
+  if (reportType === 'tickets') {
+    query.set('ticket_status', document.getElementById('ticket-status-filter')?.value || 'all');
+    query.set('priority', document.getElementById('ticket-priority-filter')?.value || 'all');
+  }
+  if (reportType === 'activity') {
+    query.set('execution_status', document.getElementById('execution-status-filter')?.value || '');
+  }
+
+  const originalText = button.textContent;
+  STATE.isExporting = true;
+  button.disabled = true;
+  button.setAttribute('aria-busy', 'true');
+  button.textContent = t.export_loading;
+  try {
+    const response = await fetch(`/api/dashboard/reports/${reportType}/excel?${query.toString()}`, {
+      headers: STATE.token ? { Authorization: `Bearer ${STATE.token}` } : {}
+    });
+    if (response.status === 401) {
+      logout();
+      throw new Error('Session expired or unauthorized');
+    }
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.detail || t.export_error);
+    }
+    const blob = await response.blob();
+    const disposition = response.headers.get('Content-Disposition') || '';
+    const filename = disposition.match(/filename="([^"]+)"/i)?.[1] || 'NexaServe_Report.xlsx';
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showExportToast(t.export_success);
+  } catch (error) {
+    showExportToast(error.message || t.export_error, true);
+  } finally {
+    STATE.isExporting = false;
+    button.removeAttribute('aria-busy');
+    button.disabled = false;
+    button.textContent = originalText || t.export_report;
+  }
 }
 
 function refreshCurrentView() {
@@ -363,7 +475,7 @@ function refreshCurrentView() {
   STATE.program = document.getElementById('global-program-filter').value;
 
   switch (STATE.currentView) {
-    case 'executive': loadExecutiveKPIs(); break;
+    case 'executive': loadExecutiveKPIs(); loadRAGEvaluationCard(); break;
     case 'customers': loadCustomers(); break;
     case 'conversations': loadConversations(); break;
     case 'tickets': loadTickets(); break;
@@ -377,6 +489,45 @@ function refreshCurrentView() {
 }
 
 // --- 1. EXECUTIVE KPIS ---
+async function loadRAGEvaluationCard() {
+  const card = document.getElementById('rag-evaluation-card');
+  if (!card) return;
+  const t = I18N[STATE.currentLang] || I18N.en;
+  card.innerHTML = `<div class="rag-eval-loading" role="status">${escapeHtml(t.rag_eval_loading)}</div>`;
+  try {
+    const data = await apiRequest('/api/dashboard/rag/evaluation-summary');
+    const status = ['HEALTHY', 'NEEDS_IMPROVEMENT', 'STALE', 'BLOCKED', 'NOT_EVALUATED'].includes(data.status)
+      ? data.status : 'NOT_EVALUATED';
+    const metric = data.pass_rate === null ? '—' : `${(Number(data.pass_rate) * 100).toFixed(1)}%`;
+    const timestamp = data.last_evaluated_at ? escapeHtml(data.last_evaluated_at) : '—';
+    const runtime = data.runtime_identity ? escapeHtml(data.runtime_identity) : 'Unknown';
+    const corpus = data.corpus_version ? escapeHtml(data.corpus_version) : 'Unknown';
+    const reason = data.reason ? `<p class="rag-eval-reason">${escapeHtml(data.reason)}</p>` : '';
+    card.innerHTML = `
+      <div class="rag-eval-head">
+        <div><h2>${escapeHtml(t.rag_eval_title)}</h2><p>${escapeHtml(t.rag_eval_definition)}</p></div>
+        <span class="rag-eval-status status-${status.toLowerCase()}" role="status">${escapeHtml(status.replaceAll('_', ' '))}</span>
+      </div>
+      <div class="rag-eval-body">
+        <div class="rag-eval-primary"><span>${escapeHtml(data.metric_name || t.rag_eval_unavailable)}</span><strong>${metric}</strong></div>
+        <dl class="rag-eval-facts">
+          <div><dt>${escapeHtml(t.rag_eval_cases)}</dt><dd>${Number(data.evaluated_cases || 0)} evaluated / ${Number(data.planned_cases || 0)} planned</dd></div>
+          <div><dt>Pass / fail / blocked</dt><dd>${Number(data.passed || 0)} / ${Number(data.failed || 0)} / ${Number(data.blocked || 0)}</dd></div>
+          <div><dt>Last evaluation</dt><dd>${timestamp}${data.time_zone ? ` <small>(${escapeHtml(data.time_zone)})</small>` : ''}</dd></div>
+          <div><dt>${escapeHtml(t.rag_eval_runtime)}</dt><dd>${runtime}</dd></div>
+          <div><dt>${escapeHtml(t.rag_eval_corpus)}</dt><dd>${corpus}</dd></div>
+        </dl>
+      </div>
+      ${reason}
+      <div class="rag-eval-actions">
+        <button class="btn-link" type="button" onclick="switchView('rag')">${escapeHtml(t.rag_eval_details)}</button>
+        <button class="btn-link" type="button" onclick="loadRAGEvaluationCard()" aria-label="${escapeHtml(t.rag_eval_refresh)}">↻ ${escapeHtml(t.rag_eval_refresh)}</button>
+      </div>`;
+  } catch (error) {
+    card.innerHTML = `<div class="rag-eval-unavailable" role="alert">${escapeHtml(t.rag_eval_unavailable)} <button class="btn-link" type="button" onclick="loadRAGEvaluationCard()">Retry</button></div>`;
+  }
+}
+
 async function loadExecutiveKPIs() {
   const container = document.getElementById('executive-kpi-grid');
   const t = I18N[STATE.currentLang] || I18N.en;

@@ -112,6 +112,9 @@
         </div>
 
         <div style="display: flex; align-items: center; gap: 12px;">
+          <button class="btn-export" id="export-report-btn" type="button" onclick="exportCurrentReport()" hidden>
+            <span aria-hidden="true">⇩</span><span data-i18n="export_report">Export to Excel</span>
+          </button>
           <!-- Language Toggle -->
           <button class="btn-icon" id="lang-toggle-btn" onclick="toggleLanguage()" title="Toggle Arabic / English">
             <span id="lang-label">عربي</span>
@@ -124,12 +127,16 @@
 
       <!-- BODY SECTIONS -->
       <main class="content-body" id="content-container">
+        <div id="export-toast" class="export-toast" role="status" aria-live="polite" hidden></div>
         
         <!-- SECTION 1: EXECUTIVE KPIS -->
         <section id="view-executive" class="dashboard-section">
           <div class="kpi-grid" id="executive-kpi-grid">
             <!-- Rendered dynamically -->
           </div>
+          <section class="rag-evaluation-panel" id="rag-evaluation-card" aria-label="RAG evaluation summary">
+            <div class="rag-eval-loading" role="status">Loading verified evaluation summary…</div>
+          </section>
         </section>
 
         <!-- SECTION 2: CUSTOMERS -->

@@ -1,0 +1,109 @@
+{
+  "title": "NexaServe Human Content Approval Ledger",
+  "schema_version": "1.0.0",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "NexaServe content approval ledger",
+    "type": "object",
+    "required": [
+      "entries"
+    ],
+    "properties": {
+      "entries": {
+        "type": "array",
+        "items": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "NexaServe content approval decision",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "source_dataset",
+            "source_record_id",
+            "content_hash_at_decision",
+            "decision",
+            "decision_rationale",
+            "evidence_reference",
+            "reviewer_role",
+            "timestamp_utc"
+          ],
+          "properties": {
+            "source_dataset": {
+              "type": "string",
+              "minLength": 1
+            },
+            "source_record_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "content_hash_at_decision": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "decision": {
+              "enum": [
+                "APPROVED_OFFICIAL_DEPI",
+                "APPROVED_INTERNAL_DEPI_GUIDANCE",
+                "APPROVED_GENERAL_SUPPORT",
+                "OUT_OF_SCOPE",
+                "REJECTED",
+                "NEEDS_MORE_EVIDENCE",
+                "NEEDS_OWNER_APPROVAL"
+              ]
+            },
+            "decision_rationale": {
+              "type": "string",
+              "minLength": 1
+            },
+            "evidence_reference": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "reviewer_role": {
+              "type": "string",
+              "minLength": 1
+            },
+            "timestamp_utc": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        }
+      }
+    },
+    "additionalProperties": true
+  },
+  "validation_rules": [
+    "Only entries in the entries array are recorded decisions. example_entry_template is documentation and never a decision.",
+    "The entries array is empty at package creation; approved_record_count is zero.",
+    "A decision applies only to the exact source_dataset + source_record_id + content_hash_at_decision tuple.",
+    "Run scripts/validate_content_approval_ledger.py before use. It resolves every decision against source_approval_queue.json; a missing record or content-hash mismatch makes the decision STALE and blocks ledger acceptance.",
+    "Duplicate JSONL companions are parity artifacts, not distinct source_dataset values for approval or import.",
+    "An approved decision requires an evidence_reference and reviewer_role; official DEPI decisions require a verifiable official URL/document reference, and internal DEPI guidance requires an authorized content-owner decision.",
+    "No approval is inferred from a blank decision, missing evidence, workbook status, matching file hash, or absence of a response."
+  ],
+  "permitted_decisions": [
+    "APPROVED_OFFICIAL_DEPI",
+    "APPROVED_INTERNAL_DEPI_GUIDANCE",
+    "APPROVED_GENERAL_SUPPORT",
+    "OUT_OF_SCOPE",
+    "REJECTED",
+    "NEEDS_MORE_EVIDENCE",
+    "NEEDS_OWNER_APPROVAL"
+  ],
+  "approved_record_count": 0,
+  "entries": [],
+  "example_entry_template": {
+    "example_only": true,
+    "source_dataset": "<source JSON path from the approval queue>",
+    "source_record_id": "<stable source record ID>",
+    "content_hash_at_decision": "<64-character SHA-256 from the current approval queue>",
+    "decision": "NEEDS_MORE_EVIDENCE",
+    "decision_rationale": "<reviewer explains the unresolved evidence gap>",
+    "evidence_reference": null,
+    "reviewer_role": "<authorized reviewer role; do not use a placeholder in a real entry>",
+    "timestamp_utc": "<ISO-8601 UTC timestamp; do not use a placeholder in a real entry>",
+    "notice": "Illustrative template only. Not a source record, reviewer decision, approval, or supporting evidence."
+  }
+}

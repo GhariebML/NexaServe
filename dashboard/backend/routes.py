@@ -9,14 +9,19 @@ import urllib.request
 import urllib.error
 import socket
 import json
+from pathlib import Path
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any, List, Tuple
 from fastapi import APIRouter, Depends, Query, HTTPException, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from urllib.parse import quote
 import redis
 
-from database import query_all, query_one, execute_commit
+from database import query_all, query_one, execute_commit, REPORT_QUERY_DEADLINE
 from auth import get_current_user, require_role
+from reporting import build_workbook, safe_filename, EXCEL_MIME, MAX_EXPORT_ROWS
+from evaluation_summary import summarize_latest_rag_evaluation
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
@@ -123,6 +128,45 @@ def _execution_status(events: List[Dict[str, Any]]) -> str:
     if any(e["event_type"] == "turn_completed" for e in events):
         return "completed"
     return "unknown"
+
+
+async def _collect_export_pages(fetch_page, limit: int = 100) -> List[Dict[str, Any]]:
+    """Fetch every matching page through the same authorized view as the UI."""
+    first = await fetch_page(1, limit)
+    total = int(first.get("total", len(first.get("items", []))) or 0)
+    if total > MAX_EXPORT_ROWS:
+        raise HTTPException(status_code=413, detail=f"Export exceeds the {MAX_EXPORT_ROWS} row limit")
+    result = list(first.get("items", []))
+    pages = int(first.get("pages", 1) or 1)
+    for page in range(2, pages + 1):
+        data = await fetch_page(page, limit)
+        result.extend(data.get("items", []))
+    if len(result) != total:
+        raise HTTPException(status_code=409, detail="Report data changed during generation; retry the export")
+    identity_key = next((key for key in ("id", "ticket_number", "request_id")
+                         if all(key in row for row in result)), None)
+    if identity_key and len({str(row[identity_key]) for row in result}) != len(result):
+        raise HTTPException(status_code=409, detail="Report data changed during generation; retry the export")
+    return result
+
+
+def _metric_rows(data: Dict[str, Any], labels: Dict[str, str]) -> List[Dict[str, Any]]:
+    return [{"metric": labels.get(key, key.replace("_", " ").title()), "value": value}
+            for key, value in data.items()]
+
+
+def _report_columns(lang: str, fields: List[Tuple[str, str, str, str]]) -> List[Dict[str, str]]:
+    """Field tuples are key, English header, Arabic header, and data type."""
+    return [{"key": key, "label": ar if lang == "ar" else en, "type": kind}
+            for key, en, ar, kind in fields]
+
+
+async def _report_timeout_scope():
+    token = REPORT_QUERY_DEADLINE.set(time.monotonic() + 30)
+    try:
+        yield None
+    finally:
+        REPORT_QUERY_DEADLINE.reset(token)
 
 # PII Masking Utility
 def mask_phone(phone: Optional[str], authorized: bool = False) -> Optional[str]:
@@ -234,14 +278,22 @@ async def get_summary(
     sla_breaches = ticket_stats["sla_breaches"] if ticket_stats else 0
 
     # Response Time (Latency from audit_logs) & RAG Success Rate
-    perf_stats = query_one("""
+    perf_where = " WHERE event_type = 'turn_completed'"
+    perf_params: List[Any] = []
+    if program and program.upper() != "ALL":
+        perf_where += " AND payload->>'program' ILIKE %s"
+        perf_params.append(f"%{program}%")
+    perf_date_filter, perf_date_params = build_date_filter(period, None, None, "created_at")
+    perf_where += perf_date_filter
+    perf_params.extend(perf_date_params)
+    perf_stats = query_one(f"""
         SELECT 
             AVG(latency_ms) as avg_latency,
             COUNT(CASE WHEN payload->>'status' = 'success' THEN 1 END) as success_turns,
             COUNT(*) as total_turns
         FROM audit_logs
-        WHERE event_type = 'turn_completed'
-    """)
+        {perf_where}
+    """, tuple(perf_params))
     avg_latency_ms = round(float(perf_stats["avg_latency"]), 1) if perf_stats and perf_stats["avg_latency"] is not None else None
     total_turns = perf_stats["total_turns"] if perf_stats else 0
     success_turns = perf_stats["success_turns"] if perf_stats else 0
@@ -1306,3 +1358,280 @@ async def respond_to_ticket(
         "n8n_dispatched": n8n_code == 200,
         "latency_ms": n8n_lat
     }
+
+
+@router.get("/rag/evaluation-summary")
+async def get_rag_evaluation_summary(user: Dict[str, Any] = Depends(get_current_user)):
+    """Read a compact benchmark result; this route never runs inference or a benchmark."""
+    project_root = Path(__file__).resolve().parents[2]
+    tests_dir = project_root / "tests"
+    return summarize_latest_rag_evaluation(
+        master_path=tests_dir / "final_test_results.json",
+        results_path=tests_dir / "golden_test_results.json",
+        active_runtime_identity=os.getenv("DASHBOARD_EVALUATION_RUNTIME_ID"),
+        active_corpus_version=os.getenv("DASHBOARD_EVALUATION_CORPUS_VERSION"),
+    )
+
+
+@router.get("/reports/{report_type}/excel")
+async def export_dashboard_report(
+    report_type: str,
+    period: Optional[str] = Query(None, pattern="^(all|today|yesterday|7d|30d|month)?$"),
+    program: Optional[str] = Query("all", max_length=40),
+    search: Optional[str] = Query(None, max_length=250),
+    ticket_status: Optional[str] = Query(None, max_length=30),
+    priority: Optional[str] = Query(None, max_length=30),
+    sla_breached: Optional[bool] = Query(None),
+    execution_status: Optional[str] = Query(None, pattern="^(completed|fallback|failed|unknown)?$"),
+    lang: str = Query("en", pattern="^(en|ar)$"),
+    user: Dict[str, Any] = Depends(get_current_user),
+    _report_scope: Any = Depends(_report_timeout_scope),
+):
+    """Generate a bounded XLSX from existing authenticated, read-only page adapters."""
+    report_started = time.monotonic()
+    now = datetime.now().astimezone()
+    active_program = program or "all"
+    active_period = None if period in (None, "all") else period
+    filters: Dict[str, Any] = {}
+    sheets: List[Dict[str, Any]] = []
+    if report_type == "executive":
+        filters = {"period": period or "all", "program": active_program}
+        data = await get_summary(period=active_period, program=active_program, user=user)
+        metric_labels = {
+            "total_customers": "Total customers / إجمالي العملاء",
+            "active_conversations": "Active conversations / المحادثات النشطة",
+            "total_conversations": "Total conversations / إجمالي المحادثات",
+            "open_tickets": "Open tickets / التذاكر المفتوحة",
+            "pending_tickets": "Pending tickets / التذاكر قيد المعالجة",
+            "resolved_tickets": "Resolved tickets / التذاكر المحلولة",
+            "sla_breaches": "SLA breaches / تجاوزات SLA",
+            "escalated_conversations": "Escalated conversations / المحادثات المصعدة",
+            "avg_response_time_ms": "Average turn latency (ms) / متوسط زمن المعالجة",
+            "rag_success_rate": "Operational successful turn rate (%) / نسبة نجاح المعالجة التشغيلية",
+        }
+        rows = [{"metric": metric_labels[key], "value": value}
+                for key, value in data.items()]
+        sheets = [{"name": "Overview", "title": "Dashboard overview / ملخص لوحة المعلومات",
+                   "columns": _report_columns(lang, [
+                       ("metric", "Metric", "المؤشر", "text"),
+                       ("value", "Value", "القيمة", "decimal"),
+                   ]), "rows": rows}]
+    elif report_type == "customers":
+        filters = {"program": active_program, "search": search or "(none)"}
+        async def fetch_customer_page(page: int, limit: int):
+            return await get_customers(search=search, program=active_program,
+                                       page=page, limit=limit, user=user)
+        items = await _collect_export_pages(fetch_customer_page)
+        sheets = [{"name": "Customers", "title": "Customers and students / العملاء والطلاب",
+                   "columns": _report_columns(lang, [
+                       ("id", "Customer ID", "معرف العميل", "text"),
+                       ("full_name", "Name", "الاسم", "text"),
+                       ("phone_masked", "Phone (role-masked)", "الهاتف (وفق الصلاحية)", "text"),
+                       ("program", "Program", "المبادرة", "text"),
+                       ("created_at", "Created at", "تاريخ الإنشاء", "datetime"),
+                       ("last_interaction", "Last interaction", "آخر تفاعل", "datetime"),
+                       ("conversation_count", "Conversations", "المحادثات", "integer"),
+                       ("open_tickets", "Open tickets", "التذاكر المفتوحة", "integer"),
+                       ("customer_status", "Status", "الحالة", "text"),
+                   ]), "rows": items}]
+    elif report_type == "conversations":
+        filters = {"period": period or "all", "program": active_program}
+        async def fetch_conversation_page(page: int, limit: int):
+            return await get_conversations(period=active_period, program=active_program,
+                                           page=page, limit=limit, user=user)
+        items = await _collect_export_pages(fetch_conversation_page)
+        data = await get_conversations(period=active_period, program=active_program,
+                                       page=1, limit=1, user=user)
+        metrics = data.get("metrics", {})
+        sheets = [
+            {"name": "Conversations", "title": "Filtered conversations / المحادثات المطابقة",
+             "columns": _report_columns(lang, [
+                 ("id", "Conversation ID", "معرف المحادثة", "text"),
+                 ("customer_name", "Customer", "العميل", "text"),
+                 ("program", "Program", "المبادرة", "text"),
+                 ("channel", "Channel", "القناة", "text"),
+                 ("intent", "Intent", "النية", "text"),
+                 ("avg_confidence", "Average confidence", "متوسط الثقة", "decimal"),
+                 ("status", "Status", "الحالة", "text"),
+                 ("created_at", "Created at", "تاريخ الإنشاء", "datetime"),
+                 ("message_count", "Message count", "عدد الرسائل", "integer"),
+             ]), "rows": items},
+            {"name": "Analytics", "title": "Conversation analytics / تحليلات المحادثات",
+             "columns": _report_columns(lang, [
+                 ("metric", "Metric", "المؤشر", "text"),
+                 ("value", "Value", "القيمة", "decimal"),
+             ]), "rows": _metric_rows(metrics, {})},
+        ]
+        for chart_name, chart_rows in data.get("charts", {}).items():
+            sheets.append({"name": chart_name, "title": chart_name.replace("_", " ").title(),
+                           "columns": _report_columns(lang, [
+                               (key, key.replace("_", " ").title(), key.replace("_", " "), "text" if key in {"label", "date_label"} else "integer")
+                               for key in (chart_rows[0].keys() if chart_rows else ["label", "count"])
+                           ]), "rows": chart_rows})
+    elif report_type == "tickets":
+        filters = {"status": ticket_status or "all", "priority": priority or "all",
+                   "program": active_program, "sla_breached": sla_breached if sla_breached is not None else "all"}
+        async def fetch_ticket_page(page: int, limit: int):
+            return await get_tickets(status=ticket_status, priority=priority,
+                                     program=active_program, sla_breached=sla_breached,
+                                     page=page, limit=limit, user=user)
+        items = await _collect_export_pages(fetch_ticket_page)
+        # `reason` and record identifiers are omitted: they are not shown in the
+        # operational table and can contain unnecessary personal or case details.
+        sheets = [{"name": "Tickets", "title": "Filtered support tickets / تذاكر الدعم المطابقة",
+                   "columns": _report_columns(lang, [
+                       ("ticket_number", "Ticket #", "رقم التذكرة", "text"),
+                       ("customer_name", "Customer", "العميل", "text"),
+                       ("program", "Program", "المبادرة", "text"),
+                       ("priority", "Priority", "الأولوية", "text"),
+                       ("status", "Status", "الحالة", "text"),
+                       ("assigned_agent", "Assigned agent", "المسؤول المكلف", "text"),
+                       ("sla_deadline", "SLA deadline", "موعد SLA", "datetime"),
+                       ("sla_status", "SLA status", "حالة SLA", "text"),
+                       ("created_at", "Created at", "تاريخ الإنشاء", "datetime"),
+                       ("updated_at", "Updated at", "تاريخ التحديث", "datetime"),
+                   ]), "rows": items}]
+    elif report_type == "rag":
+        data = await get_rag_metrics(user=user)
+        evaluation = await get_rag_evaluation_summary(user=user)
+        operational = {key: value for key, value in data.items()
+                       if key not in {"confidence_distribution", "program_isolation"}}
+        sheets = [
+            {"name": "Runtime telemetry", "title": "Operational RAG telemetry (not answer accuracy)",
+             "columns": _report_columns(lang, [
+                 ("metric", "Metric", "المؤشر", "text"),
+                 ("value", "Value", "القيمة", "decimal"),
+             ]), "rows": _metric_rows(operational, {})},
+            {"name": "Confidence", "title": "Observed AI confidence distribution",
+             "columns": _report_columns(lang, [
+                 ("bracket", "Confidence band", "نطاق الثقة", "text"),
+                 ("count", "Count", "العدد", "integer"),
+             ]), "rows": data.get("confidence_distribution", [])},
+            {"name": "Evaluation", "title": "Historical benchmark evaluation summary",
+             "columns": _report_columns(lang, [
+                 ("metric", "Metric", "المؤشر", "text"),
+                 ("value", "Value", "القيمة", "text"),
+             ]), "rows": [{"metric": key, "value": value} for key, value in evaluation.items()]},
+        ]
+    elif report_type == "knowledge-base":
+        data = await get_kb_metrics(user=user)
+        summary = {key: value for key, value in data.items()
+                   if key not in {"documents_by_program", "documents_by_source"}}
+        sheets = [
+            {"name": "Summary", "title": "Knowledge base metrics / مؤشرات قاعدة المعرفة",
+             "columns": _report_columns(lang, [
+                 ("metric", "Metric", "المؤشر", "text"),
+                 ("value", "Value", "القيمة", "text"),
+             ]), "rows": _metric_rows(summary, {})},
+            {"name": "By program", "title": "Knowledge documents by program",
+             "columns": _report_columns(lang, [
+                 ("program", "Program", "المبادرة", "text"),
+                 ("count", "Documents", "المستندات", "integer"),
+             ]), "rows": data.get("documents_by_program", [])},
+            {"name": "By source", "title": "Knowledge documents by attribution source",
+             "columns": _report_columns(lang, [
+                 ("source", "Source attribution", "جهة الإسناد", "text"),
+                 ("count", "Documents", "المستندات", "integer"),
+             ]), "rows": data.get("documents_by_source", [])},
+        ]
+    elif report_type == "health":
+        data = await get_system_health(user=user)
+        sheets = [{"name": "Health", "title": "System health snapshot / لقطة صحة النظام",
+                   "columns": _report_columns(lang, [
+                       ("name", "Component", "المكون", "text"),
+                       ("status", "Status", "الحالة", "text"),
+                       ("latency_ms", "Latency (ms)", "الزمن (مللي ثانية)", "decimal"),
+                       ("last_check", "Checked at", "وقت الفحص", "datetime"),
+                   ]), "rows": data.get("services", [])}]
+    elif report_type == "activity":
+        filters = {"execution_status": execution_status or "all (recent execution list)"}
+        execution_rows: List[Dict[str, Any]] = []
+        offset = 0
+        while offset < MAX_EXPORT_ROWS:
+            batch = await list_executions(status_filter=execution_status, channel=None,
+                                          limit=200, offset=offset, user=user)
+            batch_items = batch.get("items", [])
+            execution_rows.extend(batch_items)
+            if len(batch_items) < 200:
+                break
+            offset += len(batch_items)
+        if len(execution_rows) >= MAX_EXPORT_ROWS:
+            probe = await list_executions(status_filter=execution_status, channel=None,
+                                          limit=1, offset=MAX_EXPORT_ROWS, user=user)
+            if probe.get("items"):
+                raise HTTPException(status_code=413, detail=f"Export exceeds the {MAX_EXPORT_ROWS} row limit")
+        activity = await get_recent_activity(limit=100, user=user)
+        sheets = [
+            {"name": "Recent requests", "title": "Recent correlated requests (all matching status)",
+             "columns": _report_columns(lang, [
+                 ("request_id", "Request ID", "معرف الطلب", "text"),
+                 ("execution_id", "Execution ID", "معرف التنفيذ", "text"),
+                 ("workflow_name", "Workflow", "سير العمل", "text"),
+                 ("channel", "Channel", "القناة", "text"),
+                 ("program", "Program", "المبادرة", "text"),
+                 ("intent", "Intent", "النية", "text"),
+                 ("status", "Status", "الحالة", "text"),
+                 ("latency_ms", "Latency (ms)", "الزمن (مللي ثانية)", "decimal"),
+                 ("created_at", "Created at", "تاريخ الإنشاء", "datetime"),
+             ]), "rows": execution_rows},
+            {"name": "Audit activity", "title": "Latest 100 audit events (safe fields only)",
+             "columns": _report_columns(lang, [
+                 ("id", "Event ID", "معرف الحدث", "text"),
+                 ("event_type", "Event type", "نوع الحدث", "text"),
+                 ("workflow_name", "Workflow", "سير العمل", "text"),
+                 ("channel", "Channel", "القناة", "text"),
+                 ("latency_ms", "Latency (ms)", "الزمن (مللي ثانية)", "decimal"),
+                 ("created_at", "Created at", "تاريخ الإنشاء", "datetime"),
+             ]), "rows": activity.get("items", [])},
+        ]
+    elif report_type == "n8n":
+        workflows = await get_n8n_workflows(user=user)
+        executions = await get_n8n_executions(limit=100, user=user)
+        sheets = [
+            {"name": "Workflows", "title": "Read-only workflow metadata snapshot",
+             "columns": _report_columns(lang, [
+                 ("id", "Workflow ID", "معرف سير العمل", "text"),
+                 ("name", "Workflow name", "اسم سير العمل", "text"),
+                 ("nodes_count", "Node count", "عدد العقد", "integer"),
+                 ("tags", "Tags", "الوسوم", "text"),
+                 ("active", "Active", "نشط", "text"),
+                 ("updated_at", "Updated at", "تاريخ التحديث", "datetime"),
+             ]), "rows": [{**item, "tags": ", ".join(item.get("tags", [])),
+                         "active": "Yes" if item.get("active") else "No"}
+                        for item in workflows.get("items", [])]},
+            {"name": "Latest executions", "title": "Latest 100 read-only execution summaries",
+             "columns": _report_columns(lang, [
+                 ("id", "Execution ID", "معرف التنفيذ", "text"),
+                 ("workflow_id", "Workflow ID", "معرف سير العمل", "text"),
+                 ("status", "Status", "الحالة", "text"),
+                 ("mode", "Mode", "النمط", "text"),
+                 ("finished", "Finished", "مكتمل", "text"),
+                 ("started_at", "Started at", "وقت البدء", "datetime"),
+                 ("stopped_at", "Stopped at", "وقت الانتهاء", "datetime"),
+                 ("duration_ms", "Duration (ms)", "المدة (مللي ثانية)", "integer"),
+             ]), "rows": executions.get("items", [])},
+        ]
+    else:
+        raise HTTPException(status_code=404, detail="No report is available for this dashboard view")
+
+    if report_type in {"executive", "customers", "conversations", "tickets"}:
+        filters = {key: value for key, value in filters.items() if value not in (None, "")}
+    if time.monotonic() - report_started > 30:
+        raise HTTPException(status_code=504, detail="Report generation exceeded the time limit; retry with narrower filters")
+    try:
+        workbook_bytes = build_workbook(
+            report_title=report_type.replace("-", " ").replace("_", " ").title(),
+            sheets=sheets,
+            filters=filters,
+            lang=lang,
+            generated_at=now,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=413, detail=str(exc)) from exc
+    filename = safe_filename(report_type.replace("-", " ").replace("_", " "))
+    disposition = f"attachment; filename=\"{filename}\"; filename*=UTF-8''{quote(filename)}"
+    return StreamingResponse(
+        iter([workbook_bytes]),
+        media_type=EXCEL_MIME,
+        headers={"Content-Disposition": disposition, "Cache-Control": "no-store"},
+    )

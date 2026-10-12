@@ -6,22 +6,95 @@ import os
 import re
 import time
 import urllib.request
+import urllib.error
+import socket
 import json
+from pathlib import Path
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any, List, Tuple
 from fastapi import APIRouter, Depends, Query, HTTPException, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from urllib.parse import quote
 import redis
 
-from database import query_all, query_one, execute_commit
+from database import query_all, query_one, execute_commit, REPORT_QUERY_DEADLINE
 from auth import get_current_user, require_role
+from reporting import build_workbook, safe_filename, EXCEL_MIME, MAX_EXPORT_ROWS
+from evaluation_summary import summarize_latest_rag_evaluation
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
 N8N_HEALTH_URL = os.getenv("N8N_HEALTH_URL", "http://127.0.0.1:5678/healthz")
 N8N_UI_URL = os.getenv("N8N_UI_URL", "http://127.0.0.1:5678").rstrip("/")
+N8N_API_URL = os.getenv("N8N_API_URL", "http://n8n:5678/api/v1").rstrip("/")
+N8N_API_KEY = os.getenv("N8N_API_KEY", "")
+N8N_GATEWAY_WEBHOOK = os.getenv("N8N_GATEWAY_WEBHOOK", "http://n8n:5678/webhook/customer-service")
+N8N_AGENT_WEBHOOK = os.getenv("N8N_AGENT_WEBHOOK", "http://n8n:5678/webhook/agent-response")
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/")
 WHATSAPP_HEALTH_URL = os.getenv("WHATSAPP_HEALTH_URL", "http://127.0.0.1:8080/health")
+
+def _resolve_n8n_url(url: str) -> str:
+    """Fallback hostname if running locally outside Docker network."""
+    if "://n8n:5678" in url:
+        try:
+            socket.gethostbyname("n8n")
+        except Exception:
+            return url.replace("://n8n:5678", "://127.0.0.1:5678")
+    return url
+
+def _n8n_api_request(endpoint: str, method: str = "GET", payload: Optional[Dict[str, Any]] = None, timeout: float = 10.0) -> Tuple[int, Any, Optional[str]]:
+    base = _resolve_n8n_url(N8N_API_URL)
+    url = f"{base}{endpoint}"
+    headers = {
+        "X-N8N-API-KEY": N8N_API_KEY,
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
+    data = json.dumps(payload).encode("utf-8") if payload is not None else None
+    req = urllib.request.Request(url, data=data, headers=headers, method=method)
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as response:
+            res_body = response.read().decode("utf-8")
+            return response.getcode(), json.loads(res_body) if res_body else {}, None
+    except urllib.error.HTTPError as exc:
+        try:
+            err_body = exc.read().decode("utf-8")
+            return exc.code, json.loads(err_body), str(exc)
+        except Exception:
+            return exc.code, None, str(exc)
+    except Exception as exc:
+        return 0, None, type(exc).__name__
+
+def _n8n_webhook_post(url: str, payload: Dict[str, Any], timeout: float = 60.0) -> Tuple[int, Any, Optional[str], float]:
+    target_url = _resolve_n8n_url(url)
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+    }
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(target_url, data=data, headers=headers, method="POST")
+    t0 = time.time()
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as response:
+            lat = round((time.time() - t0) * 1000, 1)
+            raw = response.read().decode("utf-8")
+            try:
+                parsed = json.loads(raw) if raw else {}
+            except Exception:
+                parsed = {"raw": raw}
+            return response.getcode(), parsed, None, lat
+    except urllib.error.HTTPError as exc:
+        lat = round((time.time() - t0) * 1000, 1)
+        try:
+            err_raw = exc.read().decode("utf-8")
+            err_body = json.loads(err_raw)
+        except Exception:
+            err_body = {"error": str(exc)}
+        return exc.code, err_body, str(exc), lat
+    except Exception as exc:
+        lat = round((time.time() - t0) * 1000, 1)
+        return 0, None, str(exc), lat
 
 def _http_probe(url: str, timeout: float = 2.0) -> Tuple[int, Optional[str]]:
     try:
@@ -55,6 +128,45 @@ def _execution_status(events: List[Dict[str, Any]]) -> str:
     if any(e["event_type"] == "turn_completed" for e in events):
         return "completed"
     return "unknown"
+
+
+async def _collect_export_pages(fetch_page, limit: int = 100) -> List[Dict[str, Any]]:
+    """Fetch every matching page through the same authorized view as the UI."""
+    first = await fetch_page(1, limit)
+    total = int(first.get("total", len(first.get("items", []))) or 0)
+    if total > MAX_EXPORT_ROWS:
+        raise HTTPException(status_code=413, detail=f"Export exceeds the {MAX_EXPORT_ROWS} row limit")
+    result = list(first.get("items", []))
+    pages = int(first.get("pages", 1) or 1)
+    for page in range(2, pages + 1):
+        data = await fetch_page(page, limit)
+        result.extend(data.get("items", []))
+    if len(result) != total:
+        raise HTTPException(status_code=409, detail="Report data changed during generation; retry the export")
+    identity_key = next((key for key in ("id", "ticket_number", "request_id")
+                         if all(key in row for row in result)), None)
+    if identity_key and len({str(row[identity_key]) for row in result}) != len(result):
+        raise HTTPException(status_code=409, detail="Report data changed during generation; retry the export")
+    return result
+
+
+def _metric_rows(data: Dict[str, Any], labels: Dict[str, str]) -> List[Dict[str, Any]]:
+    return [{"metric": labels.get(key, key.replace("_", " ").title()), "value": value}
+            for key, value in data.items()]
+
+
+def _report_columns(lang: str, fields: List[Tuple[str, str, str, str]]) -> List[Dict[str, str]]:
+    """Field tuples are key, English header, Arabic header, and data type."""
+    return [{"key": key, "label": ar if lang == "ar" else en, "type": kind}
+            for key, en, ar, kind in fields]
+
+
+async def _report_timeout_scope():
+    token = REPORT_QUERY_DEADLINE.set(time.monotonic() + 30)
+    try:
+        yield None
+    finally:
+        REPORT_QUERY_DEADLINE.reset(token)
 
 # PII Masking Utility
 def mask_phone(phone: Optional[str], authorized: bool = False) -> Optional[str]:
@@ -112,7 +224,7 @@ async def get_summary(
     if program and program.upper() != "ALL":
         cust_prog_filter = " WHERE (metadata->>'program') ILIKE %s"
         cust_params.append(f"%{program}%")
-    
+
     total_customers_row = query_one(f"SELECT COUNT(*) as count FROM customers{cust_prog_filter}", tuple(cust_params))
     total_customers = total_customers_row["count"] if total_customers_row else 0
 
@@ -122,13 +234,13 @@ async def get_summary(
     if program and program.upper() != "ALL":
         conv_filter += " AND c.id IN (SELECT conv.id FROM conversations conv JOIN customers cust ON conv.customer_id = cust.id WHERE (cust.metadata->>'program') ILIKE %s)"
         conv_params.append(f"%{program}%")
-    
+
     d_filter, d_params = build_date_filter(period, None, None, "c.created_at")
     conv_filter += d_filter
     conv_params.extend(d_params)
 
     conv_stats = query_one(f"""
-        SELECT 
+        SELECT
             COUNT(*) as total_convs,
             COUNT(CASE WHEN c.status = 'active' THEN 1 END) as active_convs,
             COUNT(CASE WHEN c.status = 'handed_off' OR c.current_intent = 'human_escalation' THEN 1 END) as escalated_convs
@@ -145,13 +257,13 @@ async def get_summary(
     if program and program.upper() != "ALL":
         tick_filter += " AND t.customer_id IN (SELECT id FROM customers WHERE (metadata->>'program') ILIKE %s)"
         tick_params.append(f"%{program}%")
-    
+
     td_filter, td_params = build_date_filter(period, None, None, "t.created_at")
     tick_filter += td_filter
     tick_params.extend(td_params)
 
     ticket_stats = query_one(f"""
-        SELECT 
+        SELECT
             COUNT(*) as total_tickets,
             COUNT(CASE WHEN t.status = 'open' THEN 1 END) as open_tickets,
             COUNT(CASE WHEN t.status = 'in_progress' OR t.status = 'assigned' THEN 1 END) as pending_tickets,
@@ -166,14 +278,22 @@ async def get_summary(
     sla_breaches = ticket_stats["sla_breaches"] if ticket_stats else 0
 
     # Response Time (Latency from audit_logs) & RAG Success Rate
-    perf_stats = query_one("""
-        SELECT 
+    perf_where = " WHERE event_type = 'turn_completed'"
+    perf_params: List[Any] = []
+    if program and program.upper() != "ALL":
+        perf_where += " AND payload->>'program' ILIKE %s"
+        perf_params.append(f"%{program}%")
+    perf_date_filter, perf_date_params = build_date_filter(period, None, None, "created_at")
+    perf_where += perf_date_filter
+    perf_params.extend(perf_date_params)
+    perf_stats = query_one(f"""
+        SELECT
             AVG(latency_ms) as avg_latency,
             COUNT(CASE WHEN payload->>'status' = 'success' THEN 1 END) as success_turns,
             COUNT(*) as total_turns
         FROM audit_logs
-        WHERE event_type = 'turn_completed'
-    """)
+        {perf_where}
+    """, tuple(perf_params))
     avg_latency_ms = round(float(perf_stats["avg_latency"]), 1) if perf_stats and perf_stats["avg_latency"] is not None else None
     total_turns = perf_stats["total_turns"] if perf_stats else 0
     success_turns = perf_stats["success_turns"] if perf_stats else 0
@@ -214,23 +334,23 @@ async def get_customers(
         params.extend([f"%{search}%", f"%{search}%", f"%{search}%"])
 
     where_sql = " AND ".join(where_clauses)
-    
+
     total_row = query_one(f"SELECT COUNT(*) as count FROM customers c WHERE {where_sql}", tuple(params))
     total_count = total_row["count"] if total_row else 0
 
     query_params = list(params) + [limit, offset]
     rows = query_all(f"""
-        SELECT 
-            c.id, 
-            c.full_name, 
-            c.phone_number, 
+        SELECT
+            c.id,
+            c.full_name,
+            c.phone_number,
             c.email,
             COALESCE(c.metadata->>'program', 'UNKNOWN') as program,
             c.created_at,
             c.last_activity_at,
             (SELECT COUNT(*) FROM conversations WHERE customer_id = c.id) as conversation_count,
             (SELECT COUNT(*) FROM tickets WHERE customer_id = c.id AND status = 'open') as open_tickets,
-            CASE 
+            CASE
                 WHEN (SELECT COUNT(*) FROM tickets WHERE customer_id = c.id AND status = 'open') > 0 THEN 'Pending Action'
                 ELSE 'Active'
             END as customer_status
@@ -290,7 +410,7 @@ async def get_conversations(
     where_sql = " AND ".join(where_clauses)
 
     total_row = query_one(f"""
-        SELECT COUNT(*) as count 
+        SELECT COUNT(*) as count
         FROM conversations c
         JOIN customers cust ON c.customer_id = cust.id
         WHERE {where_sql}
@@ -299,7 +419,7 @@ async def get_conversations(
 
     query_params = list(params) + [limit, offset]
     rows = query_all(f"""
-        SELECT 
+        SELECT
             c.id,
             c.customer_id,
             cust.full_name as customer_name,
@@ -321,7 +441,7 @@ async def get_conversations(
 
     # Aggregate metrics for conversation analytics
     summary_counts = query_one(f"""
-        SELECT 
+        SELECT
             COUNT(*) as total,
             COUNT(CASE WHEN c.created_at >= CURRENT_DATE THEN 1 END) as today_count,
             COUNT(CASE WHEN c.created_at >= NOW() - INTERVAL '7 days' THEN 1 END) as week_count,
@@ -437,7 +557,7 @@ async def get_tickets(
     where_sql = " AND ".join(where_clauses)
 
     total_row = query_one(f"""
-        SELECT COUNT(*) as count 
+        SELECT COUNT(*) as count
         FROM tickets t
         JOIN customers c ON t.customer_id = c.id
         WHERE {where_sql}
@@ -446,7 +566,7 @@ async def get_tickets(
 
     query_params = list(params) + [limit, offset]
     rows = query_all(f"""
-        SELECT 
+        SELECT
             t.id,
             t.ticket_number,
             t.customer_id,
@@ -459,7 +579,7 @@ async def get_tickets(
             t.created_at,
             t.sla_due_at,
             t.updated_at,
-            CASE 
+            CASE
                 WHEN t.status = 'open' AND t.sla_due_at < NOW() THEN 'BREACHED'
                 WHEN t.status = 'open' AND t.sla_due_at < NOW() + INTERVAL '2 hours' THEN 'AT_RISK'
                 WHEN t.status = 'resolved' OR t.status = 'closed' THEN 'RESOLVED'
@@ -468,7 +588,7 @@ async def get_tickets(
         FROM tickets t
         JOIN customers c ON t.customer_id = c.id
         WHERE {where_sql}
-        ORDER BY 
+        ORDER BY
             CASE WHEN t.status = 'open' AND t.sla_due_at < NOW() THEN 1 ELSE 2 END,
             t.created_at DESC
         LIMIT %s OFFSET %s
@@ -532,8 +652,8 @@ async def get_rag_metrics(user: Dict[str, Any] = Depends(get_current_user)):
 
     # Confidence distribution
     conf_rows = query_all("""
-        SELECT 
-            CASE 
+        SELECT
+            CASE
                 WHEN confidence >= 0.90 THEN '0.90 - 1.00 (High)'
                 WHEN confidence >= 0.75 THEN '0.75 - 0.89 (Good)'
                 WHEN confidence >= 0.50 THEN '0.50 - 0.74 (Moderate)'
@@ -676,7 +796,7 @@ async def get_execution_detail(request_id: str, user: Dict[str, Any] = Depends(g
 @router.get("/knowledge-base")
 async def get_kb_metrics(user: Dict[str, Any] = Depends(get_current_user)):
     totals = query_one("""
-        SELECT 
+        SELECT
             COUNT(*) as total_docs,
             COUNT(CASE WHEN is_active = TRUE THEN 1 END) as active_docs,
             COUNT(CASE WHEN embedding IS NOT NULL THEN 1 END) as embedded_rows,
@@ -867,7 +987,7 @@ async def get_recent_activity(
     user: Dict[str, Any] = Depends(get_current_user)
 ):
     rows = query_all(f"""
-        SELECT 
+        SELECT
             id,
             workflow_name,
             event_type,
@@ -918,7 +1038,7 @@ async def get_conversation_detail(
     can_view_pii = (user.get("role") == "admin")
 
     conv = query_one("""
-        SELECT 
+        SELECT
             c.id, c.channel, c.status, c.current_intent, c.language, c.created_at, c.closed_at,
             cust.id as customer_id, cust.full_name, cust.phone_number, cust.email, cust.metadata as customer_metadata
         FROM conversations c
@@ -930,7 +1050,7 @@ async def get_conversation_detail(
         raise HTTPException(status_code=404, detail="Conversation not found")
 
     messages = query_all("""
-        SELECT 
+        SELECT
             id, sender_type, content, intent, confidence, created_at, metadata
         FROM messages
         WHERE conversation_id = %s
@@ -944,7 +1064,7 @@ async def get_conversation_detail(
     """, (conversation_id,))
 
     tickets = query_all("""
-        SELECT 
+        SELECT
             ticket_number, priority, status, reason, sla_due_at, assigned_agent, created_at
         FROM tickets
         WHERE conversation_id = %s
@@ -1000,3 +1120,518 @@ async def get_conversation_detail(
             "created_at": t["created_at"].isoformat() if t["created_at"] else None
         } for t in tickets]
     }
+
+# --- 10. REAL-TIME N8N ORCHESTRATION & TELEMETRY ---
+
+class SimulateRequest(BaseModel):
+    message: str
+    full_name: Optional[str] = "Live Simulator User"
+    phone_number: Optional[str] = "+201000000000"
+    channel: Optional[str] = "simulator"
+    program: Optional[str] = "DEPI"
+
+class TicketRespondRequest(BaseModel):
+    response_message: str
+    agent_name: Optional[str] = "Support Agent"
+    action: Optional[str] = "resolve"
+    notes: Optional[str] = None
+
+@router.get("/n8n/overview")
+async def get_n8n_overview(user: Dict[str, Any] = Depends(get_current_user)):
+    """Provides consolidated operational status of n8n workflows and webhook endpoints."""
+    code, data, err = _n8n_api_request("/workflows")
+    connected = (code == 200)
+    workflows = data.get("data", []) if connected else []
+    active_count = sum(1 for w in workflows if w.get("active") is True)
+
+    probe_code, probe_err = _http_probe(N8N_HEALTH_URL)
+
+    return {
+        "connected": connected,
+        "api_code": code,
+        "health_status": "ONLINE" if probe_code == 200 else "OFFLINE",
+        "total_workflows": len(workflows),
+        "active_workflows": active_count,
+        "ui_url": N8N_UI_URL,
+        "api_url": N8N_API_URL,
+        "gateway_webhook": N8N_GATEWAY_WEBHOOK,
+        "agent_webhook": N8N_AGENT_WEBHOOK,
+        "error": err
+    }
+
+@router.get("/n8n/workflows")
+async def get_n8n_workflows(user: Dict[str, Any] = Depends(get_current_user)):
+    """Lists real n8n workflows from n8n REST API with active toggle state."""
+    code, data, err = _n8n_api_request("/workflows")
+    if code != 200:
+        raise HTTPException(status_code=502, detail=f"Failed to query n8n API: {err or code}")
+
+    items = []
+    for wf in data.get("data", []):
+        wf_id = wf.get("id")
+        items.append({
+            "id": wf_id,
+            "name": wf.get("name"),
+            "active": wf.get("active", False),
+            "nodes_count": len(wf.get("nodes", [])),
+            "tags": [t.get("name") for t in wf.get("tags", [])] if wf.get("tags") else [],
+            "created_at": wf.get("createdAt"),
+            "updated_at": wf.get("updatedAt"),
+            "n8n_url": f"{N8N_UI_URL}/workflow/{wf_id}"
+        })
+    return {"items": items, "count": len(items)}
+
+@router.post("/n8n/workflows/{workflow_id}/activate")
+async def activate_n8n_workflow(workflow_id: str, user: Dict[str, Any] = Depends(require_role("admin", "supervisor"))):
+    """Activates a workflow in n8n live via API."""
+    code, data, err = _n8n_api_request(f"/workflows/{workflow_id}/activate", method="POST")
+    if code != 200:
+        raise HTTPException(status_code=502, detail=f"Failed to activate workflow: {err or code}")
+    return {"success": True, "workflow_id": workflow_id, "active": True}
+
+@router.post("/n8n/workflows/{workflow_id}/deactivate")
+async def deactivate_n8n_workflow(workflow_id: str, user: Dict[str, Any] = Depends(require_role("admin", "supervisor"))):
+    """Deactivates a workflow in n8n live via API."""
+    code, data, err = _n8n_api_request(f"/workflows/{workflow_id}/deactivate", method="POST")
+    if code != 200:
+        raise HTTPException(status_code=502, detail=f"Failed to deactivate workflow: {err or code}")
+    return {"success": True, "workflow_id": workflow_id, "active": False}
+
+@router.get("/n8n/executions")
+async def get_n8n_executions(
+    limit: int = Query(25, ge=1, le=100),
+    user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Fetches real live executions directly from n8n REST API."""
+    code, data, err = _n8n_api_request(f"/executions?limit={limit}")
+    if code != 200:
+        raise HTTPException(status_code=502, detail=f"Failed to query n8n executions: {err or code}")
+
+    raw_list = data.get("data", [])
+    executions = []
+    for ex in raw_list:
+        exec_id = ex.get("id")
+        wf_id = ex.get("workflowId")
+        st_at = ex.get("startedAt")
+        sp_at = ex.get("stoppedAt")
+        duration_ms = None
+        if st_at and sp_at:
+            try:
+                t0 = datetime.fromisoformat(st_at.replace("Z", "+00:00"))
+                t1 = datetime.fromisoformat(sp_at.replace("Z", "+00:00"))
+                duration_ms = int((t1 - t0).total_seconds() * 1000)
+            except Exception:
+                pass
+
+        executions.append({
+            "id": exec_id,
+            "workflow_id": wf_id,
+            "status": ex.get("status", "unknown"),
+            "mode": ex.get("mode", "unknown"),
+            "finished": ex.get("finished", False),
+            "started_at": st_at,
+            "stopped_at": sp_at,
+            "duration_ms": duration_ms,
+            "n8n_url": f"{N8N_UI_URL}/workflow/{wf_id}/executions/{exec_id}" if wf_id and exec_id else None
+        })
+    return {"items": executions, "count": len(executions)}
+
+@router.post("/n8n/simulate")
+async def simulate_system_interaction(
+    req: SimulateRequest,
+    user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Sends a real customer message directly into n8n Master Gateway webhook, receives response, and correlates trace."""
+    payload = {
+        "customer_message": req.message,
+        "full_name": req.full_name,
+        "phone_number": req.phone_number,
+        "channel": req.channel,
+        "program": req.program
+    }
+
+    code, n8n_resp, err, latency = _n8n_webhook_post(N8N_GATEWAY_WEBHOOK, payload, timeout=60.0)
+    if code != 200:
+        return {
+            "success": False,
+            "status_code": code,
+            "error": err or "n8n Gateway execution failed",
+            "latency_ms": latency,
+            "response": n8n_resp,
+            "trace": []
+        }
+
+    time.sleep(0.15)
+
+    req_id = None
+    exec_id = None
+    if isinstance(n8n_resp, dict):
+        req_id = n8n_resp.get("request_id")
+        exec_id = n8n_resp.get("execution_id")
+
+    correlated_events = []
+    if req_id or exec_id:
+        correlated_events = query_all("""
+            SELECT execution_id, workflow_name, event_type, channel, latency_ms, payload, created_at
+            FROM audit_logs
+            WHERE (payload->>'request_id' = %s OR execution_id = %s)
+            ORDER BY created_at ASC
+            LIMIT 50
+        """, (req_id or "", exec_id or ""))
+
+    return {
+        "success": True,
+        "status_code": code,
+        "latency_ms": latency,
+        "response": n8n_resp,
+        "request_id": req_id,
+        "execution_id": exec_id,
+        "trace": [{
+            "execution_id": r["execution_id"],
+            "workflow_name": r["workflow_name"],
+            "event_type": r["event_type"],
+            "channel": r["channel"],
+            "latency_ms": r["latency_ms"],
+            "payload": r["payload"],
+            "created_at": r["created_at"].isoformat() if r["created_at"] else None
+        } for r in correlated_events]
+    }
+
+@router.post("/tickets/{ticket_id}/respond")
+async def respond_to_ticket(
+    ticket_id: str,
+    req: TicketRespondRequest,
+    user: Dict[str, Any] = Depends(require_role("admin", "agent", "supervisor"))
+):
+    """Directly resolves or updates a ticket, dispatches agent response to n8n HITL webhook, and updates PostgreSQL."""
+    ticket = query_one("""
+        SELECT t.id, t.ticket_number, t.customer_id, t.conversation_id, t.status, c.full_name
+        FROM tickets t
+        JOIN customers c ON t.customer_id = c.id
+        WHERE t.id::text = %s OR t.ticket_number = %s
+    """, (ticket_id, ticket_id))
+
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    agent_payload = {
+        "ticket_number": ticket["ticket_number"],
+        "agent_message": req.response_message,
+        "agent_name": req.agent_name or user.get("full_name", "Support Agent"),
+        "action": req.action or "resolve"
+    }
+
+    n8n_code, n8n_data, n8n_err, n8n_lat = _n8n_webhook_post(N8N_AGENT_WEBHOOK, agent_payload, timeout=20.0)
+
+    new_status = "resolved" if req.action == "resolve" else "in_progress"
+    execute_commit("""
+        UPDATE tickets
+        SET status = %s,
+            assigned_agent = %s,
+            resolution_notes = %s,
+            updated_at = NOW()
+        WHERE id = %s
+    """, (new_status, req.agent_name, req.response_message, ticket["id"]))
+
+    if ticket.get("conversation_id"):
+        execute_commit("""
+            INSERT INTO messages (conversation_id, customer_id, sender_type, content, intent)
+            VALUES (%s, %s, 'agent', %s, 'agent_portal_resolution')
+        """, (ticket["conversation_id"], ticket["customer_id"], req.response_message))
+
+    execute_commit("""
+        INSERT INTO audit_logs (workflow_name, event_type, channel, payload)
+        VALUES ('dashboard_hitl_portal', %s, 'dashboard', %s)
+    """, ("ticket_resolved" if new_status == "resolved" else "ticket_replied", json.dumps({
+        "ticket_number": ticket["ticket_number"],
+        "agent": req.agent_name,
+        "action": req.action,
+        "n8n_dispatched": n8n_code == 200,
+        "n8n_status_code": n8n_code
+    })))
+
+    return {
+        "success": True,
+        "ticket_number": ticket["ticket_number"],
+        "status": new_status,
+        "n8n_status_code": n8n_code,
+        "n8n_dispatched": n8n_code == 200,
+        "latency_ms": n8n_lat
+    }
+
+
+@router.get("/rag/evaluation-summary")
+async def get_rag_evaluation_summary(user: Dict[str, Any] = Depends(get_current_user)):
+    """Read a compact benchmark result; this route never runs inference or a benchmark."""
+    project_root = Path(__file__).resolve().parents[2]
+    tests_dir = project_root / "tests"
+    return summarize_latest_rag_evaluation(
+        master_path=tests_dir / "final_test_results.json",
+        results_path=tests_dir / "golden_test_results.json",
+        active_runtime_identity=os.getenv("DASHBOARD_EVALUATION_RUNTIME_ID"),
+        active_corpus_version=os.getenv("DASHBOARD_EVALUATION_CORPUS_VERSION"),
+    )
+
+
+@router.get("/reports/{report_type}/excel")
+async def export_dashboard_report(
+    report_type: str,
+    period: Optional[str] = Query(None, pattern="^(all|today|yesterday|7d|30d|month)?$"),
+    program: Optional[str] = Query("all", max_length=40),
+    search: Optional[str] = Query(None, max_length=250),
+    ticket_status: Optional[str] = Query(None, max_length=30),
+    priority: Optional[str] = Query(None, max_length=30),
+    sla_breached: Optional[bool] = Query(None),
+    execution_status: Optional[str] = Query(None, pattern="^(completed|fallback|failed|unknown)?$"),
+    lang: str = Query("en", pattern="^(en|ar)$"),
+    user: Dict[str, Any] = Depends(get_current_user),
+    _report_scope: Any = Depends(_report_timeout_scope),
+):
+    """Generate a bounded XLSX from existing authenticated, read-only page adapters."""
+    report_started = time.monotonic()
+    now = datetime.now().astimezone()
+    active_program = program or "all"
+    active_period = None if period in (None, "all") else period
+    filters: Dict[str, Any] = {}
+    sheets: List[Dict[str, Any]] = []
+    if report_type == "executive":
+        filters = {"period": period or "all", "program": active_program}
+        data = await get_summary(period=active_period, program=active_program, user=user)
+        metric_labels = {
+            "total_customers": "Total customers / إجمالي العملاء",
+            "active_conversations": "Active conversations / المحادثات النشطة",
+            "total_conversations": "Total conversations / إجمالي المحادثات",
+            "open_tickets": "Open tickets / التذاكر المفتوحة",
+            "pending_tickets": "Pending tickets / التذاكر قيد المعالجة",
+            "resolved_tickets": "Resolved tickets / التذاكر المحلولة",
+            "sla_breaches": "SLA breaches / تجاوزات SLA",
+            "escalated_conversations": "Escalated conversations / المحادثات المصعدة",
+            "avg_response_time_ms": "Average turn latency (ms) / متوسط زمن المعالجة",
+            "rag_success_rate": "Operational successful turn rate (%) / نسبة نجاح المعالجة التشغيلية",
+        }
+        rows = [{"metric": metric_labels[key], "value": value}
+                for key, value in data.items()]
+        sheets = [{"name": "Overview", "title": "Dashboard overview / ملخص لوحة المعلومات",
+                   "columns": _report_columns(lang, [
+                       ("metric", "Metric", "المؤشر", "text"),
+                       ("value", "Value", "القيمة", "decimal"),
+                   ]), "rows": rows}]
+    elif report_type == "customers":
+        filters = {"program": active_program, "search": search or "(none)"}
+        async def fetch_customer_page(page: int, limit: int):
+            return await get_customers(search=search, program=active_program,
+                                       page=page, limit=limit, user=user)
+        items = await _collect_export_pages(fetch_customer_page)
+        sheets = [{"name": "Customers", "title": "Customers and students / العملاء والطلاب",
+                   "columns": _report_columns(lang, [
+                       ("id", "Customer ID", "معرف العميل", "text"),
+                       ("full_name", "Name", "الاسم", "text"),
+                       ("phone_masked", "Phone (role-masked)", "الهاتف (وفق الصلاحية)", "text"),
+                       ("program", "Program", "المبادرة", "text"),
+                       ("created_at", "Created at", "تاريخ الإنشاء", "datetime"),
+                       ("last_interaction", "Last interaction", "آخر تفاعل", "datetime"),
+                       ("conversation_count", "Conversations", "المحادثات", "integer"),
+                       ("open_tickets", "Open tickets", "التذاكر المفتوحة", "integer"),
+                       ("customer_status", "Status", "الحالة", "text"),
+                   ]), "rows": items}]
+    elif report_type == "conversations":
+        filters = {"period": period or "all", "program": active_program}
+        async def fetch_conversation_page(page: int, limit: int):
+            return await get_conversations(period=active_period, program=active_program,
+                                           page=page, limit=limit, user=user)
+        items = await _collect_export_pages(fetch_conversation_page)
+        data = await get_conversations(period=active_period, program=active_program,
+                                       page=1, limit=1, user=user)
+        metrics = data.get("metrics", {})
+        sheets = [
+            {"name": "Conversations", "title": "Filtered conversations / المحادثات المطابقة",
+             "columns": _report_columns(lang, [
+                 ("id", "Conversation ID", "معرف المحادثة", "text"),
+                 ("customer_name", "Customer", "العميل", "text"),
+                 ("program", "Program", "المبادرة", "text"),
+                 ("channel", "Channel", "القناة", "text"),
+                 ("intent", "Intent", "النية", "text"),
+                 ("avg_confidence", "Average confidence", "متوسط الثقة", "decimal"),
+                 ("status", "Status", "الحالة", "text"),
+                 ("created_at", "Created at", "تاريخ الإنشاء", "datetime"),
+                 ("message_count", "Message count", "عدد الرسائل", "integer"),
+             ]), "rows": items},
+            {"name": "Analytics", "title": "Conversation analytics / تحليلات المحادثات",
+             "columns": _report_columns(lang, [
+                 ("metric", "Metric", "المؤشر", "text"),
+                 ("value", "Value", "القيمة", "decimal"),
+             ]), "rows": _metric_rows(metrics, {})},
+        ]
+        for chart_name, chart_rows in data.get("charts", {}).items():
+            sheets.append({"name": chart_name, "title": chart_name.replace("_", " ").title(),
+                           "columns": _report_columns(lang, [
+                               (key, key.replace("_", " ").title(), key.replace("_", " "), "text" if key in {"label", "date_label"} else "integer")
+                               for key in (chart_rows[0].keys() if chart_rows else ["label", "count"])
+                           ]), "rows": chart_rows})
+    elif report_type == "tickets":
+        filters = {"status": ticket_status or "all", "priority": priority or "all",
+                   "program": active_program, "sla_breached": sla_breached if sla_breached is not None else "all"}
+        async def fetch_ticket_page(page: int, limit: int):
+            return await get_tickets(status=ticket_status, priority=priority,
+                                     program=active_program, sla_breached=sla_breached,
+                                     page=page, limit=limit, user=user)
+        items = await _collect_export_pages(fetch_ticket_page)
+        # `reason` and record identifiers are omitted: they are not shown in the
+        # operational table and can contain unnecessary personal or case details.
+        sheets = [{"name": "Tickets", "title": "Filtered support tickets / تذاكر الدعم المطابقة",
+                   "columns": _report_columns(lang, [
+                       ("ticket_number", "Ticket #", "رقم التذكرة", "text"),
+                       ("customer_name", "Customer", "العميل", "text"),
+                       ("program", "Program", "المبادرة", "text"),
+                       ("priority", "Priority", "الأولوية", "text"),
+                       ("status", "Status", "الحالة", "text"),
+                       ("assigned_agent", "Assigned agent", "المسؤول المكلف", "text"),
+                       ("sla_deadline", "SLA deadline", "موعد SLA", "datetime"),
+                       ("sla_status", "SLA status", "حالة SLA", "text"),
+                       ("created_at", "Created at", "تاريخ الإنشاء", "datetime"),
+                       ("updated_at", "Updated at", "تاريخ التحديث", "datetime"),
+                   ]), "rows": items}]
+    elif report_type == "rag":
+        data = await get_rag_metrics(user=user)
+        evaluation = await get_rag_evaluation_summary(user=user)
+        operational = {key: value for key, value in data.items()
+                       if key not in {"confidence_distribution", "program_isolation"}}
+        sheets = [
+            {"name": "Runtime telemetry", "title": "Operational RAG telemetry (not answer accuracy)",
+             "columns": _report_columns(lang, [
+                 ("metric", "Metric", "المؤشر", "text"),
+                 ("value", "Value", "القيمة", "decimal"),
+             ]), "rows": _metric_rows(operational, {})},
+            {"name": "Confidence", "title": "Observed AI confidence distribution",
+             "columns": _report_columns(lang, [
+                 ("bracket", "Confidence band", "نطاق الثقة", "text"),
+                 ("count", "Count", "العدد", "integer"),
+             ]), "rows": data.get("confidence_distribution", [])},
+            {"name": "Evaluation", "title": "Historical benchmark evaluation summary",
+             "columns": _report_columns(lang, [
+                 ("metric", "Metric", "المؤشر", "text"),
+                 ("value", "Value", "القيمة", "text"),
+             ]), "rows": [{"metric": key, "value": value} for key, value in evaluation.items()]},
+        ]
+    elif report_type == "knowledge-base":
+        data = await get_kb_metrics(user=user)
+        summary = {key: value for key, value in data.items()
+                   if key not in {"documents_by_program", "documents_by_source"}}
+        sheets = [
+            {"name": "Summary", "title": "Knowledge base metrics / مؤشرات قاعدة المعرفة",
+             "columns": _report_columns(lang, [
+                 ("metric", "Metric", "المؤشر", "text"),
+                 ("value", "Value", "القيمة", "text"),
+             ]), "rows": _metric_rows(summary, {})},
+            {"name": "By program", "title": "Knowledge documents by program",
+             "columns": _report_columns(lang, [
+                 ("program", "Program", "المبادرة", "text"),
+                 ("count", "Documents", "المستندات", "integer"),
+             ]), "rows": data.get("documents_by_program", [])},
+            {"name": "By source", "title": "Knowledge documents by attribution source",
+             "columns": _report_columns(lang, [
+                 ("source", "Source attribution", "جهة الإسناد", "text"),
+                 ("count", "Documents", "المستندات", "integer"),
+             ]), "rows": data.get("documents_by_source", [])},
+        ]
+    elif report_type == "health":
+        data = await get_system_health(user=user)
+        sheets = [{"name": "Health", "title": "System health snapshot / لقطة صحة النظام",
+                   "columns": _report_columns(lang, [
+                       ("name", "Component", "المكون", "text"),
+                       ("status", "Status", "الحالة", "text"),
+                       ("latency_ms", "Latency (ms)", "الزمن (مللي ثانية)", "decimal"),
+                       ("last_check", "Checked at", "وقت الفحص", "datetime"),
+                   ]), "rows": data.get("services", [])}]
+    elif report_type == "activity":
+        filters = {"execution_status": execution_status or "all (recent execution list)"}
+        execution_rows: List[Dict[str, Any]] = []
+        offset = 0
+        while offset < MAX_EXPORT_ROWS:
+            batch = await list_executions(status_filter=execution_status, channel=None,
+                                          limit=200, offset=offset, user=user)
+            batch_items = batch.get("items", [])
+            execution_rows.extend(batch_items)
+            if len(batch_items) < 200:
+                break
+            offset += len(batch_items)
+        if len(execution_rows) >= MAX_EXPORT_ROWS:
+            probe = await list_executions(status_filter=execution_status, channel=None,
+                                          limit=1, offset=MAX_EXPORT_ROWS, user=user)
+            if probe.get("items"):
+                raise HTTPException(status_code=413, detail=f"Export exceeds the {MAX_EXPORT_ROWS} row limit")
+        activity = await get_recent_activity(limit=100, user=user)
+        sheets = [
+            {"name": "Recent requests", "title": "Recent correlated requests (all matching status)",
+             "columns": _report_columns(lang, [
+                 ("request_id", "Request ID", "معرف الطلب", "text"),
+                 ("execution_id", "Execution ID", "معرف التنفيذ", "text"),
+                 ("workflow_name", "Workflow", "سير العمل", "text"),
+                 ("channel", "Channel", "القناة", "text"),
+                 ("program", "Program", "المبادرة", "text"),
+                 ("intent", "Intent", "النية", "text"),
+                 ("status", "Status", "الحالة", "text"),
+                 ("latency_ms", "Latency (ms)", "الزمن (مللي ثانية)", "decimal"),
+                 ("created_at", "Created at", "تاريخ الإنشاء", "datetime"),
+             ]), "rows": execution_rows},
+            {"name": "Audit activity", "title": "Latest 100 audit events (safe fields only)",
+             "columns": _report_columns(lang, [
+                 ("id", "Event ID", "معرف الحدث", "text"),
+                 ("event_type", "Event type", "نوع الحدث", "text"),
+                 ("workflow_name", "Workflow", "سير العمل", "text"),
+                 ("channel", "Channel", "القناة", "text"),
+                 ("latency_ms", "Latency (ms)", "الزمن (مللي ثانية)", "decimal"),
+                 ("created_at", "Created at", "تاريخ الإنشاء", "datetime"),
+             ]), "rows": activity.get("items", [])},
+        ]
+    elif report_type == "n8n":
+        workflows = await get_n8n_workflows(user=user)
+        executions = await get_n8n_executions(limit=100, user=user)
+        sheets = [
+            {"name": "Workflows", "title": "Read-only workflow metadata snapshot",
+             "columns": _report_columns(lang, [
+                 ("id", "Workflow ID", "معرف سير العمل", "text"),
+                 ("name", "Workflow name", "اسم سير العمل", "text"),
+                 ("nodes_count", "Node count", "عدد العقد", "integer"),
+                 ("tags", "Tags", "الوسوم", "text"),
+                 ("active", "Active", "نشط", "text"),
+                 ("updated_at", "Updated at", "تاريخ التحديث", "datetime"),
+             ]), "rows": [{**item, "tags": ", ".join(item.get("tags", [])),
+                         "active": "Yes" if item.get("active") else "No"}
+                        for item in workflows.get("items", [])]},
+            {"name": "Latest executions", "title": "Latest 100 read-only execution summaries",
+             "columns": _report_columns(lang, [
+                 ("id", "Execution ID", "معرف التنفيذ", "text"),
+                 ("workflow_id", "Workflow ID", "معرف سير العمل", "text"),
+                 ("status", "Status", "الحالة", "text"),
+                 ("mode", "Mode", "النمط", "text"),
+                 ("finished", "Finished", "مكتمل", "text"),
+                 ("started_at", "Started at", "وقت البدء", "datetime"),
+                 ("stopped_at", "Stopped at", "وقت الانتهاء", "datetime"),
+                 ("duration_ms", "Duration (ms)", "المدة (مللي ثانية)", "integer"),
+             ]), "rows": executions.get("items", [])},
+        ]
+    else:
+        raise HTTPException(status_code=404, detail="No report is available for this dashboard view")
+
+    if report_type in {"executive", "customers", "conversations", "tickets"}:
+        filters = {key: value for key, value in filters.items() if value not in (None, "")}
+    if time.monotonic() - report_started > 30:
+        raise HTTPException(status_code=504, detail="Report generation exceeded the time limit; retry with narrower filters")
+    try:
+        workbook_bytes = build_workbook(
+            report_title=report_type.replace("-", " ").replace("_", " ").title(),
+            sheets=sheets,
+            filters=filters,
+            lang=lang,
+            generated_at=now,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=413, detail=str(exc)) from exc
+    filename = safe_filename(report_type.replace("-", " ").replace("_", " "))
+    disposition = f"attachment; filename=\"{filename}\"; filename*=UTF-8''{quote(filename)}"
+    return StreamingResponse(
+        iter([workbook_bytes]),
+        media_type=EXCEL_MIME,
+        headers={"Content-Disposition": disposition, "Cache-Control": "no-store"},
+    )

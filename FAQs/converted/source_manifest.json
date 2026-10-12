@@ -1,9 +1,9 @@
 {
   "pipeline_version": "1.0",
-  "generated_at": "2026-10-11T11:26:20.017494+00:00",
+  "generated_at": "2026-10-12T02:40:14.764083+00:00",
   "discovered_faq_directory": "FAQs",
-  "source_files_total": 5,
-  "total_records_extracted": 452,
+  "source_files_total": 6,
+  "total_records_extracted": 1864,
   "source_inventory": [
     {
       "file_path": "FAQs/DEPI HELPER.xlsx",
@@ -13,6 +13,16 @@
       "sha256": "b754f154508b1d7408772ed7d2a8159087c176f0c84d152c5a079405d0dd433d",
       "status": "extracted",
       "records_count": 268,
+      "exceptions": []
+    },
+    {
+      "file_path": "FAQs/DEPI_Content_Approval_Review.xlsx",
+      "file_name": "DEPI_Content_Approval_Review.xlsx",
+      "format": "xlsx",
+      "size_bytes": 354144,
+      "sha256": "b4729989c4faa74f8ab0d27f9cbf9b5b21da76b5e403fff874fb6e8138bbc0d1",
+      "status": "extracted",
+      "records_count": 1412,
       "exceptions": []
     },
     {
@@ -173,23 +183,58 @@
         "FAQs/DEPI HELPER.xlsx (email)"
       ],
       "question": "التراجع عن الاعتذار"
+    },
+    {
+      "content_hash": "9cec2b4570aa7cd55ff0d9f2ac73da2a34f523ccaf36ad739ef627c688af55f4",
+      "count": 4,
+      "record_ids": [
+        "debi_depi_helper_xlsx_owner_approval_queue_r002_9cec2b4570aa",
+        "debi_depi_helper_xlsx_manual_content_review_r002_9cec2b4570aa",
+        "debi_depi_helper_xlsx_scope_decisions_r002_9cec2b4570aa",
+        "debi_depi_helper_xlsx_out_of_scope_r002_9cec2b4570aa"
+      ],
+      "sources": [
+        "FAQs/DEPI_Content_Approval_Review.xlsx (Owner Approval Queue)",
+        "FAQs/DEPI_Content_Approval_Review.xlsx (Manual Content Review)",
+        "FAQs/DEPI_Content_Approval_Review.xlsx (Scope Decisions)",
+        "FAQs/DEPI_Content_Approval_Review.xlsx (Out of Scope)"
+      ],
+      "question": "Review only. Reviewer fields are intentionally blank; no record is approved by this workbook."
+    },
+    {
+      "content_hash": "889ea5a6c1a861ea8426ed31e4c7faf48197907fd17588a34675e71c62c4e859",
+      "count": 4,
+      "record_ids": [
+        "debi_depi_helper_xlsx_owner_approval_queue_r004_889ea5a6c1a8",
+        "debi_depi_helper_xlsx_manual_content_review_r004_889ea5a6c1a8",
+        "debi_depi_helper_xlsx_scope_decisions_r004_889ea5a6c1a8",
+        "debi_depi_helper_xlsx_out_of_scope_r004_889ea5a6c1a8"
+      ],
+      "sources": [
+        "FAQs/DEPI_Content_Approval_Review.xlsx (Owner Approval Queue)",
+        "FAQs/DEPI_Content_Approval_Review.xlsx (Manual Content Review)",
+        "FAQs/DEPI_Content_Approval_Review.xlsx (Scope Decisions)",
+        "FAQs/DEPI_Content_Approval_Review.xlsx (Out of Scope)"
+      ],
+      "question": "Stable Source Record ID"
     }
   ],
   "summary": {
     "by_program_scope": {
-      "DEBI": 290,
+      "DEBI": 1702,
       "DIGILIANS": 162
     },
     "by_language": {
       "ar": 411,
       "bilingual": 17,
-      "en": 24
+      "en": 1436
     },
     "by_source_file": {
       "FAQs/DEPI HELPER.xlsx": 268,
+      "FAQs/DEPI_Content_Approval_Review.xlsx": 1412,
       "FAQs/FAQ final-Digilians.pdf": 162,
       "FAQs/FAQ LMS-English Exam.pdf": 22
     },
-    "records_flagged_for_review": 63
+    "records_flagged_for_review": 69
   }
 }

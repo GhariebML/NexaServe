@@ -4,13 +4,13 @@ Mounts API routers, Static file hosting for frontend, CORS, and Lifespan lifecyc
 """
 import os
 import sys
-from fastapi import FastAPI, HTTPException, status, Depends
+from fastapi import FastAPI, HTTPException, status, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
-from database import init_db_pool, query_one
+from database import init_db_pool, query_one, ReportQueryTimeoutError
 import auth
 from routes import router as dashboard_router
 
@@ -19,6 +19,13 @@ app = FastAPI(
     description="Real-time operational dashboard connected to NexaServe PostgreSQL database.",
     version="2.0.0"
 )
+
+
+@app.exception_handler(ReportQueryTimeoutError)
+async def report_query_timeout_handler(_request: Request, _exc: ReportQueryTimeoutError):
+    return JSONResponse(status_code=504, content={
+        "detail": "Report generation exceeded the database time limit; retry with narrower filters"
+    })
 
 # CORS configuration
 app.add_middleware(

@@ -3,9 +3,11 @@ NexaServe Production Admin Dashboard - Core Database Client
 Secure connection pool, parameterized query execution, and date/program filtering.
 """
 import os
+import time
 import psycopg2
 from psycopg2 import pool
 from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import Generator, Any, List, Dict, Optional, Tuple
 
 POSTGRES_HOST = os.getenv("POSTGRES_HOST", "127.0.0.1")
@@ -19,6 +21,11 @@ if not POSTGRES_PASSWORD:
 POOL_MAX_CONNECTIONS = max(2, int(os.getenv("DASHBOARD_DB_POOL_MAX", "8")))
 
 db_pool: Optional[pool.ThreadedConnectionPool] = None
+REPORT_QUERY_DEADLINE: ContextVar[Optional[float]] = ContextVar("dashboard_report_query_deadline", default=None)
+
+
+class ReportQueryTimeoutError(Exception):
+    """A bounded read-only dashboard export exceeded its database time budget."""
 
 def init_db_pool():
     global db_pool
@@ -55,7 +62,19 @@ def get_db() -> Generator[psycopg2.extensions.connection, None, None]:
 def query_all(sql: str, params: Optional[Tuple[Any, ...]] = None) -> List[Dict[str, Any]]:
     with get_db() as conn:
         with conn.cursor() as cur:
-            cur.execute(sql, params or ())
+            deadline = REPORT_QUERY_DEADLINE.get()
+            if deadline is not None:
+                remaining_ms = int((deadline - time.monotonic()) * 1000)
+                if remaining_ms <= 0:
+                    raise ReportQueryTimeoutError
+                timeout_ms = min(10_000, remaining_ms)
+                cur.execute("SELECT set_config('statement_timeout', %s, true)", (f"{timeout_ms}ms",))
+            try:
+                cur.execute(sql, params or ())
+            except psycopg2.errors.QueryCanceled as exc:
+                if deadline is not None:
+                    raise ReportQueryTimeoutError from exc
+                raise
             if cur.description is None:
                 return []
             cols = [desc[0] for desc in cur.description]

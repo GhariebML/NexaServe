@@ -583,6 +583,89 @@ tr:hover td {
   box-shadow: 0 0 15px var(--primary-glow);
 }
 
+.btn-export {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 8px 13px;
+  border: 1px solid rgba(96, 165, 250, 0.5);
+  border-radius: var(--radius-sm);
+  background: rgba(37, 99, 235, 0.16);
+  color: #DBEAFE;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-export:hover:not(:disabled) {
+  background: var(--primary);
+  border-color: #60A5FA;
+}
+
+.btn-export:disabled { opacity: 0.65; cursor: wait; }
+.btn-export:focus-visible, .btn-link:focus-visible {
+  outline: 3px solid #67E8F9;
+  outline-offset: 2px;
+}
+.btn-export[hidden] { display: none; }
+
+.rag-evaluation-panel {
+  margin-top: 22px;
+  padding: 22px;
+  border: 1px solid rgba(59, 130, 246, 0.32);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(125deg, rgba(17, 31, 52, 0.98), rgba(17, 24, 39, 0.96));
+  box-shadow: var(--shadow-card);
+}
+
+.rag-eval-loading, .rag-eval-unavailable { color: var(--text-muted); padding: 12px 2px; }
+.rag-eval-head, .rag-eval-body, .rag-eval-actions { display: flex; justify-content: space-between; gap: 20px; }
+.rag-eval-head { align-items: flex-start; }
+.rag-eval-head h2 { font-size: 1.08rem; margin-bottom: 4px; }
+.rag-eval-head p, .rag-eval-reason { color: var(--text-muted); font-size: 0.82rem; }
+.rag-eval-status { flex-shrink: 0; border-radius: 999px; padding: 5px 10px; font-size: 0.7rem; font-weight: 800; letter-spacing: .04em; }
+.status-blocked, .status-not_evaluated { color: #FDE68A; background: rgba(245, 158, 11, .15); border: 1px solid rgba(245, 158, 11, .35); }
+.status-needs_improvement, .status-stale { color: #FECACA; background: rgba(239, 68, 68, .12); border: 1px solid rgba(239, 68, 68, .3); }
+.status-healthy { color: #A7F3D0; background: rgba(16, 185, 129, .12); border: 1px solid rgba(16, 185, 129, .3); }
+.rag-eval-body { align-items: center; margin-top: 18px; }
+.rag-eval-primary { min-width: 215px; display: flex; flex-direction: column; gap: 4px; }
+.rag-eval-primary span { color: var(--text-muted); font-size: .8rem; }
+.rag-eval-primary strong { font-size: 2.2rem; line-height: 1.2; color: #93C5FD; }
+.rag-eval-facts { flex: 1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 20px; }
+.rag-eval-facts div { min-width: 0; }
+.rag-eval-facts dt { color: var(--text-subtle); font-size: .72rem; }
+.rag-eval-facts dd { overflow-wrap: anywhere; font-size: .82rem; }
+.rag-eval-facts small { color: var(--text-subtle); }
+.rag-eval-reason { margin-top: 14px; }
+.rag-eval-actions { justify-content: flex-start; margin-top: 15px; }
+.btn-link { padding: 4px 0; border: 0; background: transparent; color: #93C5FD; font: inherit; font-size: .82rem; cursor: pointer; }
+.btn-link:hover { color: #DBEAFE; text-decoration: underline; }
+.export-toast { position: fixed; z-index: 1000; inset-inline-end: 22px; top: 82px; max-width: min(420px, calc(100vw - 32px)); padding: 12px 16px; border-radius: var(--radius-md); background: #064E3B; border: 1px solid #10B981; color: #D1FAE5; box-shadow: var(--shadow-card); font-size: .84rem; }
+.export-toast.error { background: #7F1D1D; border-color: #EF4444; color: #FEE2E2; }
+.export-toast[hidden] { display: none; }
+
+@media (max-width: 768px) {
+  .topbar { min-height: 70px; height: auto; padding: 10px 14px; gap: 10px; flex-wrap: wrap; }
+  .topbar-controls { gap: 8px; flex-wrap: wrap; }
+  .topbar-controls .control-group { gap: 5px; }
+  .topbar-controls select { max-width: 135px; padding: 7px; }
+  .btn-export { min-height: 36px; padding: 7px 9px; }
+  .content-body { padding: 18px 14px; gap: 18px; }
+  .rag-evaluation-panel { padding: 16px; }
+  .rag-eval-body { align-items: flex-start; flex-direction: column; }
+  .rag-eval-facts { width: 100%; }
+}
+
+@media (max-width: 480px) {
+  .rag-eval-head { flex-direction: column; gap: 10px; }
+  .rag-eval-facts { grid-template-columns: 1fr; }
+  .rag-eval-actions { flex-wrap: wrap; gap: 12px; }
+}
+
 .empty-state {
   padding: 48px;
   text-align: center;

@@ -7,7 +7,7 @@ from pathlib import Path
 
 os.environ.setdefault("CS_DB_PASSWORD", "test-only-not-a-real-secret")
 os.environ.setdefault("DASHBOARD_JWT_SECRET", "test-only-dashboard-signing-key")
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "dashboard" / "backend"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
 
 import routes
 

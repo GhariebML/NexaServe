@@ -31,8 +31,16 @@ def normalize(text: Any) -> str:
     return "\n".join(re.sub(r"[ \t]+", " ", line).strip() for line in value.splitlines()).strip()
 
 
-def content_hash(question: Any, answer: Any) -> str:
-    return hashlib.sha256(f"{normalize(question)}||{normalize(answer)}".encode("utf-8")).hexdigest()
+def content_hash(question: Any, answer: Any, content: Any = None,
+                 fallback_to_content: bool = False) -> str:
+    """Recompute the source extractor's canonical Q/A hash.
+
+    The DEPI HELPER Excel converter uses ``answer or content`` when building
+    its canonical answer. Other extractors hash the answer field as persisted,
+    including an explicitly empty answer.
+    """
+    canonical_answer = (answer or content) if fallback_to_content else answer
+    return hashlib.sha256(f"{normalize(question)}||{normalize(canonical_answer)}".encode("utf-8")).hexdigest()
 
 
 def record_fingerprint(record: dict[str, Any]) -> str:
@@ -103,7 +111,10 @@ def classify(record: dict[str, Any], source_file: str, is_ticket: bool = False) 
         identity = "DEPI (original source artifact/content supports DEPI; faqs.json converter label DEBI conflicts)"
         authority = "internal operational/support document; not verified as an official government publication"
         proposed_program = "DEPI"
-        proposed_scope = "DEPI_AUTHORITATIVE"
+        # The supplied workbook/PDFs establish DEPI-oriented internal guidance,
+        # not official authority. Keep proposed scope explicitly non-authoritative
+        # until an accountable owner approves it.
+        proposed_scope = "DEPI_SCOPED_INTERNAL_PENDING_OWNER_APPROVAL"
         if "DEPI HELPER.xlsx" in source_file and "DEPI VS DEBI" in normalize(q) + " " + normalize(a):
             identity = "DEPI/DEBI cross-initiative case (source explicitly contrasts the two initiatives)"
             proposed_scope = "QUARANTINED"
@@ -179,7 +190,8 @@ def main() -> None:
             records.append(entry)
             continue
 
-        equivalence = content_hash(q, a)
+        helper_fallback = json_file.endswith("depi_helper.json") or source_file == "FAQs/DEPI HELPER.xlsx"
+        equivalence = content_hash(q, a, source_record.get("content"), helper_fallback)
         faq_file_path = ROOT / source_file if source_file else None
         source_hash_verified = bool(faq_file_path and faq_file_path.exists() and
                                     source_info.get(source_file, {}).get("hash_match"))
@@ -270,7 +282,7 @@ def main() -> None:
     report = {
         "title": "NexaServe source provenance and reconciliation review",
         "policy": "Review only. No record approved for ingestion; no database writes. Original source files are unchanged.",
-        "hash_method": {"source_file_sha256": "SHA-256 over original file bytes", "content_equivalence": "converter-compatible SHA-256 over normalized(question) + '||' + normalized(answer); normalization preserves punctuation and line breaks while normalizing whitespace", "record_fingerprint": "SHA-256 of canonical JSON containing source path, stable source record ID, language, normalized question, normalized answer"},
+        "hash_method": {"source_file_sha256": "SHA-256 over original file bytes", "content_equivalence": "converter-compatible SHA-256 over normalized(question) + '||' + normalized(answer); DEPI HELPER Excel records use answer or content exactly as that converter does, while other extractors preserve an empty answer. Normalization preserves punctuation and line breaks while normalizing whitespace and does not apply Unicode NFC.", "record_fingerprint": "SHA-256 of canonical JSON containing source path, stable source record ID, language, normalized question, normalized answer"},
         "original_source_files": source_info,
         "jsonl_companion_parity": parity_results,
         "summary": {"records_reviewed_in_json": len(records), "knowledge_records_with_question_or_answer": sum(r.get("source_record_content_included") is not False for r in records),
