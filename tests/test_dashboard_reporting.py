@@ -183,6 +183,12 @@ def test_empty_export_decision_rows_create_a_valid_empty_sheet():
     assert workbook["Rows"].auto_filter.ref == "A5:A5"
 
 
+def test_report_row_limit_is_enforced():
+    rows = [{"id": str(index)} for index in range(5001)]
+    with pytest.raises(ValueError, match="5000 row export limit"):
+        build_workbook("Bounded", [{"name": "Rows", "columns": [{"key": "id", "label": "ID", "type": "text"}], "rows": rows}])
+
+
 def test_export_query_timeout_is_scoped_and_parameterized(monkeypatch):
     executed = []
 
@@ -222,6 +228,20 @@ def test_dashboard_frontend_exposes_bilingual_shared_export_and_historical_label
     assert "loadRAGEvaluationCard()" in app
     export_map = app.split("const EXPORT_REPORTS = {", 1)[1].split("};", 1)[0]
     assert "health: 'health'" in export_map and "simulator:" not in export_map
+
+
+def test_packaged_summary_is_present_in_both_dashboard_build_contexts():
+    package_paths = [
+        ROOT / "dashboard" / "evaluation" / "rag_evaluation_summary.json",
+        ROOT / "deployment" / "application" / "dashboard" / "evaluation" / "rag_evaluation_summary.json",
+    ]
+    for path in package_paths:
+        assert path.exists()
+        artifact = json.loads(path.read_text(encoding="utf-8"))
+        assert "results" not in artifact
+        assert artifact["evaluation"]["summary"]["total"] == 36
+    assert "COPY evaluation/ /app/evaluation/" in (ROOT / "dashboard/Dockerfile").read_text(encoding="utf-8")
+    assert "COPY evaluation/ /app/evaluation/" in (ROOT / "deployment/application/dashboard/Dockerfile").read_text(encoding="utf-8")
 
 
 def test_evaluation_and_export_routes_require_auth_and_work_without_database(monkeypatch):

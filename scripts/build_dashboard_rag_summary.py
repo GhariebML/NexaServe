@@ -41,8 +41,8 @@ def main() -> int:
     parser.add_argument("--output", type=Path, action="append", help="Output path; may be specified more than once")
     args = parser.parse_args()
     destinations = args.output or [
-        ROOT / "dashboard" / "data" / "rag_evaluation_summary.json",
-        ROOT / "deployment" / "application" / "dashboard" / "data" / "rag_evaluation_summary.json",
+        ROOT / "dashboard" / "evaluation" / "rag_evaluation_summary.json",
+        ROOT / "deployment" / "application" / "dashboard" / "evaluation" / "rag_evaluation_summary.json",
     ]
     try:
         artifact = build(args.master, args.results, destinations)

@@ -1363,7 +1363,7 @@ async def respond_to_ticket(
 @router.get("/rag/evaluation-summary")
 async def get_rag_evaluation_summary(user: Dict[str, Any] = Depends(get_current_user)):
     """Read a compact benchmark result; this route never runs inference or a benchmark."""
-    summary_path = Path(__file__).resolve().parents[1] / "data" / "rag_evaluation_summary.json"
+    summary_path = Path(__file__).resolve().parents[1] / "evaluation" / "rag_evaluation_summary.json"
     return summarize_stored_rag_evaluation(
         summary_path=summary_path,
         active_runtime_identity=os.getenv("DASHBOARD_EVALUATION_RUNTIME_ID"),

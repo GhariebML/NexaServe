@@ -5,6 +5,6 @@ COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 COPY backend/ /app/backend/
 COPY frontend/ /app/frontend/
-COPY data/ /app/data/
+COPY evaluation/ /app/evaluation/
 EXPOSE 8090
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8090", "--workers", "1"]
