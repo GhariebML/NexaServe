@@ -397,6 +397,9 @@ function updateExportAvailability() {
   if (!button) return;
   button.hidden = !EXPORT_REPORTS[STATE.currentView];
   button.disabled = STATE.isExporting;
+  const label = (I18N[STATE.currentLang] || I18N.en).export_report;
+  button.title = label;
+  button.setAttribute('aria-label', label);
 }
 
 function showExportToast(message, isError = false) {

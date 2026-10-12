@@ -224,7 +224,7 @@ async def get_summary(
     if program and program.upper() != "ALL":
         cust_prog_filter = " WHERE (metadata->>'program') ILIKE %s"
         cust_params.append(f"%{program}%")
-
+    
     total_customers_row = query_one(f"SELECT COUNT(*) as count FROM customers{cust_prog_filter}", tuple(cust_params))
     total_customers = total_customers_row["count"] if total_customers_row else 0
 
@@ -234,13 +234,13 @@ async def get_summary(
     if program and program.upper() != "ALL":
         conv_filter += " AND c.id IN (SELECT conv.id FROM conversations conv JOIN customers cust ON conv.customer_id = cust.id WHERE (cust.metadata->>'program') ILIKE %s)"
         conv_params.append(f"%{program}%")
-
+    
     d_filter, d_params = build_date_filter(period, None, None, "c.created_at")
     conv_filter += d_filter
     conv_params.extend(d_params)
 
     conv_stats = query_one(f"""
-        SELECT
+        SELECT 
             COUNT(*) as total_convs,
             COUNT(CASE WHEN c.status = 'active' THEN 1 END) as active_convs,
             COUNT(CASE WHEN c.status = 'handed_off' OR c.current_intent = 'human_escalation' THEN 1 END) as escalated_convs
@@ -257,13 +257,13 @@ async def get_summary(
     if program and program.upper() != "ALL":
         tick_filter += " AND t.customer_id IN (SELECT id FROM customers WHERE (metadata->>'program') ILIKE %s)"
         tick_params.append(f"%{program}%")
-
+    
     td_filter, td_params = build_date_filter(period, None, None, "t.created_at")
     tick_filter += td_filter
     tick_params.extend(td_params)
 
     ticket_stats = query_one(f"""
-        SELECT
+        SELECT 
             COUNT(*) as total_tickets,
             COUNT(CASE WHEN t.status = 'open' THEN 1 END) as open_tickets,
             COUNT(CASE WHEN t.status = 'in_progress' OR t.status = 'assigned' THEN 1 END) as pending_tickets,
@@ -287,7 +287,7 @@ async def get_summary(
     perf_where += perf_date_filter
     perf_params.extend(perf_date_params)
     perf_stats = query_one(f"""
-        SELECT
+        SELECT 
             AVG(latency_ms) as avg_latency,
             COUNT(CASE WHEN payload->>'status' = 'success' THEN 1 END) as success_turns,
             COUNT(*) as total_turns
@@ -334,23 +334,23 @@ async def get_customers(
         params.extend([f"%{search}%", f"%{search}%", f"%{search}%"])
 
     where_sql = " AND ".join(where_clauses)
-
+    
     total_row = query_one(f"SELECT COUNT(*) as count FROM customers c WHERE {where_sql}", tuple(params))
     total_count = total_row["count"] if total_row else 0
 
     query_params = list(params) + [limit, offset]
     rows = query_all(f"""
-        SELECT
-            c.id,
-            c.full_name,
-            c.phone_number,
+        SELECT 
+            c.id, 
+            c.full_name, 
+            c.phone_number, 
             c.email,
             COALESCE(c.metadata->>'program', 'UNKNOWN') as program,
             c.created_at,
             c.last_activity_at,
             (SELECT COUNT(*) FROM conversations WHERE customer_id = c.id) as conversation_count,
             (SELECT COUNT(*) FROM tickets WHERE customer_id = c.id AND status = 'open') as open_tickets,
-            CASE
+            CASE 
                 WHEN (SELECT COUNT(*) FROM tickets WHERE customer_id = c.id AND status = 'open') > 0 THEN 'Pending Action'
                 ELSE 'Active'
             END as customer_status
@@ -410,7 +410,7 @@ async def get_conversations(
     where_sql = " AND ".join(where_clauses)
 
     total_row = query_one(f"""
-        SELECT COUNT(*) as count
+        SELECT COUNT(*) as count 
         FROM conversations c
         JOIN customers cust ON c.customer_id = cust.id
         WHERE {where_sql}
@@ -419,7 +419,7 @@ async def get_conversations(
 
     query_params = list(params) + [limit, offset]
     rows = query_all(f"""
-        SELECT
+        SELECT 
             c.id,
             c.customer_id,
             cust.full_name as customer_name,
@@ -441,7 +441,7 @@ async def get_conversations(
 
     # Aggregate metrics for conversation analytics
     summary_counts = query_one(f"""
-        SELECT
+        SELECT 
             COUNT(*) as total,
             COUNT(CASE WHEN c.created_at >= CURRENT_DATE THEN 1 END) as today_count,
             COUNT(CASE WHEN c.created_at >= NOW() - INTERVAL '7 days' THEN 1 END) as week_count,
@@ -557,7 +557,7 @@ async def get_tickets(
     where_sql = " AND ".join(where_clauses)
 
     total_row = query_one(f"""
-        SELECT COUNT(*) as count
+        SELECT COUNT(*) as count 
         FROM tickets t
         JOIN customers c ON t.customer_id = c.id
         WHERE {where_sql}
@@ -566,7 +566,7 @@ async def get_tickets(
 
     query_params = list(params) + [limit, offset]
     rows = query_all(f"""
-        SELECT
+        SELECT 
             t.id,
             t.ticket_number,
             t.customer_id,
@@ -579,7 +579,7 @@ async def get_tickets(
             t.created_at,
             t.sla_due_at,
             t.updated_at,
-            CASE
+            CASE 
                 WHEN t.status = 'open' AND t.sla_due_at < NOW() THEN 'BREACHED'
                 WHEN t.status = 'open' AND t.sla_due_at < NOW() + INTERVAL '2 hours' THEN 'AT_RISK'
                 WHEN t.status = 'resolved' OR t.status = 'closed' THEN 'RESOLVED'
@@ -588,7 +588,7 @@ async def get_tickets(
         FROM tickets t
         JOIN customers c ON t.customer_id = c.id
         WHERE {where_sql}
-        ORDER BY
+        ORDER BY 
             CASE WHEN t.status = 'open' AND t.sla_due_at < NOW() THEN 1 ELSE 2 END,
             t.created_at DESC
         LIMIT %s OFFSET %s
@@ -652,8 +652,8 @@ async def get_rag_metrics(user: Dict[str, Any] = Depends(get_current_user)):
 
     # Confidence distribution
     conf_rows = query_all("""
-        SELECT
-            CASE
+        SELECT 
+            CASE 
                 WHEN confidence >= 0.90 THEN '0.90 - 1.00 (High)'
                 WHEN confidence >= 0.75 THEN '0.75 - 0.89 (Good)'
                 WHEN confidence >= 0.50 THEN '0.50 - 0.74 (Moderate)'
@@ -796,7 +796,7 @@ async def get_execution_detail(request_id: str, user: Dict[str, Any] = Depends(g
 @router.get("/knowledge-base")
 async def get_kb_metrics(user: Dict[str, Any] = Depends(get_current_user)):
     totals = query_one("""
-        SELECT
+        SELECT 
             COUNT(*) as total_docs,
             COUNT(CASE WHEN is_active = TRUE THEN 1 END) as active_docs,
             COUNT(CASE WHEN embedding IS NOT NULL THEN 1 END) as embedded_rows,
@@ -987,7 +987,7 @@ async def get_recent_activity(
     user: Dict[str, Any] = Depends(get_current_user)
 ):
     rows = query_all(f"""
-        SELECT
+        SELECT 
             id,
             workflow_name,
             event_type,
@@ -1038,7 +1038,7 @@ async def get_conversation_detail(
     can_view_pii = (user.get("role") == "admin")
 
     conv = query_one("""
-        SELECT
+        SELECT 
             c.id, c.channel, c.status, c.current_intent, c.language, c.created_at, c.closed_at,
             cust.id as customer_id, cust.full_name, cust.phone_number, cust.email, cust.metadata as customer_metadata
         FROM conversations c
@@ -1050,7 +1050,7 @@ async def get_conversation_detail(
         raise HTTPException(status_code=404, detail="Conversation not found")
 
     messages = query_all("""
-        SELECT
+        SELECT 
             id, sender_type, content, intent, confidence, created_at, metadata
         FROM messages
         WHERE conversation_id = %s
@@ -1064,7 +1064,7 @@ async def get_conversation_detail(
     """, (conversation_id,))
 
     tickets = query_all("""
-        SELECT
+        SELECT 
             ticket_number, priority, status, reason, sla_due_at, assigned_agent, created_at
         FROM tickets
         WHERE conversation_id = %s
@@ -1143,9 +1143,9 @@ async def get_n8n_overview(user: Dict[str, Any] = Depends(get_current_user)):
     connected = (code == 200)
     workflows = data.get("data", []) if connected else []
     active_count = sum(1 for w in workflows if w.get("active") is True)
-
+    
     probe_code, probe_err = _http_probe(N8N_HEALTH_URL)
-
+    
     return {
         "connected": connected,
         "api_code": code,
@@ -1165,7 +1165,7 @@ async def get_n8n_workflows(user: Dict[str, Any] = Depends(get_current_user)):
     code, data, err = _n8n_api_request("/workflows")
     if code != 200:
         raise HTTPException(status_code=502, detail=f"Failed to query n8n API: {err or code}")
-
+    
     items = []
     for wf in data.get("data", []):
         wf_id = wf.get("id")
@@ -1206,7 +1206,7 @@ async def get_n8n_executions(
     code, data, err = _n8n_api_request(f"/executions?limit={limit}")
     if code != 200:
         raise HTTPException(status_code=502, detail=f"Failed to query n8n executions: {err or code}")
-
+    
     raw_list = data.get("data", [])
     executions = []
     for ex in raw_list:
@@ -1222,7 +1222,7 @@ async def get_n8n_executions(
                 duration_ms = int((t1 - t0).total_seconds() * 1000)
             except Exception:
                 pass
-
+        
         executions.append({
             "id": exec_id,
             "workflow_id": wf_id,
@@ -1249,7 +1249,7 @@ async def simulate_system_interaction(
         "channel": req.channel,
         "program": req.program
     }
-
+    
     code, n8n_resp, err, latency = _n8n_webhook_post(N8N_GATEWAY_WEBHOOK, payload, timeout=60.0)
     if code != 200:
         return {
@@ -1260,15 +1260,15 @@ async def simulate_system_interaction(
             "response": n8n_resp,
             "trace": []
         }
-
+    
     time.sleep(0.15)
-
+    
     req_id = None
     exec_id = None
     if isinstance(n8n_resp, dict):
         req_id = n8n_resp.get("request_id")
         exec_id = n8n_resp.get("execution_id")
-
+    
     correlated_events = []
     if req_id or exec_id:
         correlated_events = query_all("""
@@ -1278,7 +1278,7 @@ async def simulate_system_interaction(
             ORDER BY created_at ASC
             LIMIT 50
         """, (req_id or "", exec_id or ""))
-
+    
     return {
         "success": True,
         "status_code": code,
@@ -1310,19 +1310,19 @@ async def respond_to_ticket(
         JOIN customers c ON t.customer_id = c.id
         WHERE t.id::text = %s OR t.ticket_number = %s
     """, (ticket_id, ticket_id))
-
+    
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
-
+    
     agent_payload = {
         "ticket_number": ticket["ticket_number"],
         "agent_message": req.response_message,
         "agent_name": req.agent_name or user.get("full_name", "Support Agent"),
         "action": req.action or "resolve"
     }
-
+    
     n8n_code, n8n_data, n8n_err, n8n_lat = _n8n_webhook_post(N8N_AGENT_WEBHOOK, agent_payload, timeout=20.0)
-
+    
     new_status = "resolved" if req.action == "resolve" else "in_progress"
     execute_commit("""
         UPDATE tickets
@@ -1332,13 +1332,13 @@ async def respond_to_ticket(
             updated_at = NOW()
         WHERE id = %s
     """, (new_status, req.agent_name, req.response_message, ticket["id"]))
-
+    
     if ticket.get("conversation_id"):
         execute_commit("""
             INSERT INTO messages (conversation_id, customer_id, sender_type, content, intent)
             VALUES (%s, %s, 'agent', %s, 'agent_portal_resolution')
         """, (ticket["conversation_id"], ticket["customer_id"], req.response_message))
-
+    
     execute_commit("""
         INSERT INTO audit_logs (workflow_name, event_type, channel, payload)
         VALUES ('dashboard_hitl_portal', %s, 'dashboard', %s)
@@ -1349,7 +1349,7 @@ async def respond_to_ticket(
         "n8n_dispatched": n8n_code == 200,
         "n8n_status_code": n8n_code
     })))
-
+    
     return {
         "success": True,
         "ticket_number": ticket["ticket_number"],
@@ -1585,8 +1585,11 @@ async def export_dashboard_report(
              ]), "rows": activity.get("items", [])},
         ]
     elif report_type == "n8n":
-        workflows = await get_n8n_workflows(user=user)
-        executions = await get_n8n_executions(limit=100, user=user)
+        try:
+            workflows = await get_n8n_workflows(user=user)
+            executions = await get_n8n_executions(limit=100, user=user)
+        except HTTPException as exc:
+            raise HTTPException(status_code=503, detail="The read-only n8n report is currently unavailable") from exc
         sheets = [
             {"name": "Workflows", "title": "Read-only workflow metadata snapshot",
              "columns": _report_columns(lang, [

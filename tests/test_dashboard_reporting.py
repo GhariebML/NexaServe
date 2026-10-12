@@ -237,15 +237,19 @@ def test_evaluation_and_export_routes_require_auth_and_work_without_database(mon
 
 def test_each_passive_dashboard_page_has_a_page_specific_workbook(monkeypatch):
     async def summary(**_kwargs):
+        assert _kwargs["period"] == "7d" and _kwargs["program"] == "DEPI"
         return {"total_customers": 4}
 
     async def customers(**_kwargs):
+        assert _kwargs["program"] == "DEPI" and _kwargs["search"] == ""
         return {"items": [{"id": "c-1", "full_name": "ليلى", "program": "DEPI", "phone_masked": "010****123", "created_at": None, "last_interaction": None, "conversation_count": 1, "open_tickets": 0, "customer_status": "Active"}], "total": 1, "pages": 1}
 
     async def conversations(**_kwargs):
+        assert _kwargs["period"] == "7d" and _kwargs["program"] == "DEPI"
         return {"items": [{"id": "v-1", "customer_name": "ليلى", "program": "DEPI", "channel": "web", "intent": "faq", "avg_confidence": .8, "status": "closed", "created_at": None, "message_count": 2}], "total": 1, "pages": 1, "metrics": {"total_conversations": 1}, "charts": {}}
 
     async def tickets(**_kwargs):
+        assert _kwargs["status"] == "open" and _kwargs["priority"] == "high" and _kwargs["program"] == "DEPI"
         return {"items": [{"ticket_number": "T-1", "customer_name": "ليلى", "program": "DEPI", "priority": "high", "status": "open", "assigned_agent": "agent", "sla_deadline": None, "sla_status": "ON_TRACK", "created_at": None, "updated_at": None, "reason": "private reason"}], "total": 1, "pages": 1}
 
     async def rag(**_kwargs):
@@ -264,6 +268,7 @@ def test_each_passive_dashboard_page_has_a_page_specific_workbook(monkeypatch):
         return {"items": [{"id": "a-1", "event_type": "turn_completed", "workflow_name": "wf", "channel": "web", "latency_ms": 10, "created_at": None, "description": "not exported"}]}
 
     async def executions(**_kwargs):
+        assert _kwargs["status_filter"] == "failed"
         return {"items": []}
 
     async def workflows(**_kwargs):

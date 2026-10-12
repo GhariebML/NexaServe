@@ -1585,8 +1585,11 @@ async def export_dashboard_report(
              ]), "rows": activity.get("items", [])},
         ]
     elif report_type == "n8n":
-        workflows = await get_n8n_workflows(user=user)
-        executions = await get_n8n_executions(limit=100, user=user)
+        try:
+            workflows = await get_n8n_workflows(user=user)
+            executions = await get_n8n_executions(limit=100, user=user)
+        except HTTPException as exc:
+            raise HTTPException(status_code=503, detail="The read-only n8n report is currently unavailable") from exc
         sheets = [
             {"name": "Workflows", "title": "Read-only workflow metadata snapshot",
              "columns": _report_columns(lang, [
