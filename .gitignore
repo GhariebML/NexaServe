@@ -47,3 +47,10 @@ Desktop.ini
 .kilo/
 .opencode/
 .gemini/
+
+# FAQ source archives and PII-bearing derived artifacts
+FAQs/tickets.pst
+FAQs/tickets.json
+FAQs/converted/tickets.json
+FAQs/converted/tickets.jsonl
+FAQs/converted/tickets_manifest.json

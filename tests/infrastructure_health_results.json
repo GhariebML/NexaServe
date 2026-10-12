@@ -1,6 +1,6 @@
 {
   "test": "infrastructure_health",
-  "timestamp": "2026-10-01T09:36:56.861302",
+  "timestamp": "2026-10-11T10:13:08.860816",
   "verdict": "ALL_HEALTHY",
   "healthy_count": 5,
   "down_count": 0,
@@ -34,7 +34,7 @@
       "details": {
         "ping": true,
         "version": "7.4.11",
-        "uptime_seconds": 90833
+        "uptime_seconds": 5486
       }
     },
     {
@@ -63,14 +63,10 @@
       "status": "HEALTHY",
       "details": {
         "service": "nexaserve-whatsapp-bridge",
-        "status": "CONNECTED",
-        "connected": true,
-        "phone": "201503350999",
-        "user": {
-          "id": "201503350999:5@s.whatsapp.net",
-          "name": "Mohamed Gharieb",
-          "lid": "220865119674532:5@lid"
-        }
+        "status": "QR_READY",
+        "connected": false,
+        "phone": null,
+        "user": null
       }
     }
   ]

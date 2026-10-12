@@ -1,0 +1,120 @@
+{
+  "pipeline_version": "2.0",
+  "generated_at": "2026-10-11T09:45:44.558444+00:00",
+  "generator_script": "scripts/convert_depi_helper.py",
+  "source_file": "DEPI HELPER.xlsx",
+  "source_sha256": "b754f154508b1d7408772ed7d2a8159087c176f0c84d152c5a079405d0dd433d",
+  "size_bytes": 238618,
+  "sheets_processed": 8,
+  "sheets_skipped": 0,
+  "total_records": 265,
+  "unique_records": 260,
+  "duplicate_records": 5,
+  "language_distribution": {
+    "ar": 255,
+    "bilingual": 7,
+    "en": 3
+  },
+  "category_distribution": {
+    "registration": 111,
+    "documents": 12,
+    "complaint": 8,
+    "general": 37,
+    "exam": 36,
+    "cancellation": 8,
+    "lms": 12,
+    "results": 10,
+    "schedule": 19,
+    "attendance": 6,
+    "track_change": 3,
+    "coaching": 2,
+    "data_edit": 1
+  },
+  "sheet_statistics": {
+    "ROUND 5": {
+      "status": "extracted",
+      "records": 88,
+      "type": "qa_template",
+      "description": "Round 5 registration & onboarding FAQ responses"
+    },
+    "ROUND 4": {
+      "status": "extracted",
+      "records": 81,
+      "type": "qa_template",
+      "description": "Round 4 registration & status FAQ responses"
+    },
+    "Round 5 Cancel": {
+      "status": "extracted",
+      "records": 1,
+      "type": "qa_template",
+      "description": "Round 5 cancellation-related responses"
+    },
+    "R4 CANCEL": {
+      "status": "extracted",
+      "records": 16,
+      "type": "qa_template",
+      "description": "Round 4 cancellation & exam scheduling responses"
+    },
+    "chatting": {
+      "status": "extracted",
+      "records": 47,
+      "type": "chatbot_qa",
+      "description": "Chatbot-style Q&A pairs for quick replies"
+    },
+    "R3": {
+      "status": "extracted",
+      "records": 0,
+      "type": "qa_template",
+      "description": "Round 3 coaching & program FAQ responses"
+    },
+    "تصنيف الميل المرحلة 3": {
+      "status": "extracted",
+      "records": 20,
+      "type": "email_classification",
+      "description": "Round 3 email response classification & templates"
+    },
+    "email": {
+      "status": "extracted",
+      "records": 12,
+      "type": "email_template",
+      "description": "Email response templates by complaint type"
+    }
+  },
+  "duplicates_detail": [
+    {
+      "record_id": "depi_0094",
+      "duplicate_of": "depi_0043",
+      "content_preview": "تعديل التراك او الملف\n---\nغير متاح التغير في الوقت الحالي لقد تم غلق باب التسجيل",
+      "source": "DEPI HELPER.xlsx → ROUND 4 → Row 12"
+    },
+    {
+      "record_id": "depi_0121",
+      "duplicate_of": "depi_0091",
+      "content_preview": "اذا لم يظهر لديك تعيدل البيانات التعليمية ارجو الابلاغ بذلك في شكوى اخري موضحا ذ",
+      "source": "DEPI HELPER.xlsx → ROUND 4 → Row 53"
+    },
+    {
+      "record_id": "depi_0124",
+      "duplicate_of": "depi_0067",
+      "content_preview": "R1 Attendance\n---\nمن المراجعة تبين انك انتهيت من احدى المراحل السابقة بشهادة Att",
+      "source": "DEPI HELPER.xlsx → ROUND 4 → Row 56"
+    },
+    {
+      "record_id": "depi_0137",
+      "duplicate_of": "depi_0068",
+      "content_preview": "لا يمكن تحديد موعد اخر في الوقت الحالي بعد الانضمام حيث ان المجموعات الاخري مكتم",
+      "source": "DEPI HELPER.xlsx → ROUND 4 → Row 80"
+    },
+    {
+      "record_id": "depi_0176",
+      "duplicate_of": "depi_0004",
+      "content_preview": "SOFTWARE BASICS\n---\nرفع اي إثبات أو خلفيه عن التراك المحدد\n= programming basics ",
+      "source": "DEPI HELPER.xlsx → R4 CANCEL → Row 13"
+    }
+  ],
+  "artifacts": [
+    "FAQs\\converted\\depi_helper.json",
+    "FAQs\\converted\\depi_helper.jsonl",
+    "FAQs\\converted\\depi_helper_manifest.json"
+  ]
+}

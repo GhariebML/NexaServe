@@ -58,11 +58,10 @@ services:
       N8N_PERSONALIZATION_ENABLED: ${N8N_PERSONALIZATION_ENABLED:-false}
       N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
       N8N_DEFAULT_BINARY_DATA_MODE: filesystem
-      OLLAMA_HOST: ${OLLAMA_HOST:-http://host.docker.internal:11434}
+      OLLAMA_HOST: ${OLLAMA_HOST:-http://ollama:11434}
       WHATSAPP_BRIDGE_URL: ${WHATSAPP_BRIDGE_URL:-http://host.docker.internal:8080}
     extra_hosts:
       - "host.docker.internal:host-gateway"
-      - "cs-ollama:host-gateway"
     volumes:
       - ./data/n8n:/home/node/.n8n
     ports:
@@ -86,7 +85,7 @@ services:
     volumes:
       - ./data/ollama:/root/.ollama
     ports:
-      - "127.0.0.1:${OLLAMA_PORT:-11434}:11434"
+      - "127.0.0.1:${OLLAMA_PORT:-11435}:11434"
     healthcheck:
       test: ["CMD-SHELL", "ollama list || exit 1"]
       interval: 10s
@@ -127,7 +126,7 @@ services:
        PORT: 8080
        AUTH_DIR: /app/data/auth
        N8N_WEBHOOK_URL: http://cs-n8n:5678/webhook/customer-service
-       OLLAMA_URL: http://cs-ollama:11434/api/generate
+       OLLAMA_URL: http://ollama:11434/api/generate
     volumes:
       - ./data/whatsapp-auth:/app/data/auth
       - ./infra/whatsapp/server.js:/app/server.js

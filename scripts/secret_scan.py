@@ -13,7 +13,9 @@ RULES = {
     "github-token": re.compile(r"\bgh[pousr]_[A-Za-z0-9_]{30,}\b"),
     "bearer-token-literal": re.compile(r"(?i)\bBearer\s+[A-Za-z0-9._~-]{24,}"),
     "quoted-secret-value": re.compile(r"(?i)[\"'](?:[A-Z0-9_]*(?:PASSWORD|SECRET|API[_-]?KEY|TOKEN)[A-Z0-9_]*)[\"']\s*:\s*[\"'](?!\$\{)(?!your\b|replace\b|change\b|example\b|placeholder\b|generate\b)[A-Za-z0-9_./+=-]{16,}[\"']"),
-    "environment-secret-literal": re.compile(r"(?m)^\s*(?:export\s+)?[A-Z0-9_]*(?:PASSWORD|SECRET|API[_-]?KEY|TOKEN)[A-Z0-9_]*\s*=\s*(?!(?i:os\.getenv|os\.environ|getenv|process\.env|None\b|False\b|True\b|your|replace|change|example|placeholder|generate|\$\{))[\"']?[A-Za-z0-9_./+=-]{16,}"),
+    # Horizontal whitespace only: `\s` can cross a newline and treat the
+    # next variable as the value when a secret assignment is intentionally blank.
+    "environment-secret-literal": re.compile(r"(?m)^[ \t]*(?:export[ \t]+)?[A-Z0-9_]*(?:PASSWORD|SECRET|API[_-]?KEY|TOKEN)[A-Z0-9_]*[ \t]*=[ \t]*(?!(?i:os\.getenv|os\.environ|getenv|process\.env|None\b|False\b|True\b|your|replace|change|example|placeholder|generate|\$\{))[\"']?[A-Za-z0-9_./+=-]{16,}"),
 }
 findings = []
 for folder, dirs, names in __import__("os").walk(ROOT):

@@ -1,7 +1,7 @@
 {
   "id": "F7kjakLJXmzBDsvS",
   "name": "SubWF 06 - Output Channel Dispatcher",
-  "active": false,
+  "active": true,
   "nodes": [
     {
       "parameters": {},
@@ -154,7 +154,13 @@
       "position": [
         860,
         300
-      ]
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_CRED_01",
+          "name": "CustomerService Postgres"
+        }
+      }
     },
     {
       "parameters": {
@@ -272,7 +278,7 @@
       ]
     }
   },
-  "settings": {"errorWorkflow": "CSWF000000000008"},
+  "settings": {},
   "staticData": null,
   "pinData": {},
   "versionId": "",

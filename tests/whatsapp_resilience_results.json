@@ -1,6 +1,6 @@
 {
   "test": "whatsapp_resilience",
-  "timestamp": "2026-10-01T12:43:03.220173",
+  "timestamp": "2026-10-11T13:20:45.819291",
   "passed": 5,
   "failed": 0,
   "blocked": 0,
@@ -11,36 +11,32 @@
       "status": "PASS",
       "data": {
         "service": "nexaserve-whatsapp-bridge",
-        "status": "CONNECTED",
-        "connected": true,
-        "phone": "201503350999",
-        "user": {
-          "id": "201503350999:5@s.whatsapp.net",
-          "name": "Mohamed Gharieb",
-          "lid": "220865119674532:5@lid"
-        }
+        "status": "QR_READY",
+        "connected": false,
+        "phone": null,
+        "user": null
       }
     },
     {
       "test": "arabic_offline_reply",
       "status": "PASS",
-      "source": "deterministic-offline-fallback",
-      "reply_preview": "نعتذر، تعذّر إتمام معالجة استفسارك حالياً نظراً لأعمال صيانة مؤقتة. يمكنك متابعة برامجنا ومبادراتنا الرسمية عبر الروابط المعتمدة التالية:\n• مبادرة رواد مصر الرقمية (DEPI): https://depi.gov.eg\n• بوابة ",
+      "source": "n8n",
+      "reply_preview": "منحة رواد مصر الرقمية (DEBI) هي منحة دراسية كاملة أطلقتها وزارة الاتصالات وتكنولوجيا المعلومات المصرية. تهدف المنحة إلى تمكين جيل متميز من خريجي كليات الهندسة والحاسبات في مصر من الحصول على درجة الماج",
       "failures": []
     },
     {
       "test": "english_offline_reply",
       "status": "PASS",
-      "source": "deterministic-offline-fallback",
-      "reply_preview": "We apologize, our automated assistant is currently undergoing temporary maintenance. You can explore all official programs and initiatives through our official portals below:\n• Digital Egypt Pioneers ",
+      "source": "n8n",
+      "reply_preview": "The Digital Egypt Pioneers Initiative (DEPI) is a program aimed at fostering innovation and technological advancement in Egypt. It focuses on supporting young entrepreneurs and innovators through ment",
       "failures": []
     },
     {
       "test": "cache_status",
       "status": "PASS",
       "data": {
-        "version": 3,
-        "entries": 0,
+        "version": 1,
+        "entries": 2,
         "maxTTL": 60000
       }
     },
@@ -49,7 +45,7 @@
       "status": "PASS",
       "data": {
         "success": true,
-        "new_version": 4,
+        "new_version": 2,
         "cleared_entries": 0
       }
     }

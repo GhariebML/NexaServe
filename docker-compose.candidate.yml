@@ -1,0 +1,42 @@
+services:
+  dashboard-candidate:
+    image: nexaserve-dashboard:latest
+    container_name: cs-dashboard-candidate
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      CS_DB_NAME: test_uat_candidate
+      CS_DB_USER: ${CS_DB_USER}
+      CS_DB_PASSWORD: ${CS_DB_PASSWORD}
+      DASHBOARD_JWT_SECRET: ${DASHBOARD_JWT_SECRET}
+      DASHBOARD_CORS_ORIGINS: ${DASHBOARD_CORS_ORIGINS:-}
+      DASHBOARD_DB_POOL_MAX: ${DASHBOARD_DB_POOL_MAX:-8}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      N8N_HEALTH_URL: http://n8n:5678/healthz
+      N8N_UI_URL: http://127.0.0.1:${N8N_PORT:-5678}
+      N8N_API_URL: http://n8n:5678/api/v1
+      N8N_API_KEY: ${N8N_API_KEY}
+      N8N_GATEWAY_WEBHOOK: http://n8n:5678/webhook/customer-service
+      N8N_AGENT_WEBHOOK: http://n8n:5678/webhook/agent-response
+      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
+      EMBED_MODEL: ${EMBED_MODEL:-nomic-embed-text}
+      WHATSAPP_HEALTH_URL: http://whatsapp:8080/health
+    ports:
+      - "192.168.1.3:8091:8090"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/health/ready', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - cs-network

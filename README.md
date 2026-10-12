@@ -18,7 +18,7 @@
   <b>NexaServe</b> is an enterprise-grade, sovereign conversational intelligence platform designed for the <b>Digital Egypt Pioneers Initiative (DEPI)</b> and Ministry of Communications and Information Technology (MCIT). Engineered with strict on-premise data governance, local LLM neural routing, pgvector semantic retrieval, and multi-channel messaging via WhatsApp.
 </p>
 
-[Key Capabilities](#-key-capabilities) • [System Architecture](#-system-architecture) • [End-to-End Pipeline](#-end-to-end-pipeline-flow) • [n8n Workflows](#-n8n-workflow-suite) • [Quick Start](#-quick-start--deployment) • [Operations Dashboard](#-operations-dashboard--hitl) • [Verification Suite](#-verification-suite--testing)
+[Key Capabilities](#-key-capabilities) • [System Architecture](#-system-architecture) • [End-to-End Pipeline](#-end-to-end-pipeline-flow) • [n8n Workflows](#-10-core-n8n-workflows) • [Deployment Guide](#-step-by-step-deployment-guide) • [System Access](#-system-access--port-matrix) • [Verification Suite](#-verification-suite--testing) • [GitHub Repository](#-project-presentation--repository-reference)
 
 ---
 </div>
@@ -34,13 +34,20 @@
 - [Operations Dashboard & Human-in-the-Loop](#-operations-dashboard--human-in-the-loop)
 - [10 Core n8n Workflows](#-10-core-n8n-workflows)
 - [Repository Structure](#-repository-structure)
-- [Quick Start & Deployment](#-quick-start--deployment)
-  - [Prerequisites](#prerequisites)
-  - [Docker Compose Quickstart](#docker-compose-quickstart)
-  - [GPU Acceleration Overlay](#gpu-acceleration-overlay)
+- [System Requirements & Prerequisites](#-system-requirements--prerequisites)
+  - [Hardware Specifications](#hardware-specifications)
+  - [Software & Environment Dependencies](#software--environment-dependencies)
+- [Step-by-Step Deployment Guide](#-step-by-step-deployment-guide)
+  - [Step 1: Clone the Official Repository](#step-1-clone-the-official-repository)
+  - [Step 2: Environment Configuration](#step-2-environment-configuration)
+  - [Step 3: Initialize Knowledge Models in Ollama](#step-3-initialize-knowledge-models-in-ollama)
+  - [Step 4: Launch Core Services with Docker Compose](#step-4-launch-core-services-with-docker-compose)
+  - [Step 5: GPU Acceleration Overlay (Optional)](#step-5-gpu-acceleration-overlay-optional)
+- [System Access & Port Matrix](#-system-access--port-matrix)
+- [Pairing & Operating WhatsApp Live Gateway](#-pairing--operating-whatsapp-live-gateway)
 - [Verification Suite & Testing](#-verification-suite--testing)
 - [Security & Governance](#-security--governance)
-- [License & Authorship](#-license--authorship)
+- [Project Presentation & Repository Reference](#-project-presentation--repository-reference)
 
 ---
 
@@ -216,65 +223,152 @@ All workflows are modularly designed and exported as canonical JSON definitions 
 
 ---
 
-## 🛠️ Quick Start & Deployment
+## 🛠️ System Requirements & Prerequisites
 
-### Prerequisites
-- **Docker Engine** 24.0+ & **Docker Compose v2**
-- **NVIDIA GPU** (Optional for acceleration; 8GB+ VRAM recommended)
-- **Ollama** installed locally or running via Compose
+Before deploying NexaServe, ensure the host environment satisfies the following minimum hardware and software prerequisites:
 
-### Docker Compose Quickstart
+### Hardware Specifications
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/MCIT-DEPI/DEPI-Customer-Support.git
-   cd DEPI-Customer-Support
-   ```
+| Component | Minimum Specification (CPU Mode) | Recommended Specification (GPU Accelerated) |
+|:---|:---|:---|
+| **CPU Architecture** | x86_64 / amd64 (4 Cores minimum) | x86_64 / amd64 (8+ Cores) |
+| **System Memory (RAM)** | 16 GB DDR4/DDR5 | 32 GB DDR4/DDR5 |
+| **GPU / Accelerator** | None (CPU Quantized Inference) | NVIDIA GPU with 8GB+ VRAM (RTX 3060/4060, T4, A10) |
+| **Storage** | 30 GB SSD free space | 50 GB NVMe SSD free space |
+| **Network** | Reliable broadband connection | Port ingress for webhook endpoints & reverse proxy |
 
-2. **Configure environment variables:**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your PostgreSQL credentials, security secrets, and host configuration
-   ```
+### Software & Environment Dependencies
 
-3. **Start the core services:**
-   ```bash
-   docker compose up -d
-   ```
+1. **Operating System**: Ubuntu 22.04 / 24.04 LTS, Debian 12, or Windows 10/11 with WSL2 (Ubuntu).
+2. **Container Runtime**:
+   - [Docker Engine](https://docs.docker.com/engine/install/) version **24.0+**
+   - [Docker Compose](https://docs.docker.com/compose/install/) version **v2.20+**
+3. **Local AI Engine**: [Ollama](https://ollama.com) installed on the host or executed in containerized mode.
+4. **NVIDIA Container Toolkit** *(GPU only)*: `nvidia-container-toolkit` configured for Docker GPU passthrough.
+5. **Node.js & Python** *(Optional for local script testing)*: Python 3.10+ and Node.js 18+.
 
-4. **Verify container health:**
-   ```bash
-   docker compose ps
-   ```
+---
 
-5. **Connect WhatsApp:**
-   Open `http://localhost:8080/qr` in your browser and scan the displayed QR code with your WhatsApp application.
+## 🚀 Step-by-Step Deployment Guide
 
-6. **Access Interfaces:**
-   - **n8n Workflow Canvas**: [http://localhost:5678](http://localhost:5678)
-   - **Operations Dashboard**: [http://localhost:8090](http://localhost:8090)
-   - **WhatsApp Pairing Portal**: [http://localhost:8080/qr](http://localhost:8080/qr)
+Follow these sequential steps to configure, build, initialize, and deploy the entire platform.
 
-### GPU Acceleration Overlay
+### Step 1: Clone the Official Repository
 
-To leverage an NVIDIA GPU on Ubuntu Server 24.04:
+Clone the project repository to your target deployment server and navigate into the workspace root:
+
+```bash
+git clone https://github.com/MCIT-DEPI/DEPI-Customer-Support.git
+cd DEPI-Customer-Support
+```
+
+### Step 2: Environment Configuration
+
+Create your local `.env` configuration file from the template and set the required secrets:
+
+```bash
+cp .env.example .env
+```
+
+Open `.env` in your text editor and customize the security keys and passwords:
+```ini
+# Core Database Credentials
+POSTGRES_PASSWORD=your_secure_postgres_root_password_here
+N8N_DB_PASSWORD=your_secure_n8n_db_password_here
+CS_DB_PASSWORD=your_secure_cs_db_password_here
+
+# Security Secrets & Encryption (Generate strong 32+ character random strings)
+N8N_ENCRYPTION_KEY=replace_with_a_random_32_character_encryption_key
+N8N_USER_MANAGEMENT_JWT_SECRET=replace_with_a_random_jwt_secret
+DASHBOARD_JWT_SECRET=replace_with_a_distinct_random_secret
+
+# Local AI Engine Settings
+OLLAMA_MODEL=qwen2.5:3b
+OLLAMA_EMBED_URL=http://127.0.0.1:11434/api/embed
+```
+
+### Step 3: Initialize Knowledge Models in Ollama
+
+Ensure Ollama is running and pull the bilingual chat and embedding models:
+
+```bash
+# Pull the generative conversational model
+ollama pull qwen2.5:3b
+
+# Pull the dense vector embedding model (768 dimensions)
+ollama pull nomic-embed-text
+```
+
+### Step 4: Launch Core Services with Docker Compose
+
+Spin up the entire microservices stack (PostgreSQL + pgvector, Redis, n8n Orchestrator, WhatsApp Gateway, and Operations Dashboard):
+
+```bash
+# Launch containers in detached mode
+docker compose up -d
+
+# Verify that all containers are healthy and running
+docker compose ps
+```
+
+> [!NOTE]
+> On initial startup, PostgreSQL automatically runs [`infra/postgres/init.sql`](file:///e:/NexaServe/infra/postgres/init.sql) to initialize `pgvector`, build bilingual schemas, populate seeds, and set up role permissions.
+
+### Step 5: GPU Acceleration Overlay (Optional)
+
+If running on an Ubuntu server equipped with an NVIDIA GPU, enable accelerated neural inference:
+
 ```bash
 cd deployment
+# Install NVIDIA Container Toolkit if not already present
 bash scripts/03_install_nvidia_toolkit.sh
+
+# Deploy using the GPU overlay
 bash scripts/deploy.sh gpu
+cd ..
 ```
+
+---
+
+## 🌐 System Access & Port Matrix
+
+Once all containers are launched, access each subsystem using the respective endpoint:
+
+| Subsystem / Service | Access URL | Default Port | Primary Purpose & Usage |
+|:---|:---|:---:|:---|
+| **Operations Dashboard** | [http://localhost:8090](http://localhost:8090) | `8090` | Real-time monitoring, ticket SLA triage, agent live callback console |
+| **WhatsApp QR Pairing** | [http://localhost:8080/qr](http://localhost:8080/qr) | `8080` | Link an official WhatsApp handset using visual QR code scan |
+| **WhatsApp Gateway Health** | [http://localhost:8080/health](http://localhost:8080/health) | `8080` | Check socket connection status and webhook health |
+| **n8n Automation Engine** | [http://localhost:5678](http://localhost:5678) | `5678` | Manage 10 core workflows, trigger webhooks, view execution graphs |
+| **PostgreSQL + pgvector** | `localhost:5432` | `5432` | Sovereign vector storage and transactional customer database |
+| **Redis Cache** | `localhost:6379` | `6379` | Fast session memory, rate limiting, and temporary queues |
+| **Ollama Inference Server** | [http://localhost:11434](http://localhost:11434) | `11434` | Local LLM text generation and vector embeddings endpoint |
+
+---
+
+## 📲 Pairing & Operating WhatsApp Live Gateway
+
+1. Open your browser and navigate to **[http://localhost:8080/qr](http://localhost:8080/qr)**.
+2. Open **WhatsApp** on your customer service smartphone or test device.
+3. Go to **Settings > Linked Devices > Link a Device**.
+4. Scan the QR code displayed on the webpage.
+5. The gateway will establish an encrypted Baileys socket. The session state is automatically persisted in the `whatsapp-auth` Docker volume for seamless automatic reconnects upon service reboots.
 
 ---
 
 ## 🧪 Verification Suite & Testing
 
-The repository contains automated validation suites to ensure every component functions properly:
+The platform includes an automated end-to-end verification suite to validate every tier of the architecture:
+
+### 1. Full Platform Enterprise Test Suite (23 Assertions)
+
+Verify RAG retrieval, intent routing, Egyptian National ID PII masking, SLA ticket creation, and database telemetry:
 
 ```bash
-# Run the complete 23-assertion platform test suite:
 python scripts/test-depi-enterprise.py
 ```
 
+Expected output:
 ```text
 ======================================================================
  🚀 DEPI Enterprise AI Customer Service - Verification Suite
@@ -291,7 +385,10 @@ python scripts/test-depi-enterprise.py
 ======================================================================
 ```
 
-To test live bidirectional WhatsApp messaging:
+### 2. Live WhatsApp Round-Trip Test
+
+Transmit a sample Arabic customer query through the live Baileys bridge and confirm reception:
+
 ```bash
 python scripts/test-whatsapp-e2e.py
 ```
@@ -300,17 +397,28 @@ python scripts/test-whatsapp-e2e.py
 
 ## 🔒 Security & Governance
 
-- **Zero Cloud Leakage**: Conversation content and vectors remain within your infrastructure.
-- **Built-in PII Redaction**: Egyptian National IDs (14 digits) and phone numbers are scrubbed prior to audit logging.
-- **Scoped Ingress**: Database, Redis, and Ollama ports remain closed to the external network by default.
-- **Fail-Safe Operation**: Unhandled runtime exceptions route to the Dead-Letter Queue (DLQ) with user-friendly notices.
+- **100% Sovereign Data Isolation**: All customer data, conversation history, and vector embeddings remain on-premise without external cloud API telemetry.
+- **Automated PII Redaction**: Regex shields automatically mask Egyptian National IDs (14 digits) and Egyptian mobile numbers (`+201...`) before audit storage.
+- **Fail-Safe Circuit Breaker**: If workflow engines experience intermittent delays, incoming messages fall back gracefully without data loss.
+- **Granular Network Isolation**: Database and caching ports remain bounded within internal Docker bridge networks in production mode.
 
 ---
 
-## 📜 License & Authorship
+## 🏛️ Project Presentation & Repository Reference
 
-Developed for the **Digital Egypt Pioneers Initiative (DEPI)** under the auspices of the **Ministry of Communications and Information Technology (MCIT)**.
+This initiative represents the sovereign AI conversational customer support architecture engineered for the **Digital Egypt Pioneers Initiative (DEPI)** under the auspices of the **Ministry of Communications and Information Technology (MCIT)**.
+
+For full source code, architecture updates, and official releases, explore the repository:
 
 <div align="center">
-  <b>NexaServe</b> • Built for Sovereign Government Customer Service Automation.
+
+[![GitHub Repository](https://img.shields.io/badge/GitHub-MCIT--DEPI%2FDEPI--Customer--Support-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/MCIT-DEPI/DEPI-Customer-Support)
+
+### 🔗 **Official Project Repository**
+👉 **[https://github.com/MCIT-DEPI/DEPI-Customer-Support](https://github.com/MCIT-DEPI/DEPI-Customer-Support)** 👈
+
+*Digital Egypt Pioneers Initiative (DEPI) • Ministry of Communications and Information Technology (MCIT)*
+
+---
+**NexaServe** • Built for Sovereign Government Customer Service Automation.
 </div>

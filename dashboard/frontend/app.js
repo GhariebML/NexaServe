@@ -9,7 +9,7 @@ const STATE = {
   currentView: 'executive',
   currentLang: localStorage.getItem('nexaserve_lang') || 'en',
   period: 'all',
-  program: 'all',
+  program: 'DEPI',
   charts: {},
   customerSearchTimeout: null,
   customerPage: 1,
@@ -94,7 +94,28 @@ const I18N = {
     col_summary: "Summary",
     col_latency: "Latency",
     col_timestamp: "Timestamp",
-    btn_view_details: "View Details"
+    btn_view_details: "View Details",
+    kpi_total_customers: "Total Customers",
+    kpi_sub_total_customers: "Registered across channels",
+    kpi_active_convs: "Active Conversations",
+    kpi_sub_active_convs: "Currently in session",
+    kpi_total_convs: "Total Conversations",
+    kpi_sub_total_convs: "All-time volume",
+    kpi_open_tickets: "Open Tickets",
+    kpi_sub_open_tickets: "Awaiting resolution",
+    kpi_pending_tickets: "Pending Tickets",
+    kpi_sub_pending_tickets: "In progress by agent",
+    kpi_resolved_tickets: "Resolved Tickets",
+    kpi_sub_resolved_tickets: "Successfully closed",
+    kpi_sla_breaches: "SLA Breaches",
+    kpi_sub_sla_breaches: "Action required immediately",
+    kpi_escalated_convs: "Escalated Convs",
+    kpi_sub_escalated_convs: "Routed to human tier",
+    kpi_avg_response_time: "Avg Response Time",
+    kpi_sub_avg_response_time: "End-to-end audit latency",
+    kpi_rag_success_rate: "RAG Success Rate",
+    kpi_sub_rag_success_rate: "Strict grounded responses",
+    unit_ms: " ms"
   },
   ar: {
     ops_center: "مركز العمليات والتحكم",
@@ -116,7 +137,7 @@ const I18N = {
     title_n8n_workflows: "محرك الأتمتة وسير العمل n8n",
     sub_n8n_workflows: "ربط تكاملي مباشر ثنائي الاتجاه مع منصة n8n المحلية ومحرك تنفيذ التدفقات",
     btn_open_n8n: "فتح لوحة سير عمل n8n",
-    title_deployed_wfs: "تدفقات العمل المسجلة في النظام",
+    title_deployed_wfs: "تدفقات العمل المسجة في النظام",
     title_n8n_live_execs: "تنفيذات n8n الحية (REST API)",
     title_simulator: "محاكي خدمة العملاء المباشر",
     sub_simulator: "تفاعل مباشر مع بوابة n8n الرئيسية، نموذج Ollama، تقنية pgvector RAG، والتصعيد البشري",
@@ -171,7 +192,28 @@ const I18N = {
     col_summary: "الملخص",
     col_latency: "زمن الاستجابة",
     col_timestamp: "الوقت",
-    btn_view_details: "عرض التفاصيل"
+    btn_view_details: "عرض التفاصيل",
+    kpi_total_customers: "إجمالي المستفيدين والطلاب",
+    kpi_sub_total_customers: "المسجلين عبر جميع القنوات",
+    kpi_active_convs: "المحادثات الجارية حالياً",
+    kpi_sub_active_convs: "جلسات نشطة في الوقت الفعلي",
+    kpi_total_convs: "إجمالي المحادثات",
+    kpi_sub_total_convs: "الحجم الكلي لجميع الجلسات",
+    kpi_open_tickets: "التذاكر المفتوحة",
+    kpi_sub_open_tickets: "في انتظار المراجعة والمعالجة",
+    kpi_pending_tickets: "التذاكر قيد المعالجة",
+    kpi_sub_pending_tickets: "جارٍ العمل عليها من قبل موظف الدعم",
+    kpi_resolved_tickets: "التذاكر المكتملة والمغلقة",
+    kpi_sub_resolved_tickets: "تم حلها وإغلاقها بنجاح",
+    kpi_sla_breaches: "تجاوزات اتفاقية مستوى الخدمة SLA",
+    kpi_sub_sla_breaches: "تتطلب إجراءً فورياً وعاجلاً",
+    kpi_escalated_convs: "المحادثات المصعدة بشرياً",
+    kpi_sub_escalated_convs: "تم تحويلها لفرق الدعم البشري",
+    kpi_avg_response_time: "متوسط زمن الاستجابة",
+    kpi_sub_avg_response_time: "الزمن الكلي لمعالجة وتدقيق الرد",
+    kpi_rag_success_rate: "نسبة دقة إجابات المعرفة (RAG)",
+    kpi_sub_rag_success_rate: "إجابات موثقة ومطابقة لقواعد البيانات",
+    unit_ms: " مللي ثانية"
   }
 };
 
@@ -223,7 +265,10 @@ function applyLanguage(lang) {
   document.documentElement.lang = lang;
   document.documentElement.dir = (lang === 'ar') ? 'rtl' : 'ltr';
 
-  document.getElementById('lang-label').innerText = (lang === 'ar') ? 'EN' : 'عربي';
+  const langLabel = document.getElementById('lang-label');
+  if (langLabel) {
+    langLabel.innerText = (lang === 'ar') ? 'EN' : 'عربي';
+  }
 
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
@@ -231,6 +276,10 @@ function applyLanguage(lang) {
       el.innerText = I18N[lang][key];
     }
   });
+
+  if (STATE.token && STATE.user) {
+    refreshCurrentView();
+  }
 }
 
 function toggleLanguage() {
@@ -330,61 +379,63 @@ function refreshCurrentView() {
 // --- 1. EXECUTIVE KPIS ---
 async function loadExecutiveKPIs() {
   const container = document.getElementById('executive-kpi-grid');
-  container.innerHTML = '<div style="color:var(--text-muted);">Querying live database...</div>';
+  const t = I18N[STATE.currentLang] || I18N.en;
+  container.innerHTML = `<div style="color:var(--text-muted);">${STATE.currentLang === 'ar' ? 'جارٍ تحميل البيانات المباشرة...' : 'Querying live database...'}</div>`;
 
   try {
     const data = await apiRequest(`/api/dashboard/summary?period=${STATE.period}&program=${STATE.program}`);
+    const unitMs = t.unit_ms || ' ms';
     
     container.innerHTML = `
       <div class="kpi-card">
-        <span class="kpi-label">Total Customers</span>
+        <span class="kpi-label">${t.kpi_total_customers}</span>
         <span class="kpi-value">${data.total_customers.toLocaleString()}</span>
-        <span class="kpi-sub">Registered across channels</span>
+        <span class="kpi-sub">${t.kpi_sub_total_customers}</span>
       </div>
       <div class="kpi-card success">
-        <span class="kpi-label">Active Conversations</span>
+        <span class="kpi-label">${t.kpi_active_convs}</span>
         <span class="kpi-value">${data.active_conversations.toLocaleString()}</span>
-        <span class="kpi-sub">Currently in session</span>
+        <span class="kpi-sub">${t.kpi_sub_active_convs}</span>
       </div>
       <div class="kpi-card">
-        <span class="kpi-label">Total Conversations</span>
+        <span class="kpi-label">${t.kpi_total_convs}</span>
         <span class="kpi-value">${data.total_conversations.toLocaleString()}</span>
-        <span class="kpi-sub">All-time volume</span>
+        <span class="kpi-sub">${t.kpi_sub_total_convs}</span>
       </div>
       <div class="kpi-card warning">
-        <span class="kpi-label">Open Tickets</span>
+        <span class="kpi-label">${t.kpi_open_tickets}</span>
         <span class="kpi-value">${data.open_tickets.toLocaleString()}</span>
-        <span class="kpi-sub">Awaiting resolution</span>
+        <span class="kpi-sub">${t.kpi_sub_open_tickets}</span>
       </div>
       <div class="kpi-card">
-        <span class="kpi-label">Pending Tickets</span>
+        <span class="kpi-label">${t.kpi_pending_tickets}</span>
         <span class="kpi-value">${data.pending_tickets.toLocaleString()}</span>
-        <span class="kpi-sub">In progress by agent</span>
+        <span class="kpi-sub">${t.kpi_sub_pending_tickets}</span>
       </div>
       <div class="kpi-card success">
-        <span class="kpi-label">Resolved Tickets</span>
+        <span class="kpi-label">${t.kpi_resolved_tickets}</span>
         <span class="kpi-value">${data.resolved_tickets.toLocaleString()}</span>
-        <span class="kpi-sub">Successfully closed</span>
+        <span class="kpi-sub">${t.kpi_sub_resolved_tickets}</span>
       </div>
       <div class="kpi-card alert">
-        <span class="kpi-label">SLA Breaches</span>
+        <span class="kpi-label">${t.kpi_sla_breaches}</span>
         <span class="kpi-value" style="color:#F87171;">${data.sla_breaches.toLocaleString()}</span>
-        <span class="kpi-sub">Action required immediately</span>
+        <span class="kpi-sub">${t.kpi_sub_sla_breaches}</span>
       </div>
       <div class="kpi-card warning">
-        <span class="kpi-label">Escalated Convs</span>
+        <span class="kpi-label">${t.kpi_escalated_convs}</span>
         <span class="kpi-value">${data.escalated_conversations.toLocaleString()}</span>
-        <span class="kpi-sub">Routed to human tier</span>
+        <span class="kpi-sub">${t.kpi_sub_escalated_convs}</span>
       </div>
       <div class="kpi-card">
-        <span class="kpi-label">Avg Response Time</span>
-        <span class="kpi-value">${formatMetric(data.avg_response_time_ms, ' ms')}</span>
-        <span class="kpi-sub">End-to-end audit latency</span>
+        <span class="kpi-label">${t.kpi_avg_response_time}</span>
+        <span class="kpi-value">${formatMetric(data.avg_response_time_ms, unitMs)}</span>
+        <span class="kpi-sub">${t.kpi_sub_avg_response_time}</span>
       </div>
       <div class="kpi-card success">
-        <span class="kpi-label">RAG Success Rate</span>
+        <span class="kpi-label">${t.kpi_rag_success_rate}</span>
         <span class="kpi-value">${formatMetric(data.rag_success_rate, '%')}</span>
-        <span class="kpi-sub">Strict grounded responses</span>
+        <span class="kpi-sub">${t.kpi_sub_rag_success_rate}</span>
       </div>
     `;
   } catch (err) {

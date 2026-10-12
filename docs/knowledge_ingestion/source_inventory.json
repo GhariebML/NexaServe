@@ -1,0 +1,645 @@
+{
+  "source_directory": "FAQs/converted",
+  "scan_recursive": true,
+  "encoding": "UTF-8 (BOM accepted)",
+  "files": [
+    {
+      "relative_path": "FAQs/converted/depi_helper.json",
+      "bytes": 612223,
+      "sha256": "6196e68874b6b24aed03f67fdbc8af011db5776b219c31c855a81772ce5613ff",
+      "format": "JSON",
+      "shape": "JSON object/records[]",
+      "schema_version": "2.0",
+      "top_level_keys": [
+        "schema_version",
+        "dataset_type",
+        "program_scope",
+        "program_name",
+        "generated_at",
+        "generator",
+        "source_file",
+        "source_file_sha256",
+        "source_file_size_bytes",
+        "total_records",
+        "unique_records",
+        "duplicate_records",
+        "language_distribution",
+        "category_distribution",
+        "sheet_statistics",
+        "records"
+      ],
+      "record_count": 265,
+      "question_count": 210,
+      "answer_count": 256,
+      "missing_question_count": 55,
+      "missing_answer_count": 9,
+      "empty_or_incomplete_qa_count": 64,
+      "duplicate_content_hash_record_count": 5,
+      "duplicate_content_hash_group_count": 5,
+      "languages": {
+        "ar": 255,
+        "bilingual": 7,
+        "en": 3
+      },
+      "program_labels": {
+        "DEPI": 265
+      },
+      "applicability_counts": {
+        "ambiguous_or_unverified": 265
+      },
+      "record_types": {
+        "unspecified": 265
+      },
+      "source_labels": {
+        "DEPI HELPER.xlsx": 265
+      },
+      "quality_flags": {
+        "marked_duplicate": 5
+      },
+      "record_dispositions": {
+        "quarantined_unverified_source": 198,
+        "quarantined_incomplete_or_non_faq": 62,
+        "duplicate_flagged": 5
+      },
+      "field_presence": {
+        "question_or_question_ar": 210,
+        "answer_or_answer_ar": 256,
+        "language": 265,
+        "source_file_or_archive_or_attribution": 265,
+        "source_url": 0,
+        "question": 210,
+        "question_ar": 207,
+        "answer": 256,
+        "answer_ar": 256,
+        "program_scope": 265,
+        "program": 265,
+        "record_type": 0,
+        "category": 265,
+        "source_file": 265,
+        "source_page": 0,
+        "source_sheet": 265,
+        "source_row": 265,
+        "source_status": 0,
+        "content_sha256": 265,
+        "content_hash": 265
+      },
+      "malformed_json_lines": 0,
+      "disposition": "quarantined_review",
+      "disposition_reason": "FAQ-like records require verified source provenance, scope confirmation, and record-level quality review before activation. Export contains no source URL/status; incomplete rows and duplicate flags are separately counted."
+    },
+    {
+      "relative_path": "FAQs/converted/depi_helper.jsonl",
+      "bytes": 567240,
+      "sha256": "baca767e4bf2715f15f99f78a91c076a2981925a45b3dc65e0d78cff764cd4d3",
+      "format": "JSONL",
+      "shape": "JSON array",
+      "schema_version": null,
+      "top_level_keys": null,
+      "record_count": 265,
+      "question_count": 210,
+      "answer_count": 256,
+      "missing_question_count": 55,
+      "missing_answer_count": 9,
+      "empty_or_incomplete_qa_count": 64,
+      "duplicate_content_hash_record_count": 5,
+      "duplicate_content_hash_group_count": 5,
+      "languages": {
+        "ar": 255,
+        "bilingual": 7,
+        "en": 3
+      },
+      "program_labels": {
+        "DEPI": 265
+      },
+      "applicability_counts": {
+        "ambiguous_or_unverified": 265
+      },
+      "record_types": {
+        "unspecified": 265
+      },
+      "source_labels": {
+        "DEPI HELPER.xlsx": 265
+      },
+      "quality_flags": {
+        "marked_duplicate": 5
+      },
+      "record_dispositions": {
+        "quarantined_unverified_source": 198,
+        "quarantined_incomplete_or_non_faq": 62,
+        "duplicate_flagged": 5
+      },
+      "field_presence": {
+        "question_or_question_ar": 210,
+        "answer_or_answer_ar": 256,
+        "language": 265,
+        "source_file_or_archive_or_attribution": 265,
+        "source_url": 0,
+        "question": 210,
+        "question_ar": 207,
+        "answer": 256,
+        "answer_ar": 256,
+        "program_scope": 265,
+        "program": 265,
+        "record_type": 0,
+        "category": 265,
+        "source_file": 265,
+        "source_page": 0,
+        "source_sheet": 265,
+        "source_row": 265,
+        "source_status": 0,
+        "content_sha256": 265,
+        "content_hash": 265
+      },
+      "malformed_json_lines": 0,
+      "disposition": "skipped_duplicate_export",
+      "disposition_reason": "Line-delimited companion export; inventory is counted from its structured JSON counterpart to prevent double ingestion.",
+      "companion_json": "FAQs/converted/depi_helper.json",
+      "companion_record_parity": true
+    },
+    {
+      "relative_path": "FAQs/converted/depi_helper_manifest.json",
+      "bytes": 4042,
+      "sha256": "e91e0b57e67f139eb448817e693b8d73d72e22d8016150de6b5aa6f7eb671b5b",
+      "format": "JSON",
+      "shape": "JSON metadata object",
+      "schema_version": null,
+      "top_level_keys": [
+        "pipeline_version",
+        "generated_at",
+        "generator_script",
+        "source_file",
+        "source_sha256",
+        "size_bytes",
+        "sheets_processed",
+        "sheets_skipped",
+        "total_records",
+        "unique_records",
+        "duplicate_records",
+        "language_distribution",
+        "category_distribution",
+        "sheet_statistics",
+        "duplicates_detail",
+        "artifacts"
+      ],
+      "record_count": 0,
+      "question_count": 0,
+      "answer_count": 0,
+      "missing_question_count": 0,
+      "missing_answer_count": 0,
+      "empty_or_incomplete_qa_count": 0,
+      "duplicate_content_hash_record_count": 0,
+      "duplicate_content_hash_group_count": 0,
+      "languages": {},
+      "program_labels": {},
+      "applicability_counts": {},
+      "record_types": {},
+      "source_labels": {},
+      "quality_flags": {},
+      "record_dispositions": {},
+      "field_presence": {
+        "question_or_question_ar": 0,
+        "answer_or_answer_ar": 0,
+        "language": 0,
+        "source_file_or_archive_or_attribution": 0,
+        "source_url": 0,
+        "question": 0,
+        "question_ar": 0,
+        "answer": 0,
+        "answer_ar": 0,
+        "program_scope": 0,
+        "program": 0,
+        "record_type": 0,
+        "category": 0,
+        "source_file": 0,
+        "source_page": 0,
+        "source_sheet": 0,
+        "source_row": 0,
+        "source_status": 0,
+        "content_sha256": 0,
+        "content_hash": 0
+      },
+      "malformed_json_lines": 0,
+      "disposition": "skipped_metadata",
+      "disposition_reason": "Manifest/metadata artifact; it describes source files but is not knowledge content."
+    },
+    {
+      "relative_path": "FAQs/converted/faqs.json",
+      "bytes": 1019688,
+      "sha256": "d17c4020618908b9646b3eaff83ebc042f3eed64464f2365922cc444213719f7",
+      "format": "JSON",
+      "shape": "JSON object/records[]",
+      "schema_version": "1.0",
+      "top_level_keys": [
+        "schema_version",
+        "generated_at",
+        "total_records",
+        "total_sources",
+        "records"
+      ],
+      "record_count": 452,
+      "question_count": 397,
+      "answer_count": 441,
+      "missing_question_count": 55,
+      "missing_answer_count": 11,
+      "empty_or_incomplete_qa_count": 66,
+      "duplicate_content_hash_record_count": 9,
+      "duplicate_content_hash_group_count": 8,
+      "languages": {
+        "ar": 411,
+        "bilingual": 17,
+        "en": 24
+      },
+      "program_labels": {
+        "DEBI": 290,
+        "DIGILIANS": 162
+      },
+      "applicability_counts": {
+        "ambiguous_or_unverified": 290,
+        "other_initiative_DIGILIANS": 162
+      },
+      "record_types": {
+        "faq": 393,
+        "reference_section": 59
+      },
+      "source_labels": {
+        "FAQs/DEPI HELPER.xlsx": 268,
+        "FAQs/FAQ final-Digilians.pdf": 162,
+        "FAQs/FAQ LMS-English Exam.pdf": 22
+      },
+      "quality_flags": {
+        "source_status:unverified": 452,
+        "needs_review": 63
+      },
+      "record_dispositions": {
+        "quarantined_unverified_source": 382,
+        "quarantined_incomplete_or_non_faq": 70
+      },
+      "field_presence": {
+        "question_or_question_ar": 397,
+        "answer_or_answer_ar": 441,
+        "language": 452,
+        "source_file_or_archive_or_attribution": 452,
+        "source_url": 0,
+        "question": 397,
+        "question_ar": 397,
+        "answer": 441,
+        "answer_ar": 441,
+        "program_scope": 452,
+        "program": 452,
+        "record_type": 452,
+        "category": 452,
+        "source_file": 452,
+        "source_page": 184,
+        "source_sheet": 268,
+        "source_row": 268,
+        "source_status": 452,
+        "content_sha256": 452,
+        "content_hash": 452
+      },
+      "malformed_json_lines": 0,
+      "disposition": "quarantined_review",
+      "disposition_reason": "FAQ-like records require verified source provenance, scope confirmation, and record-level quality review before activation. All records currently declare source_status=unverified; program aliases include DEBI and DIGILIANS and have not been independently validated."
+    },
+    {
+      "relative_path": "FAQs/converted/faqs.jsonl",
+      "bytes": 936697,
+      "sha256": "63a7628b7be22c8186e0169ae2af7349ecff726248f608b732bc2bcfae9992a2",
+      "format": "JSONL",
+      "shape": "JSON array",
+      "schema_version": null,
+      "top_level_keys": null,
+      "record_count": 452,
+      "question_count": 397,
+      "answer_count": 441,
+      "missing_question_count": 55,
+      "missing_answer_count": 11,
+      "empty_or_incomplete_qa_count": 66,
+      "duplicate_content_hash_record_count": 9,
+      "duplicate_content_hash_group_count": 8,
+      "languages": {
+        "ar": 411,
+        "bilingual": 17,
+        "en": 24
+      },
+      "program_labels": {
+        "DEBI": 290,
+        "DIGILIANS": 162
+      },
+      "applicability_counts": {
+        "ambiguous_or_unverified": 290,
+        "other_initiative_DIGILIANS": 162
+      },
+      "record_types": {
+        "faq": 393,
+        "reference_section": 59
+      },
+      "source_labels": {
+        "FAQs/DEPI HELPER.xlsx": 268,
+        "FAQs/FAQ final-Digilians.pdf": 162,
+        "FAQs/FAQ LMS-English Exam.pdf": 22
+      },
+      "quality_flags": {
+        "source_status:unverified": 452,
+        "needs_review": 63
+      },
+      "record_dispositions": {
+        "quarantined_unverified_source": 382,
+        "quarantined_incomplete_or_non_faq": 70
+      },
+      "field_presence": {
+        "question_or_question_ar": 397,
+        "answer_or_answer_ar": 441,
+        "language": 452,
+        "source_file_or_archive_or_attribution": 452,
+        "source_url": 0,
+        "question": 397,
+        "question_ar": 397,
+        "answer": 441,
+        "answer_ar": 441,
+        "program_scope": 452,
+        "program": 452,
+        "record_type": 452,
+        "category": 452,
+        "source_file": 452,
+        "source_page": 184,
+        "source_sheet": 268,
+        "source_row": 268,
+        "source_status": 452,
+        "content_sha256": 452,
+        "content_hash": 452
+      },
+      "malformed_json_lines": 0,
+      "disposition": "skipped_duplicate_export",
+      "disposition_reason": "Line-delimited companion export; inventory is counted from its structured JSON counterpart to prevent double ingestion.",
+      "companion_json": "FAQs/converted/faqs.json",
+      "companion_record_parity": true
+    },
+    {
+      "relative_path": "FAQs/converted/source_manifest.json",
+      "bytes": 6429,
+      "sha256": "ca1aae4e1c61d62a7c95d3fbe0a063a1f290872fb6bf10774ee03ecc1f27cec4",
+      "format": "JSON",
+      "shape": "JSON metadata object",
+      "schema_version": null,
+      "top_level_keys": [
+        "pipeline_version",
+        "generated_at",
+        "discovered_faq_directory",
+        "source_files_total",
+        "total_records_extracted",
+        "source_inventory",
+        "exact_duplicates",
+        "summary"
+      ],
+      "record_count": 0,
+      "question_count": 0,
+      "answer_count": 0,
+      "missing_question_count": 0,
+      "missing_answer_count": 0,
+      "empty_or_incomplete_qa_count": 0,
+      "duplicate_content_hash_record_count": 0,
+      "duplicate_content_hash_group_count": 0,
+      "languages": {},
+      "program_labels": {},
+      "applicability_counts": {},
+      "record_types": {},
+      "source_labels": {},
+      "quality_flags": {},
+      "record_dispositions": {},
+      "field_presence": {
+        "question_or_question_ar": 0,
+        "answer_or_answer_ar": 0,
+        "language": 0,
+        "source_file_or_archive_or_attribution": 0,
+        "source_url": 0,
+        "question": 0,
+        "question_ar": 0,
+        "answer": 0,
+        "answer_ar": 0,
+        "program_scope": 0,
+        "program": 0,
+        "record_type": 0,
+        "category": 0,
+        "source_file": 0,
+        "source_page": 0,
+        "source_sheet": 0,
+        "source_row": 0,
+        "source_status": 0,
+        "content_sha256": 0,
+        "content_hash": 0
+      },
+      "malformed_json_lines": 0,
+      "disposition": "skipped_metadata",
+      "disposition_reason": "Manifest/metadata artifact; it describes source files but is not knowledge content."
+    },
+    {
+      "relative_path": "FAQs/converted/tickets.json",
+      "bytes": 2508027,
+      "sha256": "844ea1dec8122a761ca06faf65d46ef4c610bdad4dc0072b4481b72c0ec4f78d",
+      "format": "JSON",
+      "shape": "JSON object/tickets[]",
+      "schema_version": "1.0",
+      "top_level_keys": [
+        "schema_version",
+        "dataset_type",
+        "generated_at",
+        "source_file",
+        "source_file_sha256",
+        "source_file_size_bytes",
+        "total_tickets",
+        "tickets"
+      ],
+      "record_count": 625,
+      "question_count": 0,
+      "answer_count": 0,
+      "missing_question_count": 625,
+      "missing_answer_count": 625,
+      "empty_or_incomplete_qa_count": 625,
+      "duplicate_content_hash_record_count": 0,
+      "duplicate_content_hash_group_count": 0,
+      "languages": {
+        "unspecified": 625
+      },
+      "program_labels": {
+        "DEBI": 625
+      },
+      "applicability_counts": {
+        "ambiguous_or_unverified": 625
+      },
+      "record_types": {
+        "unspecified": 625
+      },
+      "source_labels": {
+        "FAQs/tickets.pst": 625
+      },
+      "quality_flags": {},
+      "record_dispositions": {
+        "quarantined_non_faq_ticket": 625
+      },
+      "field_presence": {
+        "question_or_question_ar": 0,
+        "answer_or_answer_ar": 0,
+        "language": 0,
+        "source_file_or_archive_or_attribution": 625,
+        "source_url": 0,
+        "question": 0,
+        "question_ar": 0,
+        "answer": 0,
+        "answer_ar": 0,
+        "program_scope": 625,
+        "program": 0,
+        "record_type": 0,
+        "category": 625,
+        "source_file": 0,
+        "source_page": 0,
+        "source_sheet": 0,
+        "source_row": 0,
+        "source_status": 0,
+        "content_sha256": 0,
+        "content_hash": 625
+      },
+      "malformed_json_lines": 0,
+      "disposition": "quarantined_non_faq",
+      "disposition_reason": "Support-ticket archive export includes student/ticket personal and case data; it is not FAQ knowledge and is excluded from RAG."
+    },
+    {
+      "relative_path": "FAQs/converted/tickets.jsonl",
+      "bytes": 2246673,
+      "sha256": "590617da8b3f98c9d6bf73fa9c68cd322fdca36c6e7bc263df14b725144eab6e",
+      "format": "JSONL",
+      "shape": "JSON array",
+      "schema_version": null,
+      "top_level_keys": null,
+      "record_count": 625,
+      "question_count": 0,
+      "answer_count": 0,
+      "missing_question_count": 625,
+      "missing_answer_count": 625,
+      "empty_or_incomplete_qa_count": 625,
+      "duplicate_content_hash_record_count": 0,
+      "duplicate_content_hash_group_count": 0,
+      "languages": {
+        "unspecified": 625
+      },
+      "program_labels": {
+        "DEBI": 625
+      },
+      "applicability_counts": {
+        "ambiguous_or_unverified": 625
+      },
+      "record_types": {
+        "unspecified": 625
+      },
+      "source_labels": {
+        "FAQs/tickets.pst": 625
+      },
+      "quality_flags": {},
+      "record_dispositions": {
+        "quarantined_incomplete_or_non_faq": 625
+      },
+      "field_presence": {
+        "question_or_question_ar": 0,
+        "answer_or_answer_ar": 0,
+        "language": 0,
+        "source_file_or_archive_or_attribution": 625,
+        "source_url": 0,
+        "question": 0,
+        "question_ar": 0,
+        "answer": 0,
+        "answer_ar": 0,
+        "program_scope": 625,
+        "program": 0,
+        "record_type": 0,
+        "category": 625,
+        "source_file": 0,
+        "source_page": 0,
+        "source_sheet": 0,
+        "source_row": 0,
+        "source_status": 0,
+        "content_sha256": 0,
+        "content_hash": 625
+      },
+      "malformed_json_lines": 0,
+      "disposition": "skipped_duplicate_export",
+      "disposition_reason": "Line-delimited companion export; inventory is counted from its structured JSON counterpart to prevent double ingestion.",
+      "companion_json": "FAQs/converted/tickets.json",
+      "companion_record_parity": true
+    },
+    {
+      "relative_path": "FAQs/converted/tickets_manifest.json",
+      "bytes": 1454,
+      "sha256": "e56dcfe21d699831a58ab657b487f57511b0fa18667855ec4df956f72f2a6577",
+      "format": "JSON",
+      "shape": "JSON metadata object",
+      "schema_version": null,
+      "top_level_keys": [
+        "pipeline_version",
+        "generated_at",
+        "source_file",
+        "source_sha256",
+        "size_bytes",
+        "total_tickets_extracted",
+        "total_eml_files",
+        "tracks_distribution",
+        "top_groups",
+        "artifacts"
+      ],
+      "record_count": 0,
+      "question_count": 0,
+      "answer_count": 0,
+      "missing_question_count": 0,
+      "missing_answer_count": 0,
+      "empty_or_incomplete_qa_count": 0,
+      "duplicate_content_hash_record_count": 0,
+      "duplicate_content_hash_group_count": 0,
+      "languages": {},
+      "program_labels": {},
+      "applicability_counts": {},
+      "record_types": {},
+      "source_labels": {},
+      "quality_flags": {},
+      "record_dispositions": {},
+      "field_presence": {
+        "question_or_question_ar": 0,
+        "answer_or_answer_ar": 0,
+        "language": 0,
+        "source_file_or_archive_or_attribution": 0,
+        "source_url": 0,
+        "question": 0,
+        "question_ar": 0,
+        "answer": 0,
+        "answer_ar": 0,
+        "program_scope": 0,
+        "program": 0,
+        "record_type": 0,
+        "category": 0,
+        "source_file": 0,
+        "source_page": 0,
+        "source_sheet": 0,
+        "source_row": 0,
+        "source_status": 0,
+        "content_sha256": 0,
+        "content_hash": 0
+      },
+      "malformed_json_lines": 0,
+      "disposition": "skipped_metadata",
+      "disposition_reason": "Manifest/metadata artifact; it describes source files but is not knowledge content."
+    }
+  ],
+  "exact_duplicate_file_groups": [],
+  "parse_errors": [],
+  "totals": {
+    "files": 9,
+    "json_files": 6,
+    "jsonl_files": 3,
+    "records_in_json_datasets": 1342,
+    "records_in_jsonl_companions": 1342,
+    "dispositions": {
+      "quarantined_review": 2,
+      "skipped_duplicate_export": 3,
+      "skipped_metadata": 3,
+      "quarantined_non_faq": 1
+    }
+  },
+  "policy": "Inventory is descriptive. No source is activated by this scan. Unverified, ambiguous, incomplete, and out-of-scope knowledge remains inactive/quarantined."
+}

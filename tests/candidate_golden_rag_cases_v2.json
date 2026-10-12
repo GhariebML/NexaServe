@@ -1,0 +1,501 @@
+{
+  "version": "2.0",
+  "description": "Multi-target golden evaluation dataset supporting historical and expanded FAQ candidate IDs",
+  "cases": [
+    {
+      "id": "Q01_DEPI_TRACKS_AR",
+      "query": "ما هي مسارات التدريب التكنولوجية المتاحة في مبادرة رواد مصر الرقمية؟",
+      "category": "tracks",
+      "language": "ar",
+      "scope": "DEPI",
+      "answerable": true,
+      "historical_ids": [
+        102
+      ],
+      "expanded_equivalent_ids": [
+        158,
+        165,
+        168,
+        274
+      ],
+      "supported_facts": "المسارات التكنولوجية المتاحة تشمل تطوير البرمجيات، الذكاء الاصطناعي، علوم البيانات، الفنون الرقمية، والأمن السيبراني والبنية التحتية.",
+      "source_provenance": "depi.gov.eg / DEPI HELPER.xlsx",
+      "sufficiency": "single_or_multiple"
+    },
+    {
+      "id": "Q02_DEPI_ADMISSION_AR",
+      "query": "ما هي شروط الالتحاق بمبادرة رواد مصر الرقمية؟",
+      "category": "admission",
+      "language": "ar",
+      "scope": "DEPI",
+      "answerable": true,
+      "historical_ids": [
+        104
+      ],
+      "expanded_equivalent_ids": [
+        101,
+        106,
+        120,
+        128,
+        246
+      ],
+      "supported_facts": "شروط الالتحاق تشمل الجنسية المصرية، التخرج من كليات معتمدة أو القيد الجامعي للسنوات المحددة، التفرغ واجتياز اختبارات القبول.",
+      "source_provenance": "depi.gov.eg / DEPI HELPER.xlsx",
+      "sufficiency": "single_record_sufficient"
+    },
+    {
+      "id": "Q03_DEPI_JOB_PROFILE_AR",
+      "query": "ما هو تعريف ال Job Profile في المبادرة؟",
+      "category": "training",
+      "language": "ar",
+      "scope": "DEPI",
+      "answerable": true,
+      "historical_ids": [
+        103
+      ],
+      "expanded_equivalent_ids": [
+        156,
+        158,
+        159
+      ],
+      "supported_facts": "الملف الوظيفي (Job Profile) هو تخصص تدريبي مهني متكامل يؤهل لوظيفة محددة في سوق العمل الحر أو التوظيف.",
+      "source_provenance": "depi.gov.eg / DEPI Official Web Page",
+      "sufficiency": "single_record_sufficient"
+    },
+    {
+      "id": "Q04_DEPI_INDUSTRY_TRACK_AR",
+      "query": "ما هو مسار الصناعة DEPI Industry Track وما هي مميزاته؟",
+      "category": "industry_track",
+      "language": "ar",
+      "scope": "DEPI",
+      "answerable": true,
+      "historical_ids": [
+        119,
+        120,
+        121
+      ],
+      "expanded_equivalent_ids": [
+        122,
+        124,
+        168
+      ],
+      "supported_facts": "مسار الصناعة يركز على التدريب العملي المتقدم بالمشاركة مع كبرى شركات التكنولوجيا العالمية والمحلية.",
+      "source_provenance": "depi.gov.eg",
+      "sufficiency": "multiple_records_complementary"
+    },
+    {
+      "id": "Q05_DEPI_FREE_COST_AR",
+      "query": "هل يوجد أي مصاريف أو رسوم للتسجيل في منحة رواد مصر الرقمية؟",
+      "category": "fees",
+      "language": "ar",
+      "scope": "DEPI",
+      "answerable": true,
+      "historical_ids": [
+        107
+      ],
+      "expanded_equivalent_ids": [
+        101,
+        118,
+        121,
+        262,
+        328
+      ],
+      "supported_facts": "المنحة مجانية بالكامل بنسبة 100% وممولة من وزارة الاتصالات وتكنولوجيا المعلومات.",
+      "source_provenance": "depi.gov.eg (FAQ Free Cost)",
+      "sufficiency": "single_record_sufficient"
+    },
+    {
+      "id": "Q06_DEPI_DURATION_AR",
+      "query": "ما هي مدة الدراسة بالمنحة؟",
+      "category": "duration",
+      "language": "ar",
+      "scope": "DEPI",
+      "answerable": true,
+      "historical_ids": [
+        110
+      ],
+      "expanded_equivalent_ids": [
+        107,
+        111,
+        187,
+        262
+      ],
+      "supported_facts": "تتراوح مدة التدريب بالمنحة حسب المسار من 3 إلى 6 أشهر.",
+      "source_provenance": "depi.gov.eg / DEPI HELPER.xlsx",
+      "sufficiency": "single_record_sufficient"
+    },
+    {
+      "id": "Q07_DEPI_ATTENDANCE_AR",
+      "query": "ما هي نسبة الحضور المطلوبة لاستكمال المنحة؟",
+      "category": "attendance",
+      "language": "ar",
+      "scope": "DEPI",
+      "answerable": true,
+      "historical_ids": [
+        112
+      ],
+      "expanded_equivalent_ids": [
+        101,
+        161,
+        226,
+        271
+      ],
+      "supported_facts": "نسبة الحضور المطلوبة لا تقل عن 80% في المحاضرات وورش العمل لاجتياز المنحة.",
+      "source_provenance": "depi.gov.eg / DEPI Guidelines",
+      "sufficiency": "single_record_sufficient"
+    },
+    {
+      "id": "Q08_DEPI_CERTIFICATE_AR",
+      "query": "هل يحصل المتدرب على شهادة بعد إتمام تدريب رواد مصر الرقمية؟",
+      "category": "certificate",
+      "language": "ar",
+      "scope": "DEPI",
+      "answerable": true,
+      "historical_ids": [
+        115
+      ],
+      "expanded_equivalent_ids": [
+        109,
+        111,
+        123,
+        269
+      ],
+      "supported_facts": "نعم، يحصل المتدرب على شهادة إتمام معتمدة من وزارة الاتصالات وتكنولوجيا المعلومات والشركة المنفذة.",
+      "source_provenance": "depi.gov.eg",
+      "sufficiency": "single_record_sufficient"
+    },
+    {
+      "id": "Q09_DEPI_LOCATIONS_AR",
+      "query": "أين توجد أماكن تنفيذ التدريب في المحافظات؟",
+      "category": "locations",
+      "language": "ar",
+      "scope": "DEPI",
+      "answerable": true,
+      "historical_ids": [
+        116
+      ],
+      "expanded_equivalent_ids": [
+        101,
+        106,
+        111,
+        114,
+        347
+      ],
+      "supported_facts": "ينفذ التدريب بمراكز إبداع مصر الرقمية (Creativa) في مختلف محافظات الجمهورية والجامعات الحكومية.",
+      "source_provenance": "depi.gov.eg",
+      "sufficiency": "single_record_sufficient"
+    },
+    {
+      "id": "Q10_DEPI_APPLICATION_CHECK_AR",
+      "query": "كيف يمكنني التأكد أن التسجيل تم بنجاح؟",
+      "category": "application",
+      "language": "ar",
+      "scope": "DEPI",
+      "answerable": true,
+      "historical_ids": [
+        117
+      ],
+      "expanded_equivalent_ids": [
+        109,
+        118,
+        124
+      ],
+      "supported_facts": "يصل بريد إلكتروني تأكيدي، ويمكن متابعة حالة الطلب من خلال الصفحة الشخصية على منصة المبادرة.",
+      "source_provenance": "depi.gov.eg / DEPI HELPER.xlsx",
+      "sufficiency": "single_record_sufficient"
+    },
+    {
+      "id": "Q11_DEPI_PARAPHRASE_FEES",
+      "query": "هو الكورس بفلوس ولا ببلاش؟",
+      "category": "fees",
+      "language": "ar",
+      "scope": "DEPI",
+      "answerable": true,
+      "historical_ids": [
+        107
+      ],
+      "expanded_equivalent_ids": [
+        111,
+        118,
+        121,
+        211,
+        262,
+        297,
+        301
+      ],
+      "supported_facts": "المنحة مجانية تماماً وبدون أي تكلفة أو رسوم على المتدربين.",
+      "source_provenance": "depi.gov.eg",
+      "sufficiency": "single_record_sufficient"
+    },
+    {
+      "id": "Q12_DEPI_PARAPHRASE_ELIGIBILITY",
+      "query": "مين يقدر يقدم في المنحة ويتقبل؟",
+      "category": "admission",
+      "language": "ar",
+      "scope": "DEPI",
+      "answerable": true,
+      "historical_ids": [
+        101,
+        104
+      ],
+      "expanded_equivalent_ids": [
+        106,
+        113,
+        171,
+        328,
+        337,
+        342,
+        343
+      ],
+      "supported_facts": "مفتوحة لخريجي وطلاب كليات الهندسة، الحاسبات، والعلوم، والتخصصات ذات الصلة وفقاً للمسارات المعلنة.",
+      "source_provenance": "depi.gov.eg",
+      "sufficiency": "multiple_records_complementary"
+    },
+    {
+      "id": "Q13_DEPI_ABOUT_EN",
+      "query": "What is the vision and objective of the Digital Egypt Pioneers Initiative (DEPI)?",
+      "category": "overview",
+      "language": "en",
+      "scope": "DEPI",
+      "answerable": true,
+      "historical_ids": [
+        158,
+        159,
+        160
+      ],
+      "expanded_equivalent_ids": [
+        102,
+        128,
+        186,
+        264,
+        323,
+        353
+      ],
+      "supported_facts": "DEPI aims to empower Egyptian youth with digital and technological competencies for the global and local job market.",
+      "source_provenance": "depi.gov.eg (About DEPI)",
+      "sufficiency": "multiple_records_complementary"
+    },
+    {
+      "id": "Q14_DEPI_GUIDANCE_EN",
+      "query": "What are the attendance and code of conduct guidelines for DEPI students?",
+      "category": "guidance",
+      "language": "en",
+      "scope": "DEPI",
+      "answerable": true,
+      "historical_ids": [
+        161
+      ],
+      "expanded_equivalent_ids": [
+        119,
+        120,
+        128,
+        186,
+        202,
+        264,
+        323
+      ],
+      "supported_facts": "Students must adhere to attendance thresholds (at least 80%), professionalism, and ethical code of conduct.",
+      "source_provenance": "depi.gov.eg (Student Code of Conduct)",
+      "sufficiency": "single_record_sufficient"
+    },
+    {
+      "id": "Q15_DEPI_CONTACT_EN",
+      "query": "How can I contact official DEPI support?",
+      "category": "contact",
+      "language": "en",
+      "scope": "DEPI",
+      "answerable": true,
+      "historical_ids": [
+        108,
+        162
+      ],
+      "expanded_equivalent_ids": [
+        186,
+        264,
+        351,
+        353,
+        362
+      ],
+      "supported_facts": "Support is available via the official portal contact form, designated email, and social media channels.",
+      "source_provenance": "depi.gov.eg (Contact Page)",
+      "sufficiency": "single_record_sufficient"
+    },
+    {
+      "id": "Q16_DEPI_MIXED_TRACKS",
+      "query": "What tracks are available for Data Science and Artificial Intelligence in DEPI؟",
+      "category": "tracks",
+      "language": "mixed",
+      "scope": "DEPI",
+      "answerable": true,
+      "historical_ids": [
+        102
+      ],
+      "expanded_equivalent_ids": [
+        119,
+        120,
+        128,
+        186,
+        246,
+        264
+      ],
+      "supported_facts": "DEPI offers dedicated tracks in Data Science, Artificial Intelligence, and Machine Learning.",
+      "source_provenance": "depi.gov.eg (Tracks Catalog)",
+      "sufficiency": "single_record_sufficient"
+    },
+    {
+      "id": "Q17_DEPI_RESIDENCE_CONDITIONS",
+      "query": "هل يشترط محل سكن معين أو محافظة معينة للقبول؟",
+      "category": "residence",
+      "language": "ar",
+      "scope": "DEPI",
+      "answerable": true,
+      "historical_ids": [
+        106
+      ],
+      "expanded_equivalent_ids": [
+        109,
+        114,
+        121,
+        123,
+        206,
+        259,
+        341
+      ],
+      "supported_facts": "المنحة متاحة لجميع المقيمين في مختلف محافظات مصر مع مراعاة مراكز التدريب الإقليمية.",
+      "source_provenance": "depi.gov.eg",
+      "sufficiency": "single_record_sufficient"
+    },
+    {
+      "id": "Q18_UNSUPPORTED_NASA",
+      "query": "Does DEPI guarantee an employment contract with NASA after graduation?",
+      "category": "negative_unsupported",
+      "language": "en",
+      "scope": "OUT_OF_SCOPE",
+      "answerable": false,
+      "historical_ids": [],
+      "expanded_equivalent_ids": [],
+      "supported_facts": "DEPI does not offer or guarantee NASA contracts. This is an unsupported claim that must be deflected safely.",
+      "source_provenance": "None (Negative Control)",
+      "sufficiency": "deflection_required"
+    },
+    {
+      "id": "Q19_UNSUPPORTED_WEATHER",
+      "query": "What is the weather forecast today in Cairo?",
+      "category": "negative_unrelated",
+      "language": "en",
+      "scope": "OUT_OF_SCOPE",
+      "answerable": false,
+      "historical_ids": [],
+      "expanded_equivalent_ids": [],
+      "supported_facts": "Weather forecast is unrelated to DEPI and must be deflected politely.",
+      "source_provenance": "None (Negative Control)",
+      "sufficiency": "deflection_required"
+    },
+    {
+      "id": "Q20_DEBI_MASTER_DEGREE",
+      "query": "ما هي شروط منحة بناة مصر الرقمية DEBI للحصول على درجة الماجستير في الهندسة من كندا؟",
+      "category": "debi_scholarship",
+      "language": "ar",
+      "scope": "DEBI_QUARANTINE",
+      "answerable": false,
+      "historical_ids": [
+        90,
+        91,
+        94
+      ],
+      "expanded_equivalent_ids": [],
+      "supported_facts": "استفسار خاص بمبادرة DEBI وليس DEPI، ويجب عزله وتوجيه المستفسر إلى قنوات DEBI الرسمية.",
+      "source_provenance": "debi.gov.eg (Quarantined)",
+      "sufficiency": "deflection_required"
+    },
+    {
+      "id": "Q21_DEBI_OTTAWA_PARTNERSHIP",
+      "query": "Which Canadian universities partner with DEBI for the master's degree scholarship?",
+      "category": "debi_scholarship",
+      "language": "en",
+      "scope": "DEBI_QUARANTINE",
+      "answerable": false,
+      "historical_ids": [
+        94
+      ],
+      "expanded_equivalent_ids": [],
+      "supported_facts": "University of Ottawa partnership is specific to DEBI, outside DEPI scope.",
+      "source_provenance": "debi.gov.eg (Quarantined)",
+      "sufficiency": "deflection_required"
+    },
+    {
+      "id": "Q22_DIGILIANS_INQUIRY",
+      "query": "ما هي مبادرة الرواد الرقميون Digilians وكيف أقوم بالتسجيل بها؟",
+      "category": "digilians_isolation",
+      "language": "ar",
+      "scope": "DIGILIANS_ISOLATION",
+      "answerable": false,
+      "historical_ids": [],
+      "expanded_equivalent_ids": [],
+      "supported_facts": "Digilians هي مبادرة مستقلة ويجب إرشاد المستفسر إلى بوابتها الرسمية.",
+      "source_provenance": "digilians.gov.eg (Isolated)",
+      "sufficiency": "deflection_required"
+    },
+    {
+      "id": "Q23_AMBIGUOUS_PDF_QUERY",
+      "query": "What are the questions in FAQ LMS-English Exam.pdf?",
+      "category": "ambiguous_pdf",
+      "language": "en",
+      "scope": "AMBIGUOUS_EXCLUDE",
+      "answerable": false,
+      "historical_ids": [],
+      "expanded_equivalent_ids": [],
+      "supported_facts": "ملف استرشادي داخلي لا يمثل سياسات رسمية عامة للمبادرة.",
+      "source_provenance": "Internal PDF (Excluded)",
+      "sufficiency": "deflection_required"
+    },
+    {
+      "id": "Q24_FOLLOWUP_STUDY_TIME",
+      "query": "هل التدريب هيكون الصبح في أوقات الدراسة الجامعية ولا بعد الظهر؟",
+      "category": "training_schedule",
+      "language": "ar",
+      "scope": "DEPI",
+      "answerable": true,
+      "historical_ids": [
+        111
+      ],
+      "expanded_equivalent_ids": [
+        106,
+        107,
+        114,
+        115,
+        116,
+        123,
+        129
+      ],
+      "supported_facts": "يتم تنظيم المواعيد لتناسب المتدربين (بعد الظهر وفي عطلات نهاية الأسبوع أو أونلاين مسائي).",
+      "source_provenance": "depi.gov.eg / DEPI HELPER.xlsx",
+      "sufficiency": "single_record_sufficient"
+    },
+    {
+      "id": "Q25_INDUSTRY_REAL_PROJECTS",
+      "query": "هل سيعمل المشاركون في مسار الصناعة على مشروعات حقيقية؟",
+      "category": "industry_track",
+      "language": "ar",
+      "scope": "DEPI",
+      "answerable": true,
+      "historical_ids": [
+        123
+      ],
+      "expanded_equivalent_ids": [
+        108,
+        120,
+        121,
+        124,
+        241,
+        257,
+        329,
+        333,
+        343
+      ],
+      "supported_facts": "نعم، يشمل مسار الصناعة العمل على مشروعات عملية واقعية تحت إشراف خبراء من كبرى الشركات الشريكة.",
+      "source_provenance": "depi.gov.eg (Industry Track details)",
+      "sufficiency": "single_record_sufficient"
+    }
+  ]
+}
