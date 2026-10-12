@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-12T03:00:16.183979+00:00",
+  "evaluation": {
+    "source_artifact": "tests/golden_test_results.json",
+    "source_artifact_sha256": "791dacd5d9086d9644cf20cd85fa6040921c5468634537ef2a78574e728d091a",
+    "master_artifact_sha256": "a5384a228e22ec8687ead60719a28697c5a6a82e046094a698e7ae20333519ef",
+    "master_finished": "2026-10-11T13:27:56.151719",
+    "master_verdict": "NOT_READY",
+    "suite_status": "FAIL",
+    "summary": {
+      "total": 36,
+      "passed": 33,
+      "failed": 2,
+      "blocked": 1,
+      "timestamp": "2026-10-11T13:27:56.113115"
+    },
+    "runtime_identity": null,
+    "corpus_version": null,
+    "time_zone": "Not recorded in source artifact"
+  }
+}
