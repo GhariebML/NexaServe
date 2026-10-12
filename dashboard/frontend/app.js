@@ -536,7 +536,7 @@ async function loadExecutiveKPIs() {
   try {
     const data = await apiRequest(`/api/dashboard/summary?period=${STATE.period}&program=${STATE.program}`);
     const unitMs = t.unit_ms || ' ms';
-    
+
     container.innerHTML = `
       <div class="kpi-card">
         <span class="kpi-label">${t.kpi_total_customers}</span>
@@ -610,7 +610,7 @@ async function loadCustomers() {
 
   try {
     const data = await apiRequest(`/api/dashboard/customers?program=${STATE.program}&search=${encodeURIComponent(search)}&page=${STATE.customerPage}&limit=10`);
-    
+
     if (data.items.length === 0) {
       tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No matching customer records found.</td></tr>';
       return;
@@ -1101,7 +1101,7 @@ async function loadN8nData() {
 
   try {
     const overview = await apiRequest('/api/dashboard/n8n/overview');
-    
+
     kpiGrid.innerHTML = `
       <div class="kpi-card ${overview.connected ? 'success' : 'error'}">
         <span class="kpi-label">n8n Engine Link</span>
