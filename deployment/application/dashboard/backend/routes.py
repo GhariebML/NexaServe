@@ -21,7 +21,7 @@ import redis
 from database import query_all, query_one, execute_commit, REPORT_QUERY_DEADLINE
 from auth import get_current_user, require_role
 from reporting import build_workbook, safe_filename, EXCEL_MIME, MAX_EXPORT_ROWS
-from evaluation_summary import summarize_latest_rag_evaluation
+from evaluation_summary import summarize_stored_rag_evaluation
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
@@ -1363,11 +1363,9 @@ async def respond_to_ticket(
 @router.get("/rag/evaluation-summary")
 async def get_rag_evaluation_summary(user: Dict[str, Any] = Depends(get_current_user)):
     """Read a compact benchmark result; this route never runs inference or a benchmark."""
-    project_root = Path(__file__).resolve().parents[2]
-    tests_dir = project_root / "tests"
-    return summarize_latest_rag_evaluation(
-        master_path=tests_dir / "final_test_results.json",
-        results_path=tests_dir / "golden_test_results.json",
+    summary_path = Path(__file__).resolve().parents[1] / "data" / "rag_evaluation_summary.json"
+    return summarize_stored_rag_evaluation(
+        summary_path=summary_path,
         active_runtime_identity=os.getenv("DASHBOARD_EVALUATION_RUNTIME_ID"),
         active_corpus_version=os.getenv("DASHBOARD_EVALUATION_CORPUS_VERSION"),
     )

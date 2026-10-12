@@ -131,7 +131,7 @@ def validate_case(case, result):
     status = "PASS" if len(failures) == 0 else "FAIL"
     return status, failures
 
-def run_all_tests(webhook_url, cases, verbose=True):
+def run_all_tests(webhook_url, cases, verbose=True, runtime_identity=None, corpus_version=None):
     """Run all golden test cases and return structured results."""
     results = []
     pass_count = 0
@@ -226,7 +226,9 @@ def run_all_tests(webhook_url, cases, verbose=True):
             "hallucination_failures": len(hallucination_failures),
             "p50_latency_ms": latencies[len(latencies)//2] if latencies else None,
             "p95_latency_ms": latencies[min(int(len(latencies)*0.95), len(latencies)-1)] if latencies else None,
-            "timestamp": datetime.datetime.now().isoformat()
+            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "runtime_identity": runtime_identity,
+            "corpus_version": corpus_version,
         },
         "results": results
     }
@@ -237,10 +239,18 @@ def main():
     parser.add_argument("--dataset", default=None, help="Dataset JSON file path")
     parser.add_argument("--output", default=None, help="Output JSON file path")
     parser.add_argument("--quiet", action="store_true", help="Minimal output")
+    parser.add_argument("--runtime-identity", default=None, help="Explicit evaluated runtime/candidate identity")
+    parser.add_argument("--corpus-version", default=None, help="Explicit evaluated corpus version")
     args = parser.parse_args()
     
     cases = load_golden_cases(args.dataset)
-    report = run_all_tests(args.webhook, cases, verbose=not args.quiet)
+    report = run_all_tests(
+        args.webhook,
+        cases,
+        verbose=not args.quiet,
+        runtime_identity=args.runtime_identity,
+        corpus_version=args.corpus_version,
+    )
     
     # Save report
     output_path = args.output or os.path.join(os.path.dirname(__file__), 'golden_test_results.json')

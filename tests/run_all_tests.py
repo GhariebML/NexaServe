@@ -34,7 +34,7 @@ if sys.platform == "win32":
 TESTS_DIR = os.path.dirname(os.path.abspath(__file__))
 SCRIPTS_DIR = os.path.join(os.path.dirname(TESTS_DIR), 'scripts')
 
-def run_test_module(name, script_path, timeout=600):
+def run_test_module(name, script_path, timeout=600, extra_args=None):
     """Run a test module as subprocess and capture results."""
     print(f"\n{'='*80}")
     print(f" RUNNING: {name}")
@@ -44,7 +44,7 @@ def run_test_module(name, script_path, timeout=600):
     start = datetime.datetime.now()
     try:
         result = subprocess.run(
-            [sys.executable, script_path],
+            [sys.executable, script_path, *(extra_args or [])],
             capture_output=True,
             text=True,
             timeout=timeout,
@@ -77,9 +77,13 @@ def main():
     parser = argparse.ArgumentParser(description="NexaServe Master Test Runner")
     parser.add_argument("--skip-golden", action="store_true", help="Skip the full golden RAG suite (slow)")
     parser.add_argument("--report-dir", default=TESTS_DIR, help="Output directory for final report")
+    parser.add_argument("--evaluation-runtime-identity", default=None,
+                        help="Explicit runtime/candidate identity to record with the RAG benchmark")
+    parser.add_argument("--evaluation-corpus-version", default=None,
+                        help="Explicit corpus version to record with the RAG benchmark")
     args = parser.parse_args()
     
-    start_time = datetime.datetime.now()
+    start_time = datetime.datetime.now(datetime.timezone.utc)
     
     print(f"\n{'#'*80}")
     print(f"#{'NEXASERVE MASTER TEST RUNNER':^78s}#")
@@ -129,15 +133,22 @@ def main():
         all_results.append(run_test_module("WhatsApp Resilience", wa_path, timeout=120))
     
     # 8. Golden RAG (slowest)
+    golden_result = None
     if not args.skip_golden:
         golden_path = os.path.join(TESTS_DIR, 'run_golden_tests.py')
         if os.path.exists(golden_path):
-            all_results.append(run_test_module("Golden RAG Suite", golden_path, timeout=600))
+            golden_args = []
+            if args.evaluation_runtime_identity:
+                golden_args.extend(["--runtime-identity", args.evaluation_runtime_identity])
+            if args.evaluation_corpus_version:
+                golden_args.extend(["--corpus-version", args.evaluation_corpus_version])
+            golden_result = run_test_module("Golden RAG Suite", golden_path, timeout=600, extra_args=golden_args)
+            all_results.append(golden_result)
     else:
         print("\n[SKIPPED] Golden RAG Suite (--skip-golden)\n")
     
     # Final summary
-    end_time = datetime.datetime.now()
+    end_time = datetime.datetime.now(datetime.timezone.utc)
     elapsed_total = (end_time - start_time).total_seconds()
     
     pass_count = sum(1 for r in all_results if r["status"] == "PASS")
@@ -180,6 +191,24 @@ def main():
     with open(outpath, 'w', encoding='utf-8') as f:
         json.dump(report, f, indent=2, ensure_ascii=False)
     print(f" Final report: {outpath}")
+
+    # Package the successful or completed-with-findings RAG run into a small
+    # privacy-safe artifact consumed by the dashboard. Never package on skip,
+    # timeout, or runner error; in those cases the previous result ages normally.
+    if golden_result and golden_result.get("status") in ("PASS", "FAIL"):
+        summary_builder = os.path.join(os.path.dirname(TESTS_DIR), 'scripts', 'build_dashboard_rag_summary.py')
+        golden_results = os.path.join(TESTS_DIR, 'golden_test_results.json')
+        package_result = subprocess.run(
+            [sys.executable, summary_builder, "--master", outpath, "--results", golden_results],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        if package_result.returncode == 0:
+            print(package_result.stdout.strip())
+        else:
+            print(" Dashboard RAG summary was not updated; the prior summary remains in place.")
     
     sys.exit(0 if verdict == "PRODUCTION_READY" else 1)
 

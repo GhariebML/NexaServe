@@ -18,7 +18,11 @@ sys.path.insert(0, str(ROOT / "dashboard" / "backend"))
 
 import routes
 import database
-from evaluation_summary import summarize_latest_rag_evaluation
+from evaluation_summary import (
+    build_sanitized_evaluation_artifact,
+    summarize_latest_rag_evaluation,
+    summarize_stored_rag_evaluation,
+)
 from reporting import build_workbook, safe_cell_value, safe_filename
 
 
@@ -28,7 +32,7 @@ def _summary_artifacts(tmp_path, *, passed=2, failed=1, blocked=1, runtime=None,
     master.write_text(json.dumps({
         "finished": "2026-10-11T14:00:00",
         "verdict": "NOT_READY",
-        "suite_results": [{"test": "Golden RAG Suite", "status": "PASS" if failed == 0 and blocked == 0 else "FAIL"}],
+        "suite_results": [{"test": "Golden RAG Suite", "status": "PASS" if failed == 0 and blocked == 0 else "FAIL", "stdout_tail": "Full report saved to: tests/golden_test_results.json"}],
     }), encoding="utf-8")
     summary = {
         "total": passed + failed + blocked,
@@ -106,7 +110,7 @@ def test_evaluation_is_only_linked_when_runtime_and_corpus_match(tmp_path):
     assert summarize_latest_rag_evaluation(master, result, "candidate-x", "kb-7")["status"] == "NEEDS_IMPROVEMENT"
     clean_master = tmp_path / "clean-master.json"
     clean_artifact = tmp_path / "clean-rag.json"
-    clean_master.write_text(json.dumps({"verdict": "READY", "finished": "2026-10-12T10:00:00+00:00", "suite_results": [{"test": "Golden RAG Suite", "status": "PASS"}]}), encoding="utf-8")
+    clean_master.write_text(json.dumps({"verdict": "READY", "finished": "2026-10-12T10:00:00+00:00", "suite_results": [{"test": "Golden RAG Suite", "status": "PASS", "stdout_tail": "Full report saved to: tests/golden_test_results.json"}]}), encoding="utf-8")
     clean_artifact.write_text(json.dumps({"runtime_identity": "candidate-x", "corpus_version": "kb-7", "summary": {"total": 2, "passed": 2, "failed": 0, "blocked": 0, "timestamp": "2026-10-12T10:00:00+00:00"}}), encoding="utf-8")
     result = summarize_latest_rag_evaluation(clean_master, clean_artifact, "candidate-x", "kb-7")
     assert result["status"] == "HEALTHY"
@@ -131,6 +135,18 @@ def test_missing_evaluation_is_not_evaluated(tmp_path):
     result = summarize_latest_rag_evaluation(tmp_path / "absent-master.json", tmp_path / "absent-rag.json")
     assert result["status"] == "NOT_EVALUATED"
     assert result["pass_rate"] is None
+
+
+def test_packaged_evaluation_artifact_contains_only_sanitized_summary(tmp_path):
+    master, result = _summary_artifacts(tmp_path)
+    artifact = build_sanitized_evaluation_artifact(master, result)
+    packaged = tmp_path / "rag_evaluation_summary.json"
+    packaged.write_text(json.dumps(artifact, ensure_ascii=False), encoding="utf-8")
+    summary = summarize_stored_rag_evaluation(packaged)
+    assert summary["status"] == "BLOCKED"
+    assert summary["passed"] == 2 and summary["failed"] == 1 and summary["blocked"] == 1
+    assert "answer" not in packaged.read_text(encoding="utf-8")
+    assert len(summary["source_artifact_sha256"]) == 64
 
 
 def test_customer_report_exports_all_filtered_pages_with_role_masking(monkeypatch):
