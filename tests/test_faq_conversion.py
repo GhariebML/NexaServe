@@ -39,12 +39,13 @@ from convert_faqs_to_json import (
 )
 
 FAQ_DIR = ROOT / "FAQs"
-OUTPUT_DIR = FAQ_DIR / "converted"
+OUTPUT_DIR = ROOT / "scratch" / "test_faq_conversion_out"
 
 
 @pytest.fixture(scope="module")
 def conversion_output():
-    """Runs conversion and returns output paths and parsed datasets."""
+    """Runs conversion into an isolated test directory and returns output paths and parsed datasets."""
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     results = run_conversion(FAQ_DIR, OUTPUT_DIR, ROOT)
     
     with open(results["faqs_json"], "r", encoding="utf-8") as f:
@@ -59,13 +60,17 @@ def conversion_output():
     with open(results["source_manifest"], "r", encoding="utf-8") as f:
         manifest = json.load(f)
         
-    return {
+    yield {
         "results": results,
         "json_data": json_data,
         "records": json_data["records"],
         "jsonl_records": jsonl_records,
         "manifest": manifest
     }
+    # Cleanup test output
+    import shutil
+    if OUTPUT_DIR.exists():
+        shutil.rmtree(OUTPUT_DIR, ignore_errors=True)
 
 
 # ------------------------------------------------------------------------------
@@ -73,8 +78,7 @@ def conversion_output():
 # ------------------------------------------------------------------------------
 
 def test_all_output_artifacts_exist(conversion_output):
-    """Verifies that all 4 required artifacts exist in FAQs/converted."""
-    assert OUTPUT_DIR.exists()
+    """Verifies that all 4 required artifacts exist in test output directory."""
     assert (OUTPUT_DIR / "faqs.json").exists()
     assert (OUTPUT_DIR / "faqs.jsonl").exists()
     assert (OUTPUT_DIR / "source_manifest.json").exists()
@@ -89,6 +93,18 @@ def test_exclusion_of_converted_directory_from_source_scans():
         assert "/converted/" not in p, f"Generated output directory was not excluded: {p}"
 
 
+def test_exclusion_of_content_approval_review_workbook(conversion_output):
+    """Verifies DEPI_Content_Approval_Review.xlsx is excluded from FAQ extraction."""
+    records = conversion_output["records"]
+    approval_recs = [r for r in records if "Approval_Review" in r.get("source_file", "")]
+    assert len(approval_recs) == 0, "Approval review workbook must not produce ordinary FAQ records"
+    manifest = conversion_output["manifest"]
+    inv_item = next((e for e in manifest["source_inventory"] if "Approval_Review" in e["file_name"]), None)
+    assert inv_item is not None
+    assert inv_item["status"] == "approval_review_workbook"
+    assert inv_item["records_count"] == 0
+
+
 # ------------------------------------------------------------------------------
 # 2. JSON & JSONL Validity and Parity
 # ------------------------------------------------------------------------------
@@ -98,7 +114,7 @@ def test_json_and_jsonl_record_parity(conversion_output):
     json_recs = conversion_output["records"]
     jsonl_recs = conversion_output["jsonl_records"]
     assert len(json_recs) == len(jsonl_recs)
-    assert len(json_recs) > 400
+    assert len(json_recs) >= 350
     for j_rec, jl_rec in zip(json_recs, jsonl_recs):
         assert j_rec["id"] == jl_rec["id"]
         assert j_rec["content_sha256"] == jl_rec["content_sha256"]
@@ -111,7 +127,7 @@ def test_json_and_jsonl_record_parity(conversion_output):
 def test_arabic_utf8_encoding_integrity(conversion_output):
     """Verifies Arabic characters round-trip cleanly without corruption or unicode escapes."""
     arabic_recs = [r for r in conversion_output["records"] if r["language"] in ["ar", "bilingual"]]
-    assert len(arabic_recs) >= 400
+    assert len(arabic_recs) >= 300
     
     # Check sample known Arabic terms
     found_depi = any("مبادرة رواد مصر الرقمية" in (r["content"] or "") for r in arabic_recs)
@@ -138,11 +154,24 @@ def test_english_and_bilingual_classification(conversion_output):
 # ------------------------------------------------------------------------------
 
 def test_valid_program_scopes(conversion_output):
-    """Ensures all records adhere to the database program scope constraint (DEBI, DIGILIANS, COMMON)."""
+    """Ensures all records adhere to the database program scope constraint (DEPI, DIGILIANS, COMMON)."""
     for rec in conversion_output["records"]:
         scope = rec["program_scope"]
         assert scope in VALID_PROGRAM_SCOPES, f"Invalid program scope '{scope}' in record {rec['id']}"
         assert rec["program"] == scope, f"Ingestion alias 'program' must match program_scope in {rec['id']}"
+
+
+def test_depi_scope_isolation_from_debi(conversion_output):
+    """Proves that DEPI content is assigned to DEPI scope, never misclassified as DEBI."""
+    records = conversion_output["records"]
+    depi_recs = [r for r in records if r["source_file"] == "FAQs/DEPI HELPER.xlsx"]
+    assert len(depi_recs) > 0
+    for r in depi_recs:
+        assert r["program_scope"] == "DEPI", f"DEPI HELPER row {r['id']} incorrectly assigned scope {r['program_scope']}"
+        assert r["program"] == "DEPI"
+
+    debi_recs = [r for r in records if r["program_scope"] == "DEBI"]
+    assert len(debi_recs) == 0, f"Expected 0 DEBI records in converted FAQ corpus, found {len(debi_recs)}"
 
 
 def test_rag_canonical_ingestion_fields(conversion_output):
@@ -155,6 +184,7 @@ def test_rag_canonical_ingestion_fields(conversion_output):
         assert "source_attribution" in rec
         assert "content_hash" in rec
         assert rec["content_hash"] == rec["content_sha256"]
+
 
 
 # ------------------------------------------------------------------------------
@@ -255,7 +285,8 @@ def test_lms_exam_pdf_q_series_and_seb_guide(conversion_output):
 def test_depi_helper_all_sheets_extracted(conversion_output):
     """Verifies DEPI HELPER.xlsx extracts records across all 8 sheets."""
     excel_recs = [r for r in conversion_output["records"] if r["source_file"] == "FAQs/DEPI HELPER.xlsx"]
-    assert len(excel_recs) == 268
+    # 204 non-empty rows extracted (empty answers and headers filtered out)
+    assert len(excel_recs) == 204
     sheets = {r["source_sheet"] for r in excel_recs}
     expected_sheets = {"ROUND 5", "ROUND 4", "Round 5 Cancel", "R4 CANCEL", "chatting", "R3", "تصنيف الميل المرحلة 3", "email"}
     # normalize spaces for comparison

@@ -13,7 +13,7 @@ import requests
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-from db_config import get_db_connection  # noqa: E402
+from db_config import get_db_connection, OLLAMA_EMBED_URL  # noqa: E402
 
 TRACE_PATH = ROOT / "logs" / "runtime_forensic" / "official_faq_trace.json"
 SOURCE_PATH = ROOT / "DEPI_Web_Scraper" / "data" / "final" / "faqs.json"
@@ -42,7 +42,7 @@ def test_official_faq_source_maps_to_active_db_record_and_embedding():
                 """SELECT id, answer_ar, source_url, content_hash, is_active,
                           embedding IS NOT NULL, vector_dims(embedding)
                      FROM knowledge_base
-                     WHERE program='DEBI' AND category='scraped_faq' AND question_ar=%s""",
+                     WHERE program='DEPI' AND category='scraped_faq' AND question_ar=%s""",
                 (source["question"],),
             )
             row = cur.fetchone()
@@ -58,7 +58,7 @@ def test_official_faq_source_maps_to_active_db_record_and_embedding():
 def test_official_faq_ranks_first_and_matches_live_context_and_final_response():
     source = _source_fact()
     embedding_response = requests.post(
-        "http://127.0.0.1:11434/api/embed",
+        OLLAMA_EMBED_URL,
         json={"model": "nomic-embed-text", "input": "من المؤهل للتدريب في DEPI؟"},
         timeout=30,
     )
@@ -82,7 +82,7 @@ def test_official_faq_ranks_first_and_matches_live_context_and_final_response():
                          + (SELECT count(*) FROM words WHERE answer_ar ILIKE '%%'||word||'%%' OR answer ILIKE '%%'||word||'%%')
                          + (1-(embedding <=> %s::vector))*50 AS rank_score
                        FROM knowledge_base
-                       WHERE is_active AND program IN ('DEBI','COMMON')
+                       WHERE is_active AND program IN ('DEPI','COMMON')
                          AND category NOT IN ('disambiguation','comparison')
                    )
                    SELECT id,program,category,answer_ar,source_url,rank_score
@@ -94,7 +94,7 @@ def test_official_faq_ranks_first_and_matches_live_context_and_final_response():
         conn.close()
 
     assert results[0][1:5] == (
-        "DEBI", "scraped_faq", source["answer"], source["source_url"]
+        "DEPI", "scraped_faq", source["answer"], source["source_url"]
     )
     trace = _trace()
     assert trace["database_record"]["id"] == results[0][0]

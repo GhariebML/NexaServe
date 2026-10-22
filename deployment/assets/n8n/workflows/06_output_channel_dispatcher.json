@@ -278,6 +278,7 @@
     }
   },
   "settings": {
+    "errorWorkflow": "CSWF000000000008",
     "executionOrder": "v1"
   }
 }

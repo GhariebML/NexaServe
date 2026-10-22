@@ -19,6 +19,8 @@ const __dirname = path.dirname(__filename);
 const PORT = process.env.PORT || 8080;
 const AUTH_DIR = process.env.AUTH_DIR || path.resolve(__dirname, '../../data/whatsapp-auth');
 const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL || 'http://localhost:5678/webhook/customer-service';
+const WHATSAPP_LIFECYCLE_API = process.env.WHATSAPP_LIFECYCLE_API || '';
+const WHATSAPP_INGEST_TOKEN = process.env.WHATSAPP_INGEST_TOKEN || '';
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434/api/generate';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'qwen2.5:3b';
 
@@ -32,6 +34,86 @@ let currentQRDataUrl = null;
 let connectionState = 'INITIALIZING';
 let connectedUser = null;
 let lastDisconnectReason = null;
+
+async function lifecycleRequest(path, payload) {
+  if (!WHATSAPP_LIFECYCLE_API || !WHATSAPP_INGEST_TOKEN) {
+    throw new Error('WhatsApp lifecycle integration is not configured');
+  }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 7000);
+  try {
+    const response = await fetch(`${WHATSAPP_LIFECYCLE_API}/${path}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-NexaServe-Webhook-Token': WHATSAPP_INGEST_TOKEN
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(`WhatsApp lifecycle API returned ${response.status}`);
+    return data;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function sendTrackedWhatsApp(to, message, replyToProviderMessageId = null) {
+  const record = await lifecycleRequest('outbound', {
+    recipient: to,
+    text: message,
+    reply_to_provider_message_id: replyToProviderMessageId
+  });
+  if (record.duplicate) {
+    return { success: true, duplicate_suppressed: true, message_id: record.provider_message_id || null,
+      delivery_status: record.delivery_status };
+  }
+  if (connectionState !== 'CONNECTED' || !sock) {
+    await lifecycleRequest('delivery', {
+      message_id: record.message_id,
+      delivery_status: 'failed'
+    });
+    throw new Error('WhatsApp is not connected');
+  }
+  const target = to.includes('@') ? to : (() => {
+      const clean = to.replace(/[^0-9]/g, '');
+      return jidMap[clean] || jidMap[`+${clean}`] || `${clean}@s.whatsapp.net`;
+  })();
+  let sent;
+  try {
+    sent = await sock.sendMessage(target, { text: message });
+  } catch (sendErr) {
+    await lifecycleRequest('delivery', { message_id: record.message_id, delivery_status: 'failed' }).catch(() => {});
+    throw sendErr;
+  }
+  const providerMessageId = sent?.key?.id;
+  if (!providerMessageId) {
+    await lifecycleRequest('delivery', { message_id: record.message_id, delivery_status: 'failed' }).catch(() => {});
+    throw new Error('WhatsApp provider returned no message ID');
+  }
+  try {
+    await lifecycleRequest('delivery', {
+      message_id: record.message_id,
+      provider_message_id: providerMessageId,
+      delivery_status: 'sent'
+    });
+  } catch (statusErr) {
+    console.error('[WhatsApp lifecycle] Provider accepted a message but its status update is pending:', statusErr.message);
+    return { success: false, status: 'queued', message_id: providerMessageId, lifecycle_message_id: record.message_id };
+  }
+  return { success: true, message_id: providerMessageId, lifecycle_message_id: record.message_id,
+    target_jid: target, timestamp: new Date().toISOString() };
+}
+
+async function recordWhatsAppReceipt(update) {
+  const providerMessageId = update?.key?.id;
+  const rawStatus = Number(update?.update?.status);
+  const statusByBaileys = { 2: 'sent', 3: 'delivered', 4: 'read', 5: 'read', 0: 'failed' };
+  const deliveryStatus = statusByBaileys[rawStatus];
+  if (!providerMessageId || !deliveryStatus || update?.key?.fromMe !== true) return;
+  await lifecycleRequest('delivery', { provider_message_id: providerMessageId, delivery_status: deliveryStatus });
+}
 
 // Track recently dispatched messages to prevent duplicate echo replies (TTL: 15s)
 const recentDispatches = new Map();
@@ -116,7 +198,7 @@ function enqueueOfflineMessage(senderJid, payload) {
     attempts: 0
   };
   OFFLINE_RETRY_QUEUE.push(item);
-  console.log(`[Offline Queue] Enqueued message from ${senderJid} (Queue size: ${OFFLINE_RETRY_QUEUE.length})`);
+  console.log(`[Offline Queue] Enqueued inbound for retry (queue size: ${OFFLINE_RETRY_QUEUE.length})`);
   return item.id;
 }
 
@@ -245,6 +327,16 @@ async function initWhatsApp() {
     }
   });
 
+  sock.ev.on('messages.update', async (updates) => {
+    for (const update of updates || []) {
+      try {
+        await recordWhatsAppReceipt(update);
+      } catch (err) {
+        console.warn('[WhatsApp lifecycle] Delivery receipt could not be recorded:', err.message);
+      }
+    }
+  });
+
   sock.ev.on('messages.upsert', async (event) => {
     try {
       if (event.type !== 'notify') return;
@@ -272,13 +364,42 @@ async function initWhatsApp() {
 
         if (!text.trim()) continue;
 
-        console.log(`[WhatsApp Ingress] From ${senderJid} (+${phone}, ${pushName}): "${text}"`);
+        const providerMessageId = msg.key?.id;
+        if (!providerMessageId) {
+          console.warn('[WhatsApp lifecycle] Inbound message had no provider ID; it was not processed.');
+          continue;
+        }
+
+        let persistedInbound;
+        try {
+          persistedInbound = await lifecycleRequest('inbound', {
+            sender_jid: senderJid,
+            provider_message_id: providerMessageId,
+            phone_number: `+${phone}`,
+            push_name: pushName,
+            text
+          });
+        } catch (persistErr) {
+          console.error('[WhatsApp lifecycle] Inbound could not be persisted; processing was stopped:', persistErr.message);
+          continue;
+        }
+        if (persistedInbound.duplicate) {
+          console.log('[WhatsApp lifecycle] Duplicate inbound event suppressed.');
+          continue;
+        }
+
+        console.log('[WhatsApp Ingress] Persisted inbound event; starting workflow processing.');
 
         const payload = {
           channel: 'whatsapp',
           customer_message: text,
           phone_number: `+${phone}`,
           channel_user_id: phone,
+          whatsapp_id: senderJid,
+          provider_message_id: providerMessageId,
+          customer_id: persistedInbound.customer_id,
+          conversation_id: persistedInbound.conversation_id,
+          inbound_message_id: persistedInbound.message_id,
           jid: senderJid,
           full_name: pushName,
           start_time: Date.now(),
@@ -355,17 +476,13 @@ async function initWhatsApp() {
           enqueueOfflineMessage(senderJid, payload);
         }
 
-        // 3. Dispatch the response directly back to the WhatsApp sender!
-        if (replyText && sock) {
-          const dispatchKey = `${senderJid}_${msg.key.id || text.slice(0, 30)}`;
-          if (!isRecentlyDispatched(dispatchKey)) {
-            console.log(`[WhatsApp Live Reply (${replySource})] -> ${senderJid}: "${replyText.slice(0, 60)}..."`);
-            try {
-              await sock.sendMessage(senderJid, { text: replyText });
-              console.log(`[WhatsApp Live Reply] ✅ Sent successfully to ${senderJid}`);
-            } catch (sendErr) {
-              console.error(`[WhatsApp Live Reply] ❌ Failed to send message to ${senderJid}:`, sendErr.message);
-            }
+        // The n8n dispatcher owns successful replies. Only the explicit offline
+        // fallback is sent here; it uses the same durable outbox and idempotency key.
+        if (replyText && replySource !== 'n8n' && sock) {
+          try {
+            await sendTrackedWhatsApp(senderJid, replyText, providerMessageId);
+          } catch (sendErr) {
+            console.error('[WhatsApp lifecycle] Offline fallback was not sent:', sendErr.message);
           }
         }
       }
@@ -607,47 +724,11 @@ app.post('/send', async (req, res) => {
     if (!to || !message) {
       return res.status(400).json({ error: 'Parameters "to" and "message" are required.' });
     }
-
-    if (connectionState !== 'CONNECTED' || !sock) {
-      return res.status(503).json({
-        error: 'WhatsApp is not connected',
-        status: connectionState
-      });
-    }
-
-    const cleanTo = to.replace(/[^0-9]/g, '');
-    let remoteJid;
-
-    if (to.includes('@')) {
-      remoteJid = to;
-    } else if (jidMap[cleanTo] || jidMap[`+${cleanTo}`]) {
-      remoteJid = jidMap[cleanTo] || jidMap[`+${cleanTo}`];
-    } else if (cleanTo.length > 13) {
-      remoteJid = `${cleanTo}@lid`;
-    } else {
-      remoteJid = `${cleanTo}@s.whatsapp.net`;
-    }
-
-    console.log(`[WhatsApp Egress] Resolved target JID: ${remoteJid} for recipient: ${to}`);
-    const dispatchKey = `${remoteJid}_${message.slice(0, 30)}`;
-    if (isRecentlyDispatched(dispatchKey)) {
-      console.log(`[WhatsApp Egress] Duplicate message to ${remoteJid} suppressed.`);
-      return res.json({ success: true, duplicate_suppressed: true, target_jid: remoteJid });
-    }
-
-    console.log(`[WhatsApp Egress] Dispatching message: "${message.slice(0, 60)}..."`);
-    const sent = await sock.sendMessage(remoteJid, { text: message });
-
-    res.json({
-      success: true,
-      message_id: sent?.key?.id || 'sent',
-      to: cleanTo,
-      target_jid: remoteJid,
-      timestamp: new Date().toISOString()
-    });
+    const result = await sendTrackedWhatsApp(to, String(message), req.body.reply_to_provider_message_id || null);
+    res.status(200).json(result);
   } catch (err) {
-    console.error('[WhatsApp Egress Error]:', err);
-    res.status(500).json({ error: err.message });
+    console.error('[WhatsApp Egress Error]:', err.message);
+    res.status(err.message === 'WhatsApp is not connected' ? 503 : 502).json({ error: err.message });
   }
 });
 

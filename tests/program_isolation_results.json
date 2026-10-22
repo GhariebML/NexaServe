@@ -1,6 +1,6 @@
 {
   "test": "program_isolation",
-  "timestamp": "2026-10-11T13:14:57.399649",
+  "timestamp": "2026-10-18T12:11:44.057480",
   "total_cases": 9,
   "testable_cases": 6,
   "leakage_count": 0,
@@ -12,9 +12,9 @@
       "query": "ما هي منح رواد مصر الرقمية؟",
       "target_program": "DEBI",
       "status": "PASS",
-      "answer": "منحة دراسية كاملة تهدف إلى تمكين جيل متميز من خريجي كليات الهندسة والحاسبات في مصر من الحصول على درجة الماجستير في العلوم المهنية والتكنولوجيا المتقدمة من كبرى الجامعات الدولية المرموقة، بالتوازي مع تدريب عملي مع كبرى شركات التكنولوجيا العالمية وتطوير المهارات القيادية واللغوية.",
+      "answer": "منحة رواد مصر الرقمية (DEBI) هي منحة دراسية كاملة أطلقتها وزارة الاتصالات وتكنولوجيا المعلومات المصرية. تهدف المنحة إلى تمكين جيل متميز من خريجي كليات الهندسة والحاسبات في مصر من الحصول على درجة الماجستير في العلوم المهنية والتكنولوجيا المتقدمة من كبرى الجامعات الدولية المرموقة، بالتوازي مع تدريب عم",
       "leakage_terms": [],
-      "latency_ms": 13431
+      "latency_ms": 16219
     },
     {
       "case_id": "ISO_DEPI_02",
@@ -23,70 +23,70 @@
       "status": "PASS",
       "answer": "شروط التقديم والقبول في مبادرة رواد مصر الرقمية (DEBI):\r\n1. الجنسية: مصري / مصرية فقط.\r\n2. المؤهل الدراسي: خريجو كليات الهندسة (أقسام: حاسبات، اتصالات، إلكترونيات، قوى/ميكاترونكس) أو كليات الحاسبات والمعلومات / الذكاء الاصطناعي.\r\n3. التقدير التراكمي: ألا يقل التقدير العام عن «جيد جداً» (Very Good) أ",
       "leakage_terms": [],
-      "latency_ms": 10285
+      "latency_ms": 32980
     },
     {
       "case_id": "ISO_DEPI_03",
       "query": "What tracks are available in DEBI?",
       "target_program": "DEBI",
       "status": "PASS",
-      "answer": "I could not find an active service request or order matching \"your requested order\". Please verify the reference number (e.g. SRV-1001 or ORD-1001) or provide your registered contact details.",
+      "answer": "DEBI offers prestigious professional Master's degree tracks in:\n1. Artificial Intelligence & Data Science\n2. Cybersecurity\n3. Robotics & Automation\n4. Software Engineering\n5. Digital Arts & FinTech",
       "leakage_terms": [],
-      "latency_ms": 2573
+      "latency_ms": 10626
     },
     {
       "case_id": "ISO_DIG_01",
       "query": "ما هي شروط مبادرة الرواد الرقميون؟",
       "target_program": "DIGILIANS",
       "status": "PASS",
-      "answer": "شروط التقديم في مبادرة الرواد الرقميون (Digilians):\n1. الجنسية: مصري / مصرية.\n2. السن: من 18 حتى 32 عاماً.\n3. المؤهل الدراسي: مؤهل مناسب لمسار التدريب (خريجو الكليات، المعاهد العليا، والمعاهد المتوسطة وفوق المتوسطة)، ويمكن لطلاب السنة النهائية التقديم بإفادة رسمية.\n4. الموقف التجنيدي للذكور: أدى الخ",
+      "answer": "عذراً، يختص هذا المساعد حالياً بمبادرة رواد مصر الرقمية (DEPI) فقط، ولا يقدم معلومات حول مبادرات أخرى مثل مبادرة الرواد الرقميون (Digilians). للاستفسار عن DEPI يسعدنا مساعدتك.",
       "leakage_terms": [],
-      "latency_ms": 10795
+      "latency_ms": 3201
     },
     {
       "case_id": "ISO_DIG_02",
       "query": "ما هي المسارات في الرواد الرقميون؟",
       "target_program": "DIGILIANS",
       "status": "PASS",
-      "answer": "تضم المبادرة 6 تخصصات رئيسية:\n1. الذكاء الاصطناعي وعلوم البيانات (AI & Data Science)\n2. الأمن السيبراني (Cybersecurity)\n3. تطوير البرمجيات وهندسة النظم (Software Development)\n4. البنية التحتية الرقمية والشبكات السحابية (Digital Infrastructure & Cloud)\n5. الفنون والوسائط الرقمية (Digital Arts & Desig",
+      "answer": "عذراً، يختص هذا المساعد حالياً بمبادرة رواد مصر الرقمية (DEPI) فقط، ولا يقدم معلومات حول مبادرات أخرى مثل مبادرة الرواد الرقميون (Digilians). للاستفسار عن DEPI يسعدنا مساعدتك.",
       "leakage_terms": [],
-      "latency_ms": 14941
+      "latency_ms": 2978
     },
     {
       "case_id": "ISO_DIG_03",
       "query": "How can I apply for Digilians?",
       "target_program": "DIGILIANS",
       "status": "PASS",
-      "answer": "To apply for Digilians, you must meet the following requirements: be Egyptian nationality, be between the ages of 18 and 32, hold a relevant educational qualification (final-year students with an official statement are eligible), have completed or been exempted from military service, and possess Eng",
+      "answer": "Sorry, this assistant is currently specialized exclusively in the Digital Egypt Pioneers Initiative (DEPI) and does not provide information about other initiatives such as Digilians.",
       "leakage_terms": [],
-      "latency_ms": 9862
+      "latency_ms": 2934
     },
     {
       "case_id": "ISO_COMP_01",
       "query": "ما الفرق بين DEPI والرواد الرقميون؟",
       "target_program": "COMPARISON",
       "status": "PASS",
-      "answer": "الرواد الرقميون (Digilians) تهدف إلى تطوير مهارات الشباب المصري في مجالات تكنولوجيا المعلومات والاتصالات، وبناء المهارات الشخصية والقيادية واللغوية، وإبرام شراكات مع كبرى الشركات العالمية والجامعات المرموقة لتمكين الكفاءات الوطنية. بينما DEPI تركز على منح درجة ماجستير علوم مهنية (Master of Science) ",
+      "answer": "عذراً، يختص هذا المساعد حالياً بمبادرة رواد مصر الرقمية (DEPI) فقط، ولا يقدم معلومات حول مبادرات أخرى مثل مبادرة الرواد الرقميون (Digilians). للاستفسار عن DEPI يسعدنا مساعدتك.",
       "leakage_terms": [],
-      "latency_ms": 25601
+      "latency_ms": 2953
     },
     {
       "case_id": "ISO_AMB_01",
       "query": "ما هي شروط المبادرة؟",
       "target_program": "AMBIGUOUS",
       "status": "PASS",
-      "answer": "هل تقصد مبادرة الرواد الرقميون (Digilians) أم مبادرة رواد مصر الرقمية (DEBI/DEPI)؟ يرجى تحديد المبادرة لتقديم الشروط الدقيقة المعتمدة.",
+      "answer": "شروط التقديم والقبول في مبادرة رواد مصر الرقمية (DEBI) هي:\n1. جنسية مصرية / مصرية فقط.\n2. خريجو كليات الهندسة (أقسام: حاسبات، اتصالات، إلكترونيات، قوى/ميكاترونكس) أو كليات الحاسبات والمعلومات / الذكاء الاصطناعي.\n3. التقدير التراكمي لا يقل عن 'جيد جداً' (Very Good) أو معدل تراكمي (GPA) لا يقل عن 3.0 ",
       "leakage_terms": [],
-      "latency_ms": 2712
+      "latency_ms": 19246
     },
     {
       "case_id": "ISO_AMB_02",
       "query": "إزاي أقدم في المبادرة؟",
       "target_program": "AMBIGUOUS",
       "status": "PASS",
-      "answer": "لقد أطلقت مبادرة الرواد الرقميون Digilians على الشباب والخريجين من الجامعات وطلاب السنة النهائية من 18 إلى 32 سنة. تهدف المبادرة إلى تطوير مهاراتهم في مجالات تكنولوجيا المعلومات والاتصالات، وبناء المهارات الشخصية والقيادية واللغوية، وإبرام شراكات مع كبرى الشركات العالمية والجامعات المرموقة لتمكين ال",
+      "answer": "أقدم في المبادرة DEPI (Digital Egypt Builders Initiative) عبر تقديم خدماتك المهنية وتقديم أفكارك المبتكرة في مجال التكنولوجيا والابتكار. يمكنك أيضاً المشاركة في الدورات والبرامج التي تقدمها DEPI لتطوير مهاراتك وتوسيع آفاقك المهنية.",
       "leakage_terms": [],
-      "latency_ms": 12965
+      "latency_ms": 15458
     }
   ]
 }

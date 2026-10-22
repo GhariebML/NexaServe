@@ -126,6 +126,8 @@ services:
        PORT: 8080
        AUTH_DIR: /app/data/auth
        N8N_WEBHOOK_URL: http://cs-n8n:5678/webhook/customer-service
+       WHATSAPP_LIFECYCLE_API: http://dashboard:8090/api/dashboard/internal/whatsapp
+       WHATSAPP_INGEST_TOKEN: ${WHATSAPP_INGEST_TOKEN:?set WHATSAPP_INGEST_TOKEN}
        OLLAMA_URL: http://ollama:11434/api/generate
     volumes:
       - ./data/whatsapp-auth:/app/data/auth
@@ -162,6 +164,7 @@ services:
       DASHBOARD_JWT_SECRET: ${DASHBOARD_JWT_SECRET:?set DASHBOARD_JWT_SECRET}
       DASHBOARD_CORS_ORIGINS: ${DASHBOARD_CORS_ORIGINS:-}
       DASHBOARD_DB_POOL_MAX: ${DASHBOARD_DB_POOL_MAX:-8}
+      WHATSAPP_INGEST_TOKEN: ${WHATSAPP_INGEST_TOKEN:?set WHATSAPP_INGEST_TOKEN}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD}

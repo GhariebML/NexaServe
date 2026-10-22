@@ -27,11 +27,13 @@ def canonical_hash(question: str, answer: str, language: str, program: str, cate
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
-def gather() -> tuple[list[dict[str, Any]], Counter[str]]:
+def gather(source_dir: Path = SOURCE_DIR) -> tuple[list[dict[str, Any]], Counter[str]]:
     candidates: list[dict[str, Any]] = []
     counts: Counter[str] = Counter()
     seen_content: set[str] = set()
-    for path in sorted(SOURCE_DIR.rglob("*.json")):
+    for path in sorted(source_dir.rglob("*.json")):
+        if "manifest" in path.name.lower():
+            continue
         try:
             root = json.loads(path.read_text(encoding="utf-8-sig"))
         except (OSError, UnicodeError, json.JSONDecodeError):
@@ -62,25 +64,26 @@ def gather() -> tuple[list[dict[str, Any]], Counter[str]]:
             if source_duplicate or exact_duplicate:
                 reason = "duplicate_record"
                 counts["duplicated"] += 1
-            elif not q or not a or rtype != "faq":
+            elif not q or not a or rtype not in {"faq", "reference_section"}:
                 reason = "incomplete_or_non_faq"
                 counts["quarantined"] += 1
-            elif scope_label not in {"DEPI", "GENERAL_SUPPORT"}:
+            elif scope_label not in {"DEPI", "COMMON", "GENERAL_SUPPORT"}:
                 reason = "scope_unverified_or_out_of_scope"
                 counts["quarantined"] += 1
-            elif source_status != "verified":
+            elif source_status not in {"verified", "candidate"}:
                 reason = "source_unverified"
                 counts["quarantined"] += 1
             else:
                 reason = "awaiting_approval_manifest"
                 counts["skipped"] += 1
+            retrieval_scope = str(record.get("retrieval_scope") or ("DEPI_AUTHORITATIVE" if scope_label == "DEPI" else "GENERAL_SUPPORT"))
             candidates.append({
-                "source_file": path.relative_to(ROOT).as_posix(),
+                "source_file": record.get("source_file") or path.relative_to(ROOT).as_posix(),
                 "source_record_id": record_id,
                 "source_index": index,
                 "record_type": rtype,
                 "program_label": scope_label,
-                "retrieval_scope": "DEPI_AUTHORITATIVE" if scope_label == "DEPI" else "GENERAL_SUPPORT",
+                "retrieval_scope": retrieval_scope,
                 "language": str(record.get("language") or "und"),
                 "question": q,
                 "answer": a,
@@ -101,8 +104,9 @@ def approved(candidates: list[dict[str, Any]], approval_path: Path | None) -> li
     approvals = {(str(x.get("source_file")), str(x.get("source_record_id")), str(x.get("retrieval_scope")))
                  for x in entries if isinstance(x, dict) and x.get("reviewer")}
     return [r for r in candidates if r["disposition"] in {"awaiting_approval_manifest", "duplicate_record"}
-            and r["source_status"] == "verified"
+            and r["source_status"] in {"verified", "candidate"}
             and (r["source_file"], r["source_record_id"], r["retrieval_scope"]) in approvals]
+
 
 
 def apply_records(records: list[dict[str, Any]], db_name: str, model: str, ollama_url: str) -> dict[str, int]:
@@ -153,7 +157,7 @@ def apply_records(records: list[dict[str, Any]], db_name: str, model: str, ollam
                             kb_id = existing[0]
                             counts["unchanged"] += 1
                         else:
-                            program = "DEPI" if r["retrieval_scope"] == "DEPI_AUTHORITATIVE" else "COMMON"
+                            program = "DEPI" if r["retrieval_scope"] in ("DEPI_AUTHORITATIVE", "DEPI_INTERNAL_GUIDANCE") else ("COMMON" if r["retrieval_scope"] == "GENERAL_SUPPORT" else r.get("program_label", "COMMON"))
                             attribution = f"{r['source_file']}#{r['source_record_id']}"
                             cur.execute("""INSERT INTO knowledge_base
                                 (program, category, question, answer, question_ar, answer_ar,
@@ -163,6 +167,8 @@ def apply_records(records: list[dict[str, Any]], db_name: str, model: str, ollam
                                  attribution, r["source_url"], r["content_hash"], vector, r["retrieval_scope"]))
                             kb_id = cur.fetchone()[0]
                             counts["inserted"] += 1
+                        src_path = ROOT / r["source_file"]
+                        f_sha = hashlib.sha256(src_path.read_bytes()).hexdigest() if src_path.exists() else r["content_hash"]
                         cur.execute("""INSERT INTO knowledge_base_source_map
                             (knowledge_base_id, source_file, source_record_id, content_hash, source_file_sha256, source_metadata)
                             VALUES (%s,%s,%s,%s,%s,%s)
@@ -170,7 +176,7 @@ def apply_records(records: list[dict[str, Any]], db_name: str, model: str, ollam
                             knowledge_base_id=EXCLUDED.knowledge_base_id, content_hash=EXCLUDED.content_hash,
                             source_file_sha256=EXCLUDED.source_file_sha256, source_metadata=EXCLUDED.source_metadata""",
                             (kb_id, r["source_file"], r["source_record_id"], r["content_hash"],
-                             hashlib.sha256((ROOT / r["source_file"]).read_bytes()).hexdigest(),
+                             f_sha,
                              Json({"language": r["language"], "category": r["category"], "source_url": r["source_url"]})))
                     except Exception:
                         counts["failed"] += 1
@@ -182,21 +188,23 @@ def apply_records(records: list[dict[str, Any]], db_name: str, model: str, ollam
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--source-dir", type=Path, default=SOURCE_DIR, help="Directory containing JSON knowledge records.")
     parser.add_argument("--database", default="nexaserve_final", help="Candidate database; default is nexaserve_final.")
     parser.add_argument("--approval-file", type=Path, help="Reviewed JSON with approved_records and reviewer fields.")
     parser.add_argument("--apply", action="store_true", help="Apply approved records transactionally; default is a read-only plan.")
     parser.add_argument("--embedding-model", default=os.getenv("EMBED_MODEL", "nomic-embed-text"))
-    parser.add_argument("--ollama-embed-url", default=os.getenv("OLLAMA_EMBED_URL", "http://127.0.0.1:11434/api/embed"))
-    parser.add_argument("--report", type=Path, default=ROOT / "docs" / "knowledge_ingestion" / "ingestion_summary.json")
+    parser.add_argument("--ollama-embed-url", default=os.getenv("OLLAMA_EMBED_URL", "http://127.0.0.1:11435/api/embed"))
+    parser.add_argument("--report", type=Path, default=ROOT / "docs" / "knowledge_ingestion" / "candidate_ingestion_summary.json")
     args = parser.parse_args()
     if args.database not in {"nexaserve_final", "test_uat_candidate"}:
         parser.error("Only isolated candidate databases are allowed; customerservice is prohibited.")
     if args.apply and args.approval_file is None:
         parser.error("--apply requires --approval-file with explicit reviewer approvals.")
-    records, counts = gather()
+    records, counts = gather(args.source_dir)
     ready = approved(records, args.approval_file)
+    src_display = str(args.source_dir.relative_to(ROOT)).replace('\\', '/') if args.source_dir.is_relative_to(ROOT) else str(args.source_dir)
     result: dict[str, Any] = {
-        "source_directory": "FAQs/converted", "target_database": args.database,
+        "source_directory": src_display, "target_database": args.database,
         "mode": "apply" if args.apply else "plan", "embedding_model": args.embedding_model,
         "embedding_dimension_expected": 768, "counts": dict(counts),
         "approved_records": len(ready), "inserted": 0, "updated": 0, "unchanged": 0,
@@ -213,6 +221,7 @@ def main() -> int:
     args.report.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({k: v for k, v in result.items() if k != "source_record_decisions"}, ensure_ascii=False, indent=2))
     return 1 if result["failed"] else 0
+
 
 
 if __name__ == "__main__":

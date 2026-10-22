@@ -1,6 +1,6 @@
 {
   "test": "whatsapp_resilience",
-  "timestamp": "2026-10-11T13:20:45.819291",
+  "timestamp": "2026-10-18T12:18:15.659225",
   "passed": 5,
   "failed": 0,
   "blocked": 0,
@@ -11,24 +11,28 @@
       "status": "PASS",
       "data": {
         "service": "nexaserve-whatsapp-bridge",
-        "status": "QR_READY",
-        "connected": false,
-        "phone": null,
-        "user": null
+        "status": "CONNECTED",
+        "connected": true,
+        "phone": "201503350999",
+        "user": {
+          "id": "201503350999:7@s.whatsapp.net",
+          "name": "Brainwave Data",
+          "lid": "220865119674532:7@lid"
+        }
       }
     },
     {
       "test": "arabic_offline_reply",
       "status": "PASS",
       "source": "n8n",
-      "reply_preview": "منحة رواد مصر الرقمية (DEBI) هي منحة دراسية كاملة أطلقتها وزارة الاتصالات وتكنولوجيا المعلومات المصرية. تهدف المنحة إلى تمكين جيل متميز من خريجي كليات الهندسة والحاسبات في مصر من الحصول على درجة الماج",
+      "reply_preview": "تشمل مزايا منحة DEBI:\r\n1. تمويل كامل وتغطية بنسبة 100% لمصروفات الماجستير من الجامعة الأجنبية.\r\n2. شهادات مهنية دولية معتمدة من كبرى شركات التكنولوجيا.\r\n3. مكافأة شهرية للمتدربين طوال فترة المنحة.\r\n4.",
       "failures": []
     },
     {
       "test": "english_offline_reply",
       "status": "PASS",
       "source": "n8n",
-      "reply_preview": "The Digital Egypt Pioneers Initiative (DEPI) is a program aimed at fostering innovation and technological advancement in Egypt. It focuses on supporting young entrepreneurs and innovators through ment",
+      "reply_preview": "The Digital Egypt Pioneers Initiative (DEPI) is a fully-funded scholarship launched by Egypt's Ministry of Communications and Information Technology (MCIT). It grants top Egyptian engineering and comp",
       "failures": []
     },
     {

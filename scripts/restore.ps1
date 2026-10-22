@@ -38,6 +38,36 @@ if (-not (Test-Path $targetFolder)) {
 
 Write-Host "[+] Restoring from: $targetFolder" -ForegroundColor Yellow
 
+# Validate a workflow export before stopping services or restoring any data.
+$workflowsExport = Join-Path $targetFolder "n8n_workflows_export.json"
+if (Test-Path $workflowsExport) {
+    $inventoryPath = Join-Path $ProjectDir "deployment\inventory.json"
+    if (-not (Test-Path $inventoryPath)) { throw "Release inventory missing; workflow restore stopped before service changes." }
+    $releaseInventory = Get-Content -Raw $inventoryPath | ConvertFrom-Json
+    $acceptance = $releaseInventory.n8n_workflows.import_acceptance
+    if (-not $acceptance -or $acceptance.status -ne "passed" -or -not $acceptance.n8n_version -or -not $acceptance.evidence) {
+        throw "Target-version import acceptance evidence is not recorded; workflow restore stopped before service changes."
+    }
+    try { $workflowDocument = Get-Content -Raw $workflowsExport | ConvertFrom-Json -ErrorAction Stop }
+    catch { throw "Workflow backup JSON is invalid; restore stopped before service changes." }
+    $workflowItems = if ($workflowDocument -is [System.Array]) { @($workflowDocument) }
+        elseif ($workflowDocument -is [System.Collections.IDictionary] -or $workflowDocument.PSObject.Properties.Name -contains "id") { @($workflowDocument) }
+        else { throw "Unsupported workflow backup structure; restore stopped before service changes." }
+    $seenWorkflowIds = @{}
+    foreach ($workflow in $workflowItems) {
+        if (-not $workflow.id -or $seenWorkflowIds.ContainsKey([string]$workflow.id)) {
+            throw "Workflow backup has a missing or repeated workflow ID; restore stopped before service changes."
+        }
+        $seenWorkflowIds[[string]$workflow.id] = $true
+        if ($workflow.PSObject.Properties.Name -contains "active" -and $workflow.active -isnot [bool]) {
+            throw "Workflow backup has invalid active metadata; restore stopped before service changes."
+        }
+        if ($workflow.active -eq $true) {
+            throw "Workflow backup contains active=true metadata; restore stopped pending isolated import acceptance."
+        }
+    }
+}
+
 # Parse .env
 $envFile = Join-Path $ProjectDir ".env"
 $envVars = @{}
@@ -83,11 +113,12 @@ docker compose -f (Join-Path $ProjectDir "docker-compose.yml") start n8n
 Start-Sleep -Seconds 5
 
 # 5. Restore n8n workflows if export exists
-$workflowsExport = Join-Path $targetFolder "n8n_workflows_export.json"
 if (Test-Path $workflowsExport) {
     Write-Host "[+] Importing n8n workflows from $workflowsExport..." -ForegroundColor Yellow
     docker cp $workflowsExport "cs-n8n:/tmp/restore_workflows.json"
+    if ($LASTEXITCODE -ne 0) { throw "Workflow export copy failed; restore stopped." }
     docker exec cs-n8n n8n import:workflow --input=/tmp/restore_workflows.json
+    if ($LASTEXITCODE -ne 0) { throw "Workflow import failed; no activation was attempted." }
     docker exec cs-n8n rm -f /tmp/restore_workflows.json
     Write-Host "    ✓ n8n workflows imported." -ForegroundColor Green
 }

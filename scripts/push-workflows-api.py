@@ -1,105 +1,103 @@
-import os
-import sys
+#!/usr/bin/env python3
+"""Update canonical n8n workflows; activation is separate and explicit."""
+
+from __future__ import annotations
+
+import argparse
 import json
-import glob
+import os
+from pathlib import Path
+import sys
 import urllib.request
-import urllib.error
 
-API_KEY = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("N8N_API_KEY", "")
-if not API_KEY:
-    print("[ERROR] N8N_API_KEY environment variable or CLI argument required.")
-    sys.exit(1)
-BASE_URL = os.environ.get("N8N_URL", "http://localhost:5678/api/v1")
-WORKFLOWS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "infra", "n8n", "workflows")
+from n8n_release_policy import canonical_workflow_paths, validate_activation_ids
 
-headers = {
-    "X-N8N-API-KEY": API_KEY,
-    "Content-Type": "application/json",
-    "Accept": "application/json"
-}
 
-def get_existing_workflows():
-    req = urllib.request.Request(f"{BASE_URL}/workflows", headers=headers, method="GET")
-    with urllib.request.urlopen(req) as resp:
-        data = json.loads(resp.read().decode("utf-8"))
-        return {wf["id"]: wf for wf in data.get("data", [])}
+ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_BASE_URL = "http://localhost:5678/api/v1"
 
-def push_workflow(filepath, existing_wfs):
-    with open(filepath, "r", encoding="utf-8") as f:
-        wf_data = json.load(f)
-    
-    wf_id = wf_data.get("id")
-    name = wf_data.get("name")
-    
-    payload = {
-        "name": name,
-        "nodes": wf_data.get("nodes", []),
-        "connections": wf_data.get("connections", {}),
-        "settings": wf_data.get("settings", {})
+
+def request_json(url: str, headers: dict[str, str], *, method: str = "GET", payload: dict | None = None) -> dict:
+    data = json.dumps(payload).encode("utf-8") if payload is not None else None
+    request = urllib.request.Request(url, data=data, headers=headers, method=method)
+    with urllib.request.urlopen(request, timeout=15) as response:
+        body = response.read().decode("utf-8")
+    return json.loads(body) if body else {}
+
+
+def load_exports() -> list[tuple[Path, dict]]:
+    paths = canonical_workflow_paths(ROOT)
+    exports = [(path, json.loads(path.read_text(encoding="utf-8"))) for path in paths]
+    return exports
+
+
+def run(*, activate_ids: list[str], api_key: str | None = None, base_url: str | None = None) -> int:
+    if activate_ids:
+        validate_activation_ids(activate_ids)
+    exports = load_exports()
+    api_key = api_key if api_key is not None else os.environ.get("N8N_API_KEY", "")
+    if not api_key:
+        raise RuntimeError("N8N_API_KEY must be provided through the process environment")
+    base_url = (base_url or os.environ.get("N8N_URL", DEFAULT_BASE_URL)).rstrip("/")
+    headers = {
+        "X-N8N-API-KEY": api_key,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
     }
-    
-    if wf_id and wf_id in existing_wfs:
-        req = urllib.request.Request(
-            f"{BASE_URL}/workflows/{wf_id}",
-            data=json.dumps(payload).encode("utf-8"),
-            headers=headers,
-            method="PUT"
-        )
-        action = "Updated"
-    else:
-        req = urllib.request.Request(
-            f"{BASE_URL}/workflows",
-            data=json.dumps(payload).encode("utf-8"),
-            headers=headers,
-            method="POST"
-        )
-        action = "Created"
-        
-    with urllib.request.urlopen(req) as resp:
-        res = json.loads(resp.read().decode("utf-8"))
-        returned_id = res.get("id", wf_id)
-    
-    activate_req = urllib.request.Request(
-        f"{BASE_URL}/workflows/{returned_id}/activate",
-        headers=headers,
-        method="POST"
+
+    existing_data = request_json(f"{base_url}/workflows", headers)
+    existing = {item["id"]: item for item in existing_data.get("data", [])}
+    imported: dict[str, str] = {}
+    for path, workflow in exports:
+        workflow_id = workflow["id"]
+        payload = {
+            "name": workflow.get("name"),
+            "nodes": workflow.get("nodes", []),
+            "connections": workflow.get("connections", {}),
+            "settings": workflow.get("settings", {}),
+        }
+        if workflow_id in existing:
+            response = request_json(
+                f"{base_url}/workflows/{workflow_id}", headers, method="PUT", payload=payload
+            )
+            action = "Updated"
+        else:
+            response = request_json(f"{base_url}/workflows", headers, method="POST", payload=payload)
+            action = "Created"
+        returned_id = response.get("id", workflow_id)
+        if returned_id != workflow_id:
+            raise RuntimeError(f"n8n returned a different workflow ID for {path.name}; activation stopped")
+        imported[workflow_id] = action
+        print(f"{action}: {path.name} ({workflow_id})")
+
+    # No activation call is reachable until every selected import/update succeeded.
+    for workflow_id in activate_ids:
+        if workflow_id not in imported:
+            raise RuntimeError("activation target was not imported in this successful batch")
+        request_json(f"{base_url}/workflows/{workflow_id}/activate", headers, method="POST")
+        print(f"Activation requested for allowlisted workflow {workflow_id}")
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--activate-workflow",
+        action="append",
+        default=[],
+        metavar="ID",
+        help="explicitly activate an allowlisted workflow after every canonical update succeeds",
     )
-    is_active = False
+    args = parser.parse_args()
+    if args.activate_workflow and not os.environ.get("N8N_ACTIVATION_APPROVED"):
+        parser.error("set N8N_ACTIVATION_APPROVED before requesting explicit activation")
     try:
-        with urllib.request.urlopen(activate_req) as act_resp:
-            act_res = json.loads(act_resp.read().decode("utf-8"))
-            is_active = act_res.get("active", True)
-    except Exception:
-        is_active = True
+        return run(activate_ids=args.activate_workflow)
+    except Exception as exc:
+        # Never print response bodies or credentials; a failure returns before activation.
+        print(f"Workflow update failed ({type(exc).__name__}); no later activation was attempted.", file=sys.stderr)
+        return 1
 
-    return {
-        "file": os.path.basename(filepath),
-        "id": returned_id,
-        "name": name,
-        "action": action,
-        "active": is_active
-    }
-
-def main():
-    print(f"Connecting to n8n at {BASE_URL}...")
-    existing = get_existing_workflows()
-    print(f"Found {len(existing)} existing workflows in n8n.")
-    
-    json_files = sorted(glob.glob(os.path.join(WORKFLOWS_DIR, "*.json")))
-    results = []
-    for fp in json_files:
-        try:
-            res = push_workflow(fp, existing)
-            print(f"[{res['action']}] {res['file']} -> {res['name']} (ID: {res['id']})")
-            results.append(res)
-        except Exception as e:
-            print(f"[ERROR] Failed to push {os.path.basename(fp)}: {e}")
-            if hasattr(e, "read"):
-                print(e.read().decode("utf-8"))
-            
-    print("\nSummary of pushed workflows:")
-    for r in results:
-        print(f" - {r['name']} ({r['id']}): {r['action']}")
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

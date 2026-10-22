@@ -50,8 +50,8 @@ except ImportError:
 
 
 # Canonical program scopes supported by NexaServe PostgreSQL constraint:
-# CHECK (program IN ('DIGILIANS', 'DEBI', 'COMMON'))
-VALID_PROGRAM_SCOPES = {"DEBI", "DIGILIANS", "COMMON", "UNKNOWN"}
+# CHECK (program IN ('DIGILIANS', 'DEBI', 'COMMON', 'DEPI'))
+VALID_PROGRAM_SCOPES = {"DEPI", "DEBI", "DIGILIANS", "COMMON", "UNKNOWN"}
 
 # Language detection helper
 ARABIC_CHAR_PATTERN = re.compile(r'[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]')
@@ -401,7 +401,7 @@ def extract_lms_exam_pdf(filepath: Path, repo_root: Path) -> Tuple[List[Dict[str
         page_num = get_page_for_char(m.start())
         
         c_hash = compute_content_hash(q_clean, a_clean, None)
-        rec_id = make_stable_id("DEBI", source_slug, f"q{q_num:02d}", c_hash)
+        rec_id = make_stable_id("COMMON", source_slug, f"q{q_num:02d}", c_hash)
         
         rec = {
             "id": rec_id,
@@ -411,8 +411,8 @@ def extract_lms_exam_pdf(filepath: Path, repo_root: Path) -> Tuple[List[Dict[str
             "title": f"DEPI LMS Assessment FAQ - {q_label}",
             "content": f"{q_clean}\n{a_clean}",
             "language": detect_language(f"{q_clean} {a_clean}"),
-            "program_scope": "DEBI",
-            "category": "lms_assessment_faq",
+            "program_scope": "COMMON",
+            "category": "technical_support",
             "source_file": rel_path,
             "source_page": page_num,
             "source_sheet": None,
@@ -421,13 +421,14 @@ def extract_lms_exam_pdf(filepath: Path, repo_root: Path) -> Tuple[List[Dict[str
             "source_status": "unverified",
             "source_sha256": file_sha256,
             "content_sha256": c_hash,
-            "needs_review": False,
-            "review_notes": [],
-            "program": "DEBI",
+            "needs_review": True,
+            "review_notes": ["Support/exam browser guidance document; general platform support scope."],
+            "program": "COMMON",
             "question_ar": q_clean,
             "answer_ar": a_clean,
             "source_attribution": filepath.name,
-            "content_hash": c_hash
+            "content_hash": c_hash,
+            "retrieval_scope": "GENERAL_SUPPORT"
         }
         records.append(rec)
         
@@ -458,7 +459,7 @@ def extract_lms_exam_pdf(filepath: Path, repo_root: Path) -> Tuple[List[Dict[str
                     
                 sub_clean = normalize_whitespace(re.sub(r'<<<PAGE_\d+>>>', '', sub_content))
                 c_hash = compute_content_hash(sub_title, sub_clean, sub_clean)
-                rec_id = make_stable_id("DEBI", source_slug, f"sec_{sub_id.replace('.', '_')}", c_hash)
+                rec_id = make_stable_id("COMMON", source_slug, f"sec_{sub_id.replace('.', '_')}", c_hash)
                 
                 records.append({
                     "id": rec_id,
@@ -468,7 +469,7 @@ def extract_lms_exam_pdf(filepath: Path, repo_root: Path) -> Tuple[List[Dict[str
                     "title": f"DEPI LMS Guide - Section {sub_id}: {sub_title}",
                     "content": sub_clean,
                     "language": detect_language(sub_clean),
-                    "program_scope": "DEBI",
+                    "program_scope": "COMMON",
                     "category": "technical_support",
                     "source_file": rel_path,
                     "source_page": page_num,
@@ -478,13 +479,14 @@ def extract_lms_exam_pdf(filepath: Path, repo_root: Path) -> Tuple[List[Dict[str
                     "source_status": "unverified",
                     "source_sha256": file_sha256,
                     "content_sha256": c_hash,
-                    "needs_review": False,
-                    "review_notes": [],
-                    "program": "DEBI",
+                    "needs_review": True,
+                    "review_notes": ["Support/exam browser guidance document; general platform support scope."],
+                    "program": "COMMON",
                     "question_ar": sub_title,
                     "answer_ar": sub_clean,
                     "source_attribution": filepath.name,
-                    "content_hash": c_hash
+                    "content_hash": c_hash,
+                    "retrieval_scope": "GENERAL_SUPPORT"
                 })
         
         # Support note on page 10
@@ -494,7 +496,7 @@ def extract_lms_exam_pdf(filepath: Path, repo_root: Path) -> Tuple[List[Dict[str
             pos = sec2_match.start() + contact_pat.start()
             page_num = get_page_for_char(pos)
             c_hash = compute_content_hash("قنوات الدعم الفني والخط الساخن للمنحة", c_text, c_text)
-            rec_id = make_stable_id("DEBI", source_slug, "support_contact_note", c_hash)
+            rec_id = make_stable_id("COMMON", source_slug, "support_contact_note", c_hash)
             
             records.append({
                 "id": rec_id,
@@ -504,7 +506,7 @@ def extract_lms_exam_pdf(filepath: Path, repo_root: Path) -> Tuple[List[Dict[str
                 "title": "قنوات الدعم الفني والخط الساخن لمنصة DEPI LMS",
                 "content": f"قنوات الدعم الفني والخط الساخن لمنصة DEPI LMS:\n{c_text}",
                 "language": "ar",
-                "program_scope": "DEBI",
+                "program_scope": "COMMON",
                 "category": "technical_support",
                 "source_file": rel_path,
                 "source_page": page_num,
@@ -516,11 +518,12 @@ def extract_lms_exam_pdf(filepath: Path, repo_root: Path) -> Tuple[List[Dict[str
                 "content_sha256": c_hash,
                 "needs_review": True,
                 "review_notes": ["Contact numbers poster displayed as image on page 11."],
-                "program": "DEBI",
+                "program": "COMMON",
                 "question_ar": "ما هي قنوات الدعم الفني والخط الساخن لمشاكل منصة الامتحانات؟",
                 "answer_ar": c_text,
                 "source_attribution": filepath.name,
-                "content_hash": c_hash
+                "content_hash": c_hash,
+                "retrieval_scope": "GENERAL_SUPPORT"
             })
             
     return records, meta
@@ -618,13 +621,19 @@ def extract_depi_helper_excel(filepath: Path, repo_root: Path) -> Tuple[List[Dic
                 elif not q and not a:
                     continue
             
-            # Skip empty rows
-            if not a and not q:
+            # Skip empty rows, empty answers, or accidental headers
+            if not a or not a.strip() or a.strip().lower() in ('nan', 'none'):
+                continue
+            if not q or not q.strip() or q.strip().lower() in ('nan', 'none'):
+                continue
+            if q.strip() in ['البيــــــــان', 'البيان', 'ASK', 'ASK ', '#', 'نوع الشكوى او الطلب']:
+                continue
+            if a.strip() in ['النص', 'النص ', 'ANSWER', 'ANSWER ', 'نص الارسال المرسل', 'الرسالة']:
                 continue
                 
             content_text = f"{q}\n{a}".strip() if q and a else (a or q)
             c_hash = compute_content_hash(q, a, content_text)
-            rec_id = make_stable_id("DEBI", source_slug, f"{clean_sheet_slug}_r{r:03d}", c_hash)
+            rec_id = make_stable_id("DEPI", source_slug, f"{clean_sheet_slug}_r{r:03d}", c_hash)
             
             rec = {
                 "id": rec_id,
@@ -634,7 +643,7 @@ def extract_depi_helper_excel(filepath: Path, repo_root: Path) -> Tuple[List[Dic
                 "title": title,
                 "content": content_text,
                 "language": detect_language(content_text),
-                "program_scope": "DEBI",
+                "program_scope": "DEPI",
                 "category": category,
                 "source_file": rel_path,
                 "source_page": None,
@@ -646,11 +655,12 @@ def extract_depi_helper_excel(filepath: Path, repo_root: Path) -> Tuple[List[Dic
                 "content_sha256": c_hash,
                 "needs_review": needs_review,
                 "review_notes": notes,
-                "program": "DEBI",
+                "program": "DEPI",
                 "question_ar": q,
                 "answer_ar": a,
                 "source_attribution": f"{filepath.name} [{sheet_name.strip()}]",
-                "content_hash": c_hash
+                "content_hash": c_hash,
+                "retrieval_scope": "DEPI_INTERNAL_GUIDANCE"
             }
             records.append(rec)
             
@@ -691,7 +701,14 @@ def inspect_source_files(faq_dir: Path, repo_root: Path) -> Tuple[List[Path], Li
             }
             
             # Check supported formats
-            if suffix in ['.xlsx', '.xls', '.pdf', '.docx', '.csv', '.txt', '.md', '.html', '.json', '.jsonl']:
+            if p.name == 'DEPI_Content_Approval_Review.xlsx':
+                entry["status"] = "approval_review_workbook"
+                entry["records_count"] = 0
+                entry["exceptions"].append({
+                    "type": "governance_review_workbook",
+                    "details": "DEPI_Content_Approval_Review.xlsx is an approval/review governance workbook with review queues and schemas; excluded from ordinary FAQ extraction."
+                })
+            elif suffix in ['.xlsx', '.xls', '.pdf', '.docx', '.csv', '.txt', '.md', '.html', '.json', '.jsonl']:
                 entry["status"] = "supported"
             elif suffix == '.pst':
                 entry["status"] = "unsupported_binary_format"
@@ -738,6 +755,16 @@ def run_conversion(
         manifest_item = manifest_by_rel.get(rel_path)
         
         if fpath.suffix.lower() == '.xlsx':
+            if fpath.name == "DEPI_Content_Approval_Review.xlsx":
+                if manifest_item:
+                    manifest_item["status"] = "approval_review_workbook"
+                    manifest_item["records_count"] = 0
+                    manifest_item["exceptions"].append({
+                        "type": "governance_review_workbook",
+                        "details": "DEPI_Content_Approval_Review.xlsx is an approval/review workbook with review queues and schemas; excluded from ordinary FAQ extraction."
+                    })
+                extraction_summaries.append((fpath.name, 0, "approval_review_workbook (excluded from ordinary FAQ extraction)"))
+                continue
             try:
                 recs, meta = extract_depi_helper_excel(fpath, repo_root)
                 all_records.extend(recs)
@@ -916,7 +943,14 @@ def generate_markdown_report(manifest_doc: Dict[str, Any], duplicates: List[Dict
     ])
     
     for prog, cnt in summary["by_program_scope"].items():
-        note = "Digital Egypt Pioneers Initiative" if prog == "DEBI" else ("Digilians Initiative" if prog == "DIGILIANS" else "Common/Shared")
+        if prog == "DEPI":
+            note = "Digital Egypt Pioneers Initiative (DEPI)"
+        elif prog == "DEBI":
+            note = "Digital Egypt Builders Initiative (DEBI)"
+        elif prog == "DIGILIANS":
+            note = "Digilians Initiative"
+        else:
+            note = "Common/Shared"
         lines.append(f"| **{prog}** | {cnt} | {note} |")
         
     lines.extend([

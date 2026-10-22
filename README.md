@@ -408,17 +408,22 @@ python scripts/test-whatsapp-e2e.py
 
 This initiative represents the sovereign AI conversational customer support architecture engineered for the **Digital Egypt Pioneers Initiative (DEPI)** under the auspices of the **Ministry of Communications and Information Technology (MCIT)**.
 
-For full source code, architecture updates, and official releases, explore the repository:
+For full source code, architecture updates, and official releases, explore the repositories:
 
 <div align="center">
 
 [![GitHub Repository](https://img.shields.io/badge/GitHub-MCIT--DEPI%2FDEPI--Customer--Support-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/MCIT-DEPI/DEPI-Customer-Support)
+[![Portfolio Fork](https://img.shields.io/badge/GitHub-GhariebML%2FNexaServe-6C3FC5?style=for-the-badge&logo=github&logoColor=white)](https://github.com/GhariebML/NexaServe)
 
 ### 🔗 **Official Project Repository**
 👉 **[https://github.com/MCIT-DEPI/DEPI-Customer-Support](https://github.com/MCIT-DEPI/DEPI-Customer-Support)** 👈
+
+### 🔗 **Portfolio & Development Repository**
+👉 **[https://github.com/GhariebML/NexaServe](https://github.com/GhariebML/NexaServe)** 👈
 
 *Digital Egypt Pioneers Initiative (DEPI) • Ministry of Communications and Information Technology (MCIT)*
 
 ---
 **NexaServe** • Built for Sovereign Government Customer Service Automation.
 </div>
+

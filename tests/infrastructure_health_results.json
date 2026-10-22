@@ -1,8 +1,8 @@
 {
   "test": "infrastructure_health",
-  "timestamp": "2026-10-11T10:13:08.860816",
-  "verdict": "ALL_HEALTHY",
-  "healthy_count": 5,
+  "timestamp": "2026-10-18T09:09:51.040566",
+  "verdict": "PARTIAL",
+  "healthy_count": 4,
   "down_count": 0,
   "checks": [
     {
@@ -10,18 +10,18 @@
       "status": "HEALTHY",
       "details": {
         "version": "PostgreSQL 16.15 (Debian 16.15-1.pgdg12+2) on x86_64-pc-linux-gnu, compiled by g",
-        "tables_found": 19,
+        "tables_found": 20,
         "missing_tables": [],
         "extensions": [
           "plpgsql",
-          "uuid-ossp",
           "pg_trgm",
+          "uuid-ossp",
           "vector"
         ],
         "has_vector": true,
         "has_pg_trgm": true,
-        "kb_rows": 73,
-        "kb_embedded": 73,
+        "kb_rows": 474,
+        "kb_embedded": 474,
         "embedding_dimension": 768,
         "hnsw_indexes": [
           "idx_kb_embedding_hnsw"
@@ -34,7 +34,7 @@
       "details": {
         "ping": true,
         "version": "7.4.11",
-        "uptime_seconds": 5486
+        "uptime_seconds": 3129
       }
     },
     {
@@ -46,16 +46,11 @@
     },
     {
       "service": "ollama",
-      "status": "HEALTHY",
+      "status": "DEGRADED",
       "details": {
-        "models": [
-          "nomic-embed-text:latest",
-          "qwen2.5:3b",
-          "qwen2.5:1.5b",
-          "qwen2.5:7b"
-        ],
-        "has_llm": true,
-        "has_embed": true
+        "models": [],
+        "has_llm": false,
+        "has_embed": false
       }
     },
     {
@@ -63,10 +58,14 @@
       "status": "HEALTHY",
       "details": {
         "service": "nexaserve-whatsapp-bridge",
-        "status": "QR_READY",
-        "connected": false,
-        "phone": null,
-        "user": null
+        "status": "CONNECTED",
+        "connected": true,
+        "phone": "201503350999",
+        "user": {
+          "id": "201503350999:7@s.whatsapp.net",
+          "name": "Brainwave Data",
+          "lid": "220865119674532:7@lid"
+        }
       }
     }
   ]

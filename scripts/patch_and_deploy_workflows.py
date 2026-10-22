@@ -2,11 +2,20 @@
 """
 Script to patch workflow files to use stable qwen2.5:1.5b (preventing WSL OOM kills)
 and properly configure DEPI FAQ routing and heuristics.
-Then imports and publishes them in n8n.
+Then imports the canonical exports. It never publishes or activates workflows.
 """
 import json
+import os
 import re
 import subprocess
+from pathlib import Path
+
+from n8n_release_policy import canonical_workflow_paths
+
+ROOT = Path(__file__).resolve().parents[1]
+os.chdir(ROOT)
+# Refuse incomplete or activation-marked source sets before modifying any export.
+canonical_workflows = canonical_workflow_paths(ROOT)
 
 # -------------------------------------------------------------
 # 1. Update 03_ai_intent_engine.json
@@ -102,54 +111,27 @@ print("[OK] Updated 04B_knowledge_base_faq.json with qwen2.5:1.5b")
 # -------------------------------------------------------------
 # 3. Deploy and Import into n8n Container
 # -------------------------------------------------------------
-import glob
-import os
-
-project_dir = "e:/NexaServe"
-# The legacy monolithic Master_ exports contain duplicate customer-service
-# webhook paths. Deploy the modular canonical workflows only.
-workflows = [
-    path for path in glob.glob("infra/n8n/workflows/*.json")
-    if not os.path.basename(path).startswith("Master_")
-]
+project_dir = str(ROOT)
 
 # Get project ID
 res = subprocess.run(["docker", "exec", "cs-postgres", "psql", "-U", "postgres", "-d", "n8n", "-t", "-c", "SELECT id FROM project LIMIT 1;"], capture_output=True, text=True)
+if res.returncode != 0 or not res.stdout.strip():
+    raise SystemExit("Could not resolve n8n project ID; no workflow imports were attempted.")
 project_id = res.stdout.strip()
 print(f"n8n Project ID: {project_id}")
 
-for wf_path in workflows:
-    fname = os.path.basename(wf_path)
+for wf_path in canonical_workflows:
+    fname = wf_path.name
     container_dest = f"/tmp/{fname}"
     # copy into container
-    subprocess.run(["docker", "cp", wf_path, f"cs-n8n:{container_dest}"], check=True)
+    subprocess.run(["docker", "cp", str(wf_path), f"cs-n8n:{container_dest}"], check=True)
     # import
     cmd = ["docker", "exec", "cs-n8n", "n8n", "import:workflow", f"--input={container_dest}"]
     if project_id:
         cmd.append(f"--projectId={project_id}")
     res = subprocess.run(cmd, capture_output=True, text=True)
-    if res.returncode == 0:
-        print(f"  [Imported] {fname}")
-    else:
-        print(f"  [Error] {fname}: {res.stderr.strip()}")
+    if res.returncode != 0:
+        raise SystemExit(f"Import failed for {fname}; no activation was attempted.")
+    print(f"  [Imported] {fname}")
 
-# Publish all workflows
-all_cswfs = [
-    "CSWF000000000001",
-    "CSWF000000000002",
-    "CSWF000000000003",
-    "CSWF000000000004",
-    "CSWF000000000005",
-    "CSWF000000000006",
-    "CSWF000000000007",
-    "CSWF000000000008",
-]
-
-for wf in all_cswfs:
-    res = subprocess.run(["docker", "exec", "cs-n8n", "n8n", "publish:workflow", f"--id={wf}"], capture_output=True, text=True)
-    if res.returncode == 0:
-        print(f"  [Published] {wf}")
-    else:
-        print(f"  [Publish Warn] {wf}: {res.stderr.strip()}")
-
-print("[DONE] Workflows updated and published!")
+print("[DONE] Canonical workflows imported. This script never publishes or activates workflows.")

@@ -85,7 +85,8 @@ CREATE INDEX IF NOT EXISTS idx_orders_customer ON orders(customer_id);
 -- 5. Bilingual Knowledge Base (MCIT Services, FAQs & Enterprise Policies)
 CREATE TABLE IF NOT EXISTS knowledge_base (
     id SERIAL PRIMARY KEY,
-    program VARCHAR(20) NOT NULL DEFAULT 'DIGILIANS' CHECK (program IN ('DIGILIANS', 'DEBI', 'COMMON')),
+    program VARCHAR(20) NOT NULL DEFAULT 'DIGILIANS' CHECK (program IN ('DIGILIANS', 'DEBI', 'COMMON', 'DEPI')),
+retrieval_scope VARCHAR(32),
     category VARCHAR(50) NOT NULL, -- 'citizen_services', 'digital_identity', 'policies', 'telecom_complaints', 'technical_support'
     question TEXT NOT NULL,
     answer TEXT NOT NULL,

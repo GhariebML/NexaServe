@@ -1082,8 +1082,10 @@ powershell -ExecutionPolicy Bypass -File .\scripts\start-ollama.ps1
 # 2. Launch Docker stack (PostgreSQL, n8n, Redis)
 docker compose up -d
 
-# 3. Push and activate all 10 workflows in n8n
-python .\scripts\push-workflows-api.py
+# 3. Historical workflow command (superseded)
+# The workflow API helper now updates only inventory-selected workflows and never
+# activates by default. Current exports with active=true are rejected by its gate.
+# Do not run this command until isolated import acceptance and release approval.
 ```
 
 ### 11.3 Service Access Points

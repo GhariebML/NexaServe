@@ -1,0 +1,219 @@
+{
+  "schema_version": 1,
+  "as_of": "2026-10-12",
+  "status": "HOLD_NO_REMOTE_WRITES",
+  "candidate": {
+    "repository": "E:\\NexaServe",
+    "branch": "master",
+    "commit": "a0b9a5e3d93673b159dc68b81e3a9bb2eda0516d",
+    "release_tag": null,
+    "deployment_bundle_version": "0.1.1",
+    "working_tree_at_preflight": "clean before preflight report/manifest artifacts"
+  },
+  "target": {
+    "ssh_alias": "nexaserve-ministry",
+    "expected_identity": "depi@10.179.0.125",
+    "verified_host_account": "depi",
+    "compose_project": "nexaserve",
+    "deployment_directory": "/opt/nexaserve/deployment",
+    "compose_files": [
+      "compose/docker-compose.yml",
+      "compose/docker-compose.gpu.yml"
+    ]
+  },
+  "current_runtime": {
+    "container_count": 6,
+    "all_reported_healthy": true,
+    "dashboard": {
+      "container": "cs-dashboard",
+      "image": "nexaserve-dashboard",
+      "image_id": "sha256:dcaf499f19db8627f979ba60ef381641678585f06917ba9d1a278ecf1d19e18b",
+      "created": "2026-09-28",
+      "api_version": "2.0.0",
+      "openapi_paths": 12,
+      "openapi_status": 200,
+      "health_ready_status": 404
+    },
+    "n8n": {
+      "image_version": "2.38.1",
+      "healthz_status": 200,
+      "api_key_configured_for_deployment_tooling": false,
+      "read_only_workflow_list_status": 401
+    },
+    "database": {
+      "engine": "PostgreSQL",
+      "dashboard_database": "customerservice",
+      "dashboard_user": "cs_app_user",
+      "production_rows_queried": false
+    },
+    "persistent_volumes": [
+      "nexaserve_postgres-data",
+      "nexaserve_redis-data",
+      "nexaserve_ollama-data",
+      "nexaserve_n8n-data",
+      "nexaserve_whatsapp-auth",
+      "nexaserve_source-data"
+    ]
+  },
+  "proposed_scope": {
+    "dashboard": {
+      "files": [
+        "deployment/application/dashboard/backend",
+        "deployment/application/dashboard/frontend",
+        "deployment/application/dashboard/evaluation/rag_evaluation_summary.json",
+        "deployment/application/dashboard/Dockerfile",
+        "deployment/application/dashboard/requirements.txt"
+      ],
+      "target_service": "dashboard",
+      "status": "HELD_VISUAL_REVIEW_AND_BACKUP_GATES"
+    },
+    "n8n_workflows": {
+      "local_definition_count": 11,
+      "deployed_bundle_definition_count": 10,
+      "shared_stable_id_count": 10,
+      "shared_ids_with_file_hash_differences": 10,
+      "comparison": [
+        {
+          "id": "CSWF000000000008",
+          "name": "Global Error Handler & Dead Letter Queue",
+          "local_file": "00_global_error_handler.json",
+          "local_sha256": "2d0e4c3f8f1b2a4e58b82363a8bf7e126274eb2465fac06b840a1a0f515e5d3a",
+          "deployed_file": "00_global_error_handler.json",
+          "deployed_sha256": "57698a96b63a19c033feec1df28a3ba47b59cf48222b1b1a8058fad07ab554ce",
+          "classification": "conflicting_or_uncertain"
+        },
+        {
+          "id": "CSWF000000000001",
+          "name": "Master 01 - Customer Service Gateway & Dispatcher",
+          "local_file": "01_gateway_dispatcher.json",
+          "local_sha256": "ba0d64c32b9d0565e51f627156a1a8c78b57e598576ffd4bdbec1c507bc646a8",
+          "deployed_file": "01_gateway_dispatcher.json",
+          "deployed_sha256": "4b0adf0365c62f19406c6e37376edf073b3afea099352302f3e4042f8c9dd3e7",
+          "classification": "conflicting_or_uncertain"
+        },
+        {
+          "id": "CSWF000000000002",
+          "name": "SubWF 02 - Customer Profile & Session Manager",
+          "local_file": "02_customer_session.json",
+          "local_sha256": "dd7df71428926827d2b4a071afb7c4caf7b524beb40816c1c683093224436915",
+          "deployed_file": "02_customer_session.json",
+          "deployed_sha256": "9c4eeae6c6eb9a35b6491c642350afd80a3043ff7d04fd275bd25ecd9449f802",
+          "classification": "conflicting_or_uncertain"
+        },
+        {
+          "id": "CSWF000000000003",
+          "name": "SubWF 03 - AI Cognitive & Intent Engine",
+          "local_file": "03_ai_intent_engine.json",
+          "local_sha256": "6710591b0f94022ed3dd119a3a1c9dfe21bf13b5ea0f201830b9e0ae69119e38",
+          "deployed_file": "03_ai_intent_engine.json",
+          "deployed_sha256": "c71d10be88b8d6a85ba73464bd6a99026f6be4af827af3df27c5c154542640b1",
+          "classification": "conflicting_or_uncertain"
+        },
+        {
+          "id": "CSWF000000000004",
+          "name": "SubWF 04A - Order Lookup & Tracking",
+          "local_file": "04A_order_lookup.json",
+          "local_sha256": "00ac5889fea17c2a79e08cfee5c85b29fee7543f2723dc1050a60cc4db30bc7d",
+          "deployed_file": "04A_order_lookup.json",
+          "deployed_sha256": "888fbd5a8fb6c1cd6ca4ac5172a0058db5befa18ff28fa7514094e4dfcc12c0a",
+          "classification": "conflicting_or_uncertain"
+        },
+        {
+          "id": "CSWF000000000005",
+          "name": "SubWF 04B - Knowledge Base & FAQ",
+          "local_file": "04B_knowledge_base_faq.json",
+          "local_sha256": "43ea0c3f93279d00a77a6f8b5023755f87f9c7846a610d39730649ca78b71536",
+          "deployed_file": "04B_knowledge_base_faq.json",
+          "deployed_sha256": "d394ca42f45809ee8daddc3cd0606f6325ba088f25d649ad5bf39fe865f9371c",
+          "classification": "conflicting_or_uncertain"
+        },
+        {
+          "id": "CSWF000000000006",
+          "name": "SubWF 04C - Human in the Loop Escalation",
+          "local_file": "04C_human_escalation.json",
+          "local_sha256": "2284cbc4f9ff769ea44cbf70effe7f0c2c758962cd986f306ae15f976d8b8154",
+          "deployed_file": "04C_human_escalation.json",
+          "deployed_sha256": "0d6cd0c8494a0945002fe8734334c027eb56f0bd579f5fcf3be7f2c2b2010a54",
+          "classification": "conflicting_or_uncertain"
+        },
+        {
+          "id": "RWLCadRzOPjTHXVo",
+          "name": "SubWF 04D - Human in the Loop Agent Bridge",
+          "local_file": "04D_agent_response_bridge.json",
+          "local_sha256": "551ff4a63af063fbaef65983a5a232cf4c107d9a0b416dc9fede6ae51057784b",
+          "deployed_file": "04D_agent_response_bridge.json",
+          "deployed_sha256": "83cd5b3b2101256d373decd219c74b5eafe04f0345c0107c1476c5cd9395b575",
+          "classification": "conflicting_or_uncertain"
+        },
+        {
+          "id": "CSWF000000000007",
+          "name": "SubWF 05 - Conversation & Audit Logger",
+          "local_file": "05_conversation_logger.json",
+          "local_sha256": "98b582497bdc7855cbf7707919a02e92d4387a752c00564ceaaf5eb12b94a1ae",
+          "deployed_file": "05_conversation_logger.json",
+          "deployed_sha256": "52b57b3e9301423b5877f5cd12802210afdb7c32405357ad6e9fb92d2b0177cf",
+          "classification": "conflicting_or_uncertain"
+        },
+        {
+          "id": "F7kjakLJXmzBDsvS",
+          "name": "SubWF 06 - Output Channel Dispatcher",
+          "local_file": "06_output_dispatcher.json",
+          "local_sha256": "228d2caeda8c820d6e6da4ee500c550e6eb36500eeb410d073b24405e5ec65a0",
+          "deployed_file": "06_output_dispatcher.json",
+          "deployed_sha256": "3bf1d8a1bebc212899ceb042be67a496d27e21f5909c89cb8534ae9fd7f704bf",
+          "duplicate_local_file": "06_output_channel_dispatcher.json",
+          "duplicate_local_sha256": "1fa83167cf34925d9f35f3004b818c2e661673ed02c64819459cc6009827e340",
+          "classification": "duplicate_id_conflict"
+        }
+      ],
+      "duplicate_local_stable_id": {
+        "id": "F7kjakLJXmzBDsvS",
+        "files": [
+          "06_output_channel_dispatcher.json",
+          "06_output_dispatcher.json"
+        ]
+      },
+      "runtime_inventory_verified": false,
+      "updates_selected": [],
+      "status": "HELD_API_ACCESS_AND_WORKFLOW_RECONCILIATION"
+    },
+    "excluded_services": [
+      "postgres",
+      "redis",
+      "ollama",
+      "whatsapp"
+    ],
+    "database_migrations": [],
+    "knowledge_record_changes": false,
+    "persistent_volume_changes": false
+  },
+  "rag_evaluation": {
+    "total": 36,
+    "passed": 33,
+    "failed": 2,
+    "blocked": 1,
+    "master_verdict": "NOT_READY",
+    "runtime_identity": null,
+    "corpus_version": null,
+    "summary_sha256": "BACDBF6618C32DE1C3CB3EA3C715A029428F6AA936579F932E747FA40E0BAD55",
+    "status": "BLOCKED"
+  },
+  "validation": {
+    "reporting_tests": "25 passed",
+    "deployment_observability_tests": "6 passed",
+    "javascript_syntax": "passed",
+    "python_compile": "passed",
+    "compose_config": "passed_with_unset_local_EMBED_MODEL_and_EMBED_DIMENSION_warnings",
+    "dashboard_image_build": "passed",
+    "visual_review": "not_verified_login_only_preview_stylesheet_not_served"
+  },
+  "backup_gate": {
+    "existing_backup_date": "2026-09-28",
+    "existing_backups_off_host": false,
+    "approved_off_host_destination": null,
+    "isolated_restore_target_or_accepted_evidence": null,
+    "fresh_backup_created": false,
+    "status": "BLOCKED"
+  },
+  "remote_changes_performed": false
+}

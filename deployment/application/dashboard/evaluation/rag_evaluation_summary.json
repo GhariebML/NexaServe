@@ -1,22 +1,22 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-12T03:02:06.986647+00:00",
+  "generated_at": "2026-10-18T09:25:11.175688+00:00",
   "evaluation": {
     "source_artifact": "tests/golden_test_results.json",
-    "source_artifact_sha256": "791dacd5d9086d9644cf20cd85fa6040921c5468634537ef2a78574e728d091a",
-    "master_artifact_sha256": "a5384a228e22ec8687ead60719a28697c5a6a82e046094a698e7ae20333519ef",
-    "master_finished": "2026-10-11T13:27:56.151719",
+    "source_artifact_sha256": "afddf9c9e0a044e2a5afabf5d3a51e9f22034094e00f3fe66f2926ec01b140c9",
+    "master_artifact_sha256": "d865a6432495a498bc0a9c3c120214b5b2bd40bfc1d17114dc0f1c65a47a694b",
+    "master_finished": "2026-10-18T09:25:10.972218+00:00",
     "master_verdict": "NOT_READY",
     "suite_status": "FAIL",
     "summary": {
       "total": 36,
-      "passed": 33,
+      "passed": 34,
       "failed": 2,
-      "blocked": 1,
-      "timestamp": "2026-10-11T13:27:56.113115"
+      "blocked": 0,
+      "timestamp": "2026-10-18T09:25:10.937640+00:00"
     },
     "runtime_identity": null,
     "corpus_version": null,
-    "time_zone": "Not recorded in source artifact"
+    "time_zone": null
   }
 }

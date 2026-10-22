@@ -9,7 +9,7 @@ import psycopg2
 from pgvector.psycopg2 import register_vector
 
 def load_env_file():
-    """Parse .env file from project root into os.environ if not already set."""
+    """Parse .env file from project root into os.environ if not already set or set to test-only placeholder."""
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     env_path = os.path.join(base_dir, ".env")
     if os.path.exists(env_path):
@@ -20,7 +20,7 @@ def load_env_file():
                     k, v = line.split("=", 1)
                     k = k.strip()
                     v = v.strip().strip("\"'")
-                    if k not in os.environ:
+                    if k not in os.environ or os.environ[k] in ("test-only-not-a-real-secret", "test-only-dashboard-signing-key"):
                         os.environ[k] = v
 
 load_env_file()
@@ -39,14 +39,20 @@ LLM_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
 
 def get_db_connection():
     """Return an active PostgreSQL connection with pgvector registered."""
-    if not DB_PASS:
+    load_env_file()
+    db_name = os.getenv("CS_DB_NAME", "customerservice")
+    db_user = os.getenv("CS_DB_USER", "cs_app_user")
+    db_pass = os.getenv("CS_DB_PASSWORD")
+    db_host = os.getenv("POSTGRES_HOST", "127.0.0.1")
+    db_port = os.getenv("POSTGRES_PORT", "5432")
+    if not db_pass:
         raise ValueError("Database password not configured. Please set CS_DB_PASSWORD in environment or .env file.")
     conn = psycopg2.connect(
-        dbname=DB_NAME,
-        user=DB_USER,
-        password=DB_PASS,
-        host=DB_HOST,
-        port=DB_PORT
+        dbname=db_name,
+        user=db_user,
+        password=db_pass,
+        host=db_host,
+        port=db_port
     )
     register_vector(conn)
     return conn

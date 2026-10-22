@@ -12,6 +12,8 @@ const STATE = {
   program: 'DEPI',
   charts: {},
   customerSearchTimeout: null,
+  ticketSearchTimeout: null,
+  selectedTicketId: null,
   customerPage: 1,
   convPage: 1,
   ticketPage: 1,
@@ -269,7 +271,17 @@ async function apiRequest(endpoint, options = {}) {
   }
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.detail || `Request failed with status ${res.status}`);
+    const detail = errorData.detail;
+    let errMsg;
+    if (Array.isArray(detail)) {
+      // Pydantic validation error format
+      errMsg = detail.map(d => d.msg || JSON.stringify(d)).join('; ');
+    } else if (detail && typeof detail === 'object') {
+      errMsg = JSON.stringify(detail);
+    } else {
+      errMsg = detail || `Request failed with status ${res.status}`;
+    }
+    throw new Error(errMsg);
   }
   return await res.json();
 }
@@ -428,6 +440,9 @@ async function exportCurrentReport() {
   if (reportType === 'tickets') {
     query.set('ticket_status', document.getElementById('ticket-status-filter')?.value || 'all');
     query.set('priority', document.getElementById('ticket-priority-filter')?.value || 'all');
+    query.set('category', document.getElementById('ticket-category-filter')?.value || 'all');
+    query.set('channel', document.getElementById('ticket-channel-filter')?.value || 'all');
+    query.set('search', document.getElementById('ticket-search-input')?.value.trim() || '');
   }
   if (reportType === 'activity') {
     query.set('execution_status', document.getElementById('execution-status-filter')?.value || '');
@@ -622,7 +637,7 @@ async function loadCustomers() {
     tbody.innerHTML = data.items.map(c => `
       <tr>
         <td style="font-family:monospace; font-size:0.75rem; color:var(--text-muted);">${c.id.substring(0,8)}...</td>
-        <td style="font-weight:600;">${c.full_name}</td>
+        <td><button class="btn-page" onclick="openCustomerProfile('${c.id}')" style="font-weight:600;">${escapeHtml(c.full_name)}</button></td>
         <td><code>${c.phone_masked || 'N/A'}</code></td>
         <td><span class="badge ${c.program === 'DEPI' ? 'badge-depi' : 'badge-digilians'}">${c.program}</span></td>
         <td>${c.created_at ? new Date(c.created_at).toLocaleDateString() : 'N/A'}</td>
@@ -743,17 +758,58 @@ function renderConvCharts(charts) {
   });
 }
 
+function debounceTicketSearch() {
+  clearTimeout(STATE.ticketSearchTimeout);
+  STATE.ticketSearchTimeout = setTimeout(() => {
+    STATE.ticketPage = 1;
+    loadTickets();
+  }, 350);
+}
+
 // --- 4. TICKETS ---
 async function loadTickets() {
   const tbody = document.getElementById('tickets-table-body');
-  const status = document.getElementById('ticket-status-filter').value;
-  const priority = document.getElementById('ticket-priority-filter').value;
-  tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Loading tickets...</td></tr>';
+  const status = document.getElementById('ticket-status-filter')?.value || 'all';
+  const priority = document.getElementById('ticket-priority-filter')?.value || 'all';
+  const category = document.getElementById('ticket-category-filter')?.value || 'all';
+  const channel = document.getElementById('ticket-channel-filter')?.value || 'all';
+  const search = document.getElementById('ticket-search-input')?.value.trim() || '';
+  const sortRaw = document.getElementById('ticket-sort-filter')?.value || 'created_at:desc';
+  const [sortBy, sortDir] = sortRaw.split(':');
+
+  tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">Loading tickets...</td></tr>';
 
   try {
-    const data = await apiRequest(`/api/dashboard/tickets?status=${status}&priority=${priority}&program=${STATE.program}&page=${STATE.ticketPage}&limit=10`);
+    const params = new URLSearchParams({
+      status: status,
+      priority: priority,
+      category: category,
+      channel: channel,
+      search: search,
+      sort_by: sortBy || 'created_at',
+      sort_dir: sortDir || 'desc',
+      program: STATE.program,
+      page: STATE.ticketPage,
+      limit: 10
+    });
 
-    if (data.items.length === 0) {
+    const data = await apiRequest(`/api/dashboard/tickets?${params.toString()}`);
+
+    // Update KPI counters if overview elements exist
+    if (data.metrics) {
+      const elTotal = document.getElementById('kpi-ticket-total');
+      const elOpen = document.getElementById('kpi-ticket-open');
+      const elPending = document.getElementById('kpi-ticket-pending');
+      const elBreached = document.getElementById('kpi-ticket-breached');
+      const elResolved = document.getElementById('kpi-ticket-resolved');
+      if (elTotal) elTotal.innerText = data.metrics.total ?? (data.total || 0);
+      if (elOpen) elOpen.innerText = data.metrics.open ?? 0;
+      if (elPending) elPending.innerText = data.metrics.pending ?? 0;
+      if (elBreached) elBreached.innerText = data.metrics.breached ?? 0;
+      if (elResolved) elResolved.innerText = data.metrics.resolved ?? 0;
+    }
+
+    if (!data.items || data.items.length === 0) {
       tbody.innerHTML = '<tr><td colspan="10" class="empty-state">No tickets matching selected filters.</td></tr>';
       return;
     }
@@ -764,21 +820,37 @@ async function loadTickets() {
       else if (t.sla_status === 'AT_RISK') slaClass = 'badge-pending';
 
       const safeCust = (t.customer_name || 'Customer').replace(/'/g, "\\'");
+      const displayTitle = t.title || t.reason || 'Support Request';
+      const truncatedTitle = displayTitle.length > 45 ? displayTitle.substring(0, 42) + '...' : displayTitle;
+
       return `
         <tr>
-          <td><strong style="color:#60A5FA;">${t.ticket_number}</strong></td>
-          <td style="font-weight:600;">${t.customer_name}</td>
-          <td><span class="badge ${t.program === 'DEPI' ? 'badge-depi' : 'badge-digilians'}">${t.program}</span></td>
+          <td>
+            <a href="javascript:void(0)" onclick="openTicketDetailsModal('${t.id}')" style="color:#60A5FA; font-weight:700; text-decoration:none;">
+              ${t.ticket_number}
+            </a>
+          </td>
+          <td>
+            <div style="font-weight:600;">${escapeHtml(t.customer_name || 'Unknown')}</div>
+            <div style="font-size:0.75rem; color:var(--text-muted);">${escapeHtml(truncatedTitle)}</div>
+          </td>
+          <td><span class="badge ${t.program === 'DEPI' ? 'badge-depi' : 'badge-digilians'}">${t.program || 'DEPI'}</span></td>
+          <td><span class="badge badge-normal">${t.source_channel || t.channel || 'whatsapp'}</span></td>
           <td><span class="badge badge-${t.priority}">${t.priority}</span></td>
           <td><span class="badge badge-${t.status}">${t.status}</span></td>
-          <td>${t.assigned_agent}</td>
+          <td>${escapeHtml(t.assigned_agent || 'Unassigned')}</td>
           <td>${t.sla_deadline ? new Date(t.sla_deadline).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) : 'None'}</td>
-          <td><span class="badge ${slaClass}">${t.sla_status}</span></td>
+          <td><span class="badge ${slaClass}">${t.sla_status || 'ON_TRACK'}</span></td>
           <td>${t.created_at ? new Date(t.created_at).toLocaleDateString() : 'N/A'}</td>
           <td>
-            <button class="btn-icon" style="font-size:0.75rem; padding:4px 8px; background:var(--primary); color:#fff; border-radius:var(--radius-sm); border:none; cursor:pointer;" onclick="openTicketModal('${t.id}', '${t.ticket_number}', '${safeCust}')" title="Respond & Resolve via n8n">
-              💬 Resolve
-            </button>
+            <div style="display:flex; gap:6px;">
+              <button class="btn-icon" style="font-size:0.75rem; padding:4px 8px; background:rgba(59,130,246,0.2); color:#60A5FA; border:1px solid rgba(59,130,246,0.4); border-radius:var(--radius-sm); cursor:pointer;" onclick="openTicketDetailsModal('${t.id}')" title="Inspect Full Lifecycle & Timeline">
+                🔍 Details
+              </button>
+              <button class="btn-icon" style="font-size:0.75rem; padding:4px 8px; background:var(--primary); color:#fff; border-radius:var(--radius-sm); border:none; cursor:pointer;" onclick="openTicketModal('${t.id}', '${t.ticket_number}', '${safeCust}')" title="Quick Respond / Resolve">
+                💬
+              </button>
+            </div>
           </td>
         </tr>
       `;
@@ -792,6 +864,7 @@ async function loadTickets() {
     tbody.innerHTML = `<tr><td colspan="10" class="empty-state" style="color:var(--accent-rose);">${err.message}</td></tr>`;
   }
 }
+
 
 // --- 5. RAG & AI QUALITY ---
 async function loadRAGMetrics() {
@@ -999,25 +1072,56 @@ async function openExecutionDetail(requestId) {
 }
 
 // --- 9. CONVERSATION DETAIL MODAL ---
-async function openConversationDetail(convId) {
+async function openCustomerProfile(customerId, page = 1) {
+  const modal = document.getElementById('conv-modal');
+  const body = document.getElementById('modal-conv-body');
+  modal.style.display = 'flex';
+  body.innerHTML = '<div>Loading customer profile...</div>';
+  try {
+    const data = await apiRequest(`/api/dashboard/customers/${encodeURIComponent(customerId)}?page=${page}&limit=20`);
+    const customer = data.customer;
+    body.innerHTML = `
+      <section style="background:var(--bg-subtle);padding:16px;border-radius:var(--radius-md);">
+        <h4>${escapeHtml(customer.full_name || 'Customer')}</h4>
+        <div style="color:var(--text-muted);">Phone: <code>${escapeHtml(customer.phone_masked || 'N/A')}</code> · Email: <code>${escapeHtml(customer.email_masked || 'N/A')}</code></div>
+        <div style="margin-top:6px;">Program: ${escapeHtml(customer.program || 'UNKNOWN')} · Language: ${escapeHtml(customer.preferred_language || 'N/A')}</div>
+      </section>
+      <section><h4>Conversations (${data.total})</h4>
+        ${data.conversations.length ? `<div style="display:flex;flex-direction:column;gap:8px;">${data.conversations.map(c => `
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--bg-subtle);padding:12px;border-radius:var(--radius-sm);">
+            <div><strong>${escapeHtml(c.channel)} · ${escapeHtml(c.status)}</strong><div style="font-size:.8rem;color:var(--text-muted);">${c.created_at ? new Date(c.created_at).toLocaleString() : 'Time unavailable'} · ${c.message_count} messages</div></div>
+            <button class="btn-page" onclick="openConversationDetail('${c.id}')">Open</button>
+          </div>`).join('')}</div>` : '<div class="empty-state">No conversations found.</div>'}
+        <div style="display:flex;justify-content:space-between;margin-top:12px;">
+          <button class="btn-page" ${page <= 1 ? 'disabled' : ''} onclick="openCustomerProfile('${customerId}',${page - 1})">Previous</button>
+          <span>Page ${page} of ${Math.max(1, data.pages)}</span>
+          <button class="btn-page" ${page >= data.pages ? 'disabled' : ''} onclick="openCustomerProfile('${customerId}',${page + 1})">Next</button>
+        </div>
+      </section>`;
+  } catch (err) {
+    body.innerHTML = `<div class="empty-state" style="color:var(--accent-rose);">${escapeHtml(err.message)}</div>`;
+  }
+}
+
+async function openConversationDetail(convId, page = 1) {
   const modal = document.getElementById('conv-modal');
   const body = document.getElementById('modal-conv-body');
   modal.style.display = 'flex';
   body.innerHTML = '<div>Loading conversation session...</div>';
 
   try {
-    const data = await apiRequest(`/api/dashboard/conversations/${convId}`);
+    const data = await apiRequest(`/api/dashboard/conversations/${encodeURIComponent(convId)}?page=${page}&limit=50`);
 
     body.innerHTML = `
       <!-- Customer Card -->
       <div style="background:var(--bg-subtle); padding:16px; border-radius:var(--radius-md); display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px;">
         <div>
-          <div style="font-weight:700; font-size:1.05rem;">${data.customer.full_name}</div>
+          <div style="font-weight:700; font-size:1.05rem;">${escapeHtml(data.customer.full_name)}</div>
           <div style="font-size:0.8rem; color:var(--text-muted);">Phone: <code>${data.customer.phone_masked || 'N/A'}</code> | Email: <code>${data.customer.email_masked || 'N/A'}</code></div>
         </div>
         <div style="display:flex; gap:8px;">
-          <span class="badge ${data.customer.program === 'DEPI' ? 'badge-depi' : 'badge-digilians'}">${data.customer.program}</span>
-          <span class="badge badge-normal">${data.conversation.channel}</span>
+          <span class="badge ${data.customer.program === 'DEPI' ? 'badge-depi' : 'badge-digilians'}">${escapeHtml(data.customer.program)}</span>
+          <span class="badge badge-normal">${escapeHtml(data.conversation.channel)}</span>
         </div>
       </div>
 
@@ -1025,25 +1129,26 @@ async function openConversationDetail(convId) {
       <div>
         <h4 style="font-size:0.85rem; color:var(--text-muted); margin-bottom:6px;">Conversation Summary:</h4>
         <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); padding:12px; border-radius:var(--radius-sm); font-size:0.85rem;">
-          ${data.summary}
+          ${escapeHtml(data.summary)}
         </div>
       </div>
 
       <!-- Turn by Turn Messages -->
       <div>
-        <h4 style="font-size:0.85rem; color:var(--text-muted); margin-bottom:8px;">Messages (${data.messages.length}):</h4>
+        <h4 style="font-size:0.85rem; color:var(--text-muted); margin-bottom:8px;">Messages (${data.message_total}):</h4>
         <div style="display:flex; flex-direction:column; gap:10px; max-height:300px; overflow-y:auto; padding-right:8px;">
           ${data.messages.map(m => `
             <div style="padding:12px; border-radius:var(--radius-sm); background:${m.sender_type === 'customer' ? 'var(--bg-subtle)' : 'rgba(37,99,235,0.1)'}; border:1px solid ${m.sender_type === 'customer' ? 'var(--border-color)' : 'rgba(37,99,235,0.2)'};">
               <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">
-                <span style="font-weight:700; text-transform:uppercase;">${m.sender_type} ${m.confidence ? `(Confidence: ${Math.round(m.confidence * 100)}%)` : ''}</span>
-                <span>${new Date(m.created_at).toLocaleTimeString()}</span>
+                <span style="font-weight:700; text-transform:uppercase;">${m.sender_type === 'customer' ? 'Incoming customer' : m.sender_type === 'agent' ? 'Outgoing agent' : 'Outgoing assistant'} ${m.confidence ? `(Confidence: ${Math.round(m.confidence * 100)}%)` : ''} ${m.metadata?.delivery_status ? `· ${escapeHtml(m.metadata.delivery_status)}` : ''}</span>
+                <span>${m.created_at ? new Date(m.created_at).toLocaleString() : 'Time unavailable'}</span>
               </div>
-              <div style="font-size:0.85rem;">${m.content}</div>
-              ${m.metadata && m.metadata.rag_evidence ? `<div style="margin-top:6px; font-size:0.75rem; color:#60A5FA;"><strong>RAG Sources:</strong> ${JSON.stringify(m.metadata.rag_evidence)}</div>` : ''}
+              <div style="font-size:0.85rem;white-space:pre-wrap;">${escapeHtml(m.content)}</div>
+              ${m.metadata && m.metadata.rag_evidence ? `<div style="margin-top:6px; font-size:0.75rem; color:#60A5FA;"><strong>RAG Sources:</strong> ${escapeHtml(JSON.stringify(m.metadata.rag_evidence))}</div>` : ''}
             </div>
           `).join('')}
         </div>
+        <div style="display:flex;justify-content:space-between;margin-top:10px;"><button class="btn-page" ${page <= 1 ? 'disabled' : ''} onclick="openConversationDetail('${convId}',${page - 1})">Previous messages</button><span>Page ${page} of ${Math.max(1, data.message_pages)}</span><button class="btn-page" ${page >= data.message_pages ? 'disabled' : ''} onclick="openConversationDetail('${convId}',${page + 1})">Next messages</button></div>
       </div>
 
       <!-- Attached Tickets -->
@@ -1054,7 +1159,7 @@ async function openConversationDetail(convId) {
             ${data.tickets.map(t => `
               <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-subtle); padding:10px; border-radius:var(--radius-sm);">
                 <div>
-                  <strong>${t.ticket_number}</strong> - <span style="font-size:0.8rem; color:var(--text-muted);">${t.reason}</span>
+                  <button class="btn-page" onclick="openTicketDetailsModal('${encodeURIComponent(t.ticket_number)}')">${escapeHtml(t.ticket_number)}</button> - <span style="font-size:0.8rem; color:var(--text-muted);">${escapeHtml(t.reason)}</span>
                 </div>
                 <div style="display:flex; gap:6px;">
                   <span class="badge badge-${t.priority}">${t.priority}</span>
@@ -1395,3 +1500,288 @@ async function handleTicketRespondSubmit(e) {
     submitBtn.innerText = 'Dispatch Response to n8n & Customer 🚀';
   }
 }
+
+// --- 12. COMPREHENSIVE TICKET DETAILS MODAL ---
+let currentTicketData = null;
+
+async function openTicketDetailsModal(ticketId) {
+  STATE.selectedTicketId = ticketId;
+  const modal = document.getElementById('ticket-details-modal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+
+  // Show loading state
+  document.getElementById('td-modal-number').innerText = 'Loading ticket...';
+  document.getElementById('td-tab-timeline').innerHTML = '<div style="padding:12px; color:var(--text-muted);">Loading conversation timeline...</div>';
+  document.getElementById('td-tab-events').innerHTML = '<div style="padding:12px; color:var(--text-muted);">Loading lifecycle events...</div>';
+
+  try {
+    const data = await apiRequest(`/api/dashboard/tickets/${ticketId}`);
+    currentTicketData = data;
+
+    // Header info
+    document.getElementById('td-modal-number').innerText = data.ticket_number || 'TICK-N/A';
+    
+    const statusBadge = document.getElementById('td-modal-status-badge');
+    statusBadge.className = `badge badge-${data.status}`;
+    statusBadge.innerText = (data.status || 'open').toUpperCase();
+
+    const priBadge = document.getElementById('td-modal-priority-badge');
+    priBadge.className = `badge badge-${data.priority}`;
+    priBadge.innerText = (data.priority || 'medium').toUpperCase();
+
+    const catBadge = document.getElementById('td-modal-category-badge');
+    catBadge.innerText = data.category || 'General';
+
+    const chanBadge = document.getElementById('td-modal-channel-badge');
+    chanBadge.innerText = data.channel || data.source_channel || 'WhatsApp';
+
+    // Meta Grid
+    document.getElementById('td-modal-customer').innerText = data.customer ? (data.customer.full_name || 'Citizen') : 'Customer';
+    document.getElementById('td-modal-phone').innerText = data.customer ? (data.customer.phone_masked || data.customer.phone_number || 'N/A') : 'N/A';
+    
+    document.getElementById('td-modal-sla-status').innerText = data.sla_status || 'ON_TRACK';
+    document.getElementById('td-modal-sla-time').innerText = data.sla_deadline ? new Date(data.sla_deadline).toLocaleString() : 'No SLA limit';
+
+    document.getElementById('td-modal-team').innerText = data.assigned_team || 'DEPI Support Team';
+    document.getElementById('td-modal-agent').innerText = data.assigned_agent || 'Unassigned';
+
+    document.getElementById('td-modal-created').innerText = data.created_at ? new Date(data.created_at).toLocaleString() : 'N/A';
+    document.getElementById('td-modal-updated').innerText = data.updated_at ? `Updated: ${new Date(data.updated_at).toLocaleTimeString()}` : '';
+
+    // Title & Reason
+    document.getElementById('td-modal-title').innerText = data.title || data.reason || 'Support Request';
+    document.getElementById('td-modal-reason').innerText = data.reason || 'No specific description provided.';
+
+    // Populate Tab 1: Timeline
+    renderTicketTimeline(data.messages || [], data.reason);
+
+    // Populate Tab 2: Events
+    renderTicketEvents(data.timeline || []);
+
+    // Populate Tab 3: Notes
+    renderTicketNotes(data.internal_notes);
+
+    // Populate Tab 4: Actions Form
+    const selStatus = document.getElementById('td-action-status');
+    if (selStatus) selStatus.value = data.status || 'open';
+    const selPriority = document.getElementById('td-action-priority');
+    if (selPriority) selPriority.value = data.priority || 'medium';
+    const txtAgent = document.getElementById('td-action-agent');
+    if (txtAgent) txtAgent.value = data.assigned_agent || (STATE.user ? (STATE.user.full_name || STATE.user.username) : '');
+
+    switchTicketTab('timeline');
+  } catch (err) {
+    alert(`Failed to load ticket details: ${err.message}`);
+    closeTicketDetailsModal();
+  }
+}
+
+function closeTicketDetailsModal() {
+  const modal = document.getElementById('ticket-details-modal');
+  if (modal) modal.style.display = 'none';
+  STATE.selectedTicketId = null;
+  currentTicketData = null;
+}
+
+function switchTicketTab(tabName) {
+  const tabs = ['timeline', 'events', 'notes', 'actions'];
+  tabs.forEach(t => {
+    const pane = document.getElementById(`td-tab-${t}`);
+    const btn = document.getElementById(`tab-btn-${t}`);
+    if (pane) pane.style.display = (t === tabName) ? (t === 'timeline' || t === 'events' ? 'flex' : 'flex') : 'none';
+    if (btn) {
+      if (t === tabName) {
+        btn.style.background = 'var(--primary)';
+        btn.style.color = '#fff';
+      } else {
+        btn.style.background = 'transparent';
+        btn.style.color = 'var(--text-muted)';
+      }
+    }
+  });
+}
+
+function renderTicketTimeline(messages, initialReason) {
+  const container = document.getElementById('td-tab-timeline');
+  if (!container) return;
+
+  if ((!messages || messages.length === 0) && !initialReason) {
+    container.innerHTML = '<div style="padding:16px; color:var(--text-muted); text-align:center;">No conversation messages correlated.</div>';
+    return;
+  }
+
+  let html = '';
+  if (initialReason && (!messages || messages.length === 0)) {
+    html += `
+      <div class="chat-bubble user" style="max-width:85%; background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.3); padding:10px 14px; border-radius:12px; margin-bottom:8px;">
+        <div style="font-size:0.75rem; color:#60A5FA; margin-bottom:4px; font-weight:600;">Customer Ingress Message</div>
+        <div style="font-size:0.9rem; line-height:1.4;">${escapeHtml(initialReason)}</div>
+      </div>
+    `;
+  }
+
+  (messages || []).forEach(m => {
+    const isBot = m.sender === 'bot' || m.sender === 'system';
+    const isAgent = m.sender === 'agent' || m.sender === 'human';
+    let bubbleClass = 'user';
+    let borderStyle = 'background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.3);';
+    let senderLabel = m.sender || 'Customer';
+
+    if (isBot) {
+      bubbleClass = 'bot';
+      borderStyle = 'background:rgba(255,255,255,0.05); border:1px solid var(--border-color); align-self:flex-start;';
+      senderLabel = '🤖 NexaServe AI Bot';
+    } else if (isAgent) {
+      bubbleClass = 'agent';
+      borderStyle = 'background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.4); align-self:flex-start;';
+      senderLabel = `👨‍💼 Agent (${m.sender_name || 'Support'})`;
+    } else {
+      borderStyle = 'background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.3); align-self:flex-end;';
+    }
+
+    const timeStr = m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
+
+    html += `
+      <div style="max-width:85%; ${borderStyle} padding:10px 14px; border-radius:12px; margin-bottom:8px;">
+        <div style="display:flex; justify-content:space-between; gap:12px; font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">
+          <strong>${senderLabel}</strong>
+          <span>${timeStr}</span>
+        </div>
+        <div style="font-size:0.88rem; line-height:1.45; white-space:pre-wrap;">${escapeHtml(m.message || m.content || '')}</div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+function renderTicketEvents(events) {
+  const container = document.getElementById('td-tab-events');
+  if (!container) return;
+
+  if (!events || events.length === 0) {
+    container.innerHTML = '<div style="padding:16px; color:var(--text-muted); text-align:center;">No lifecycle events logged yet.</div>';
+    return;
+  }
+
+  container.innerHTML = events.map(e => {
+    let icon = '📜';
+    if (e.event_type === 'created') icon = '🆕';
+    else if (e.event_type === 'status_change') icon = '🔄';
+    else if (e.event_type === 'assignment') icon = '👤';
+    else if (e.event_type === 'internal_note') icon = '📝';
+    else if (e.event_type === 'agent_reply') icon = '💬';
+    else if (e.event_type === 'customer_followup') icon = '📥';
+
+    const actor = e.actor_name ? `${e.actor_name} (${e.actor_type})` : (e.actor_type || 'System');
+    const timeStr = e.created_at ? new Date(e.created_at).toLocaleString() : '';
+    const detailsStr = e.details ? (typeof e.details === 'object' ? JSON.stringify(e.details) : e.details) : '';
+
+    return `
+      <div style="display:flex; gap:10px; align-items:flex-start; background:rgba(255,255,255,0.02); padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+        <span style="font-size:1.1rem;">${icon}</span>
+        <div style="flex:1;">
+          <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-muted);">
+            <strong style="color:var(--text-main); text-transform:uppercase;">${e.event_type.replace(/_/g, ' ')}</strong>
+            <span>${timeStr}</span>
+          </div>
+          <div style="font-size:0.8rem; color:var(--text-subtle); margin-top:2px;">by ${escapeHtml(actor)}</div>
+          ${detailsStr ? `<div style="font-size:0.8rem; color:var(--text-muted); margin-top:4px; font-family:monospace; background:rgba(0,0,0,0.2); padding:4px 8px; border-radius:4px;">${escapeHtml(detailsStr)}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderTicketNotes(notes) {
+  const box = document.getElementById('td-notes-list');
+  if (!box) return;
+  if (!notes || !notes.trim()) {
+    box.innerText = 'No internal notes recorded.';
+  } else {
+    box.innerText = notes;
+  }
+}
+
+async function submitTicketInternalNote() {
+  const input = document.getElementById('td-new-note');
+  if (!input) return;
+  const note = input.value.trim();
+  if (!note || !STATE.selectedTicketId) return;
+
+  const agentName = STATE.user ? (STATE.user.full_name || STATE.user.username) : 'Operations Agent';
+
+  try {
+    await apiRequest(`/api/dashboard/tickets/${STATE.selectedTicketId}/notes`, {
+      method: 'POST',
+      body: JSON.stringify({
+        note: note,
+        agent_name: agentName
+      })
+    });
+
+    input.value = '';
+    // Reload ticket details
+    await openTicketDetailsModal(STATE.selectedTicketId);
+    switchTicketTab('notes');
+  } catch (err) {
+    alert(`Failed to add note: ${err.message}`);
+  }
+}
+
+async function submitTicketUpdateAction() {
+  if (!STATE.selectedTicketId) return;
+
+  const status = document.getElementById('td-action-status').value;
+  const priority = document.getElementById('td-action-priority').value;
+  const agent = document.getElementById('td-action-agent').value.trim();
+
+  try {
+    await apiRequest(`/api/dashboard/tickets/${STATE.selectedTicketId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        status: status,
+        priority: priority,
+        assigned_agent: agent
+      })
+    });
+
+    alert('Ticket updated successfully!');
+    await openTicketDetailsModal(STATE.selectedTicketId);
+    loadTickets();
+  } catch (err) {
+    alert(`Failed to update ticket: ${err.message}`);
+  }
+}
+
+async function submitTicketReplyAction(action) {
+  if (!STATE.selectedTicketId) return;
+  const msgInput = document.getElementById('td-action-reply-msg');
+  const msg = msgInput.value.trim();
+  if (!msg) {
+    alert('Please enter a response message to dispatch to the customer.');
+    return;
+  }
+
+  const agentName = STATE.user ? (STATE.user.full_name || STATE.user.username) : 'Operations Agent';
+
+  try {
+    const res = await apiRequest(`/api/dashboard/tickets/${STATE.selectedTicketId}/respond`, {
+      method: 'POST',
+      body: JSON.stringify({
+        response_message: msg,
+        action: action,
+        agent_name: agentName
+      })
+    });
+
+    msgInput.value = '';
+    alert(`Reply dispatched successfully via n8n (Ticket ${res.ticket_number})!`);
+    await openTicketDetailsModal(STATE.selectedTicketId);
+    loadTickets();
+  } catch (err) {
+    alert(`Failed to dispatch reply: ${err.message}`);
+  }
+}
+

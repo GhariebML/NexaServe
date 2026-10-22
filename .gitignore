@@ -36,6 +36,9 @@ scratch/
 tmp/
 .cache/
 
+# Data preparation output (contains PII-quarantined candidate records requiring review)
+FAQs/New Fiels/JSON/prepared/
+
 # OS specific files
 Thumbs.db
 Desktop.ini
@@ -48,9 +51,17 @@ Desktop.ini
 .opencode/
 .gemini/
 
+# Sensitive scripts with hardcoded credentials
+reset_admin.py
+
 # FAQ source archives and PII-bearing derived artifacts
 FAQs/tickets.pst
 FAQs/tickets.json
 FAQs/converted/tickets.json
 FAQs/converted/tickets.jsonl
 FAQs/converted/tickets_manifest.json
+
+# Large FAQ source documents and raw JSON exports (PII risk)
+FAQs/New Fiels/*.docx
+FAQs/New Fiels/*.xlsx
+FAQs/New Fiels/JSON/*.json
