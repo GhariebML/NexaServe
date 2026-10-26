@@ -59,7 +59,7 @@ def get_db() -> Generator[psycopg2.extensions.connection, None, None]:
                 close_connection = True
         db_pool.putconn(conn, close=close_connection)
 
-def query_all(sql: str, params: Optional[Tuple[Any, ...]] = None) -> List[Dict[str, Any]]:
+def query_all(sql: str, params: Optional[Tuple[Any, ...]] = None, commit: bool = False) -> List[Dict[str, Any]]:
     with get_db() as conn:
         with conn.cursor() as cur:
             deadline = REPORT_QUERY_DEADLINE.get()
@@ -75,14 +75,15 @@ def query_all(sql: str, params: Optional[Tuple[Any, ...]] = None) -> List[Dict[s
                 if deadline is not None:
                     raise ReportQueryTimeoutError from exc
                 raise
-            if cur.description is None:
-                return []
-            cols = [desc[0] for desc in cur.description]
-            rows = cur.fetchall()
+            rows = cur.fetchall() if cur.description is not None else []
+            cols = [desc[0] for desc in cur.description] if cur.description is not None else []
+            if commit:
+                conn.commit()
             return [dict(zip(cols, row)) for row in rows]
 
-def query_one(sql: str, params: Optional[Tuple[Any, ...]] = None) -> Optional[Dict[str, Any]]:
-    results = query_all(sql, params)
+def query_one(sql: str, params: Optional[Tuple[Any, ...]] = None, commit: bool = False) -> Optional[Dict[str, Any]]:
+    """`commit=True` is for data-modifying statements with RETURNING."""
+    results = query_all(sql, params, commit=commit)
     return results[0] if results else None
 
 def execute_commit(sql: str, params: Optional[Tuple[Any, ...]] = None) -> int:

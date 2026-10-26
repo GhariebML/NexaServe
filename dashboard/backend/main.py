@@ -12,6 +12,7 @@ from pydantic import BaseModel
 
 from database import init_db_pool, query_one, ReportQueryTimeoutError
 import auth
+import login_throttle
 from routes import router as dashboard_router
 
 app = FastAPI(
@@ -72,44 +73,81 @@ class ChangePasswordRequest(BaseModel):
     old_password: str
     new_password: str
 
+def _client_ip(request: Request) -> str:
+    return request.client.host if request.client else "unknown"
+
+
+def _throttle_or_raise(username: str, client_ip: str) -> None:
+    wait = login_throttle.retry_after_seconds(username, client_ip)
+    if wait:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many failed attempts; try again later",
+            headers={"Retry-After": str(wait)},
+        )
+
+
+def _public_user(user: dict) -> dict:
+    return {key: user[key] for key in ("id", "username", "full_name", "role", "must_change_password")}
+
+
+# Sync handlers: Argon2 verification and DB access block, so FastAPI runs these in its threadpool.
 @app.post("/api/auth/login")
-async def login(req: LoginRequest):
+def login(req: LoginRequest, request: Request):
+    client_ip = _client_ip(request)
+    _throttle_or_raise(req.username, client_ip)
     user = auth.authenticate_user(req.username, req.password)
     if not user:
+        login_throttle.record_failure(req.username, client_ip)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid username or password"
         )
-    token = auth.create_access_token(
-        user_id=user["id"],
-        username=user["username"],
-        role=user["role"],
-        full_name=user["full_name"],
-        must_change=user.get("must_change_password", False)
-    )
+    login_throttle.clear_failures(req.username, client_ip)
     return {
-        "access_token": token,
+        "access_token": auth.issue_token_for(user),
         "token_type": "bearer",
-        "user": user
+        "user": _public_user(user)
     }
 
 @app.post("/api/auth/change-password")
-async def change_password(req: ChangePasswordRequest, current_user: dict = Depends(auth.get_current_user)):
+def change_password(req: ChangePasswordRequest, request: Request,
+                    current_user: dict = Depends(auth.get_authenticated_user)):
+    client_ip = _client_ip(request)
+    _throttle_or_raise(current_user["username"], client_ip)
     user = auth.authenticate_user(current_user["username"], req.old_password)
     if not user:
+        login_throttle.record_failure(current_user["username"], client_ip)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Current password verification failed"
         )
-    if len(req.new_password) < 12:
+    if len(req.new_password) < auth.MIN_PASSWORD_LENGTH:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="New password must be at least 12 characters long"
+            detail=f"New password must be at least {auth.MIN_PASSWORD_LENGTH} characters long"
         )
-    success = auth.update_user_password(current_user["sub"], req.new_password)
-    if not success:
+    if req.new_password == req.old_password:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="New password must differ from the current password")
+    new_version = auth.update_user_password(current_user["sub"], req.new_password)
+    if new_version is None:
         raise HTTPException(status_code=500, detail="Failed to update password")
-    return {"message": "Password updated successfully"}
+    login_throttle.clear_failures(current_user["username"], client_ip)
+    # Every earlier token (including the one used for this call) is now revoked; hand back a fresh one.
+    refreshed = {**user, "must_change_password": False, "token_version": new_version}
+    return {
+        "message": "Password updated successfully",
+        "access_token": auth.issue_token_for(refreshed),
+        "token_type": "bearer",
+        "user": _public_user(refreshed),
+    }
+
+@app.post("/api/auth/logout")
+def logout(current_user: dict = Depends(auth.get_authenticated_user)):
+    """Revokes all of this user's sessions (tokens are stateless, so revocation is per user)."""
+    auth.revoke_user_tokens(current_user["sub"])
+    return {"message": "Signed out"}
 
 # Mount dashboard API
 app.include_router(dashboard_router)
