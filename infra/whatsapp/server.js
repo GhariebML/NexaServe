@@ -1,5 +1,5 @@
 import express from 'express';
-import cors from 'cors';
+import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -21,6 +21,9 @@ const AUTH_DIR = process.env.AUTH_DIR || path.resolve(__dirname, '../../data/wha
 const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL || 'http://localhost:5678/webhook/customer-service';
 const WHATSAPP_LIFECYCLE_API = process.env.WHATSAPP_LIFECYCLE_API || '';
 const WHATSAPP_INGEST_TOKEN = process.env.WHATSAPP_INGEST_TOKEN || '';
+// Message/delivery persistence through the dashboard is opt-in: set WHATSAPP_LIFECYCLE_API to enable it.
+// When unset, messages are processed directly and n8n's conversation logger stores each turn.
+const LIFECYCLE_ENABLED = Boolean(WHATSAPP_LIFECYCLE_API && WHATSAPP_INGEST_TOKEN);
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434/api/generate';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'qwen2.5:3b';
 
@@ -59,7 +62,21 @@ async function lifecycleRequest(path, payload) {
   }
 }
 
+function resolveTargetJid(to) {
+  if (to.includes('@')) return to;
+  const clean = to.replace(/[^0-9]/g, '');
+  return jidMap[clean] || jidMap[`+${clean}`] || `${clean}@s.whatsapp.net`;
+}
+
 async function sendTrackedWhatsApp(to, message, replyToProviderMessageId = null) {
+  if (!LIFECYCLE_ENABLED) {
+    if (connectionState !== 'CONNECTED' || !sock) throw new Error('WhatsApp is not connected');
+    const target = resolveTargetJid(to);
+    const sent = await sock.sendMessage(target, { text: message });
+    const providerMessageId = sent?.key?.id;
+    if (!providerMessageId) throw new Error('WhatsApp provider returned no message ID');
+    return { success: true, message_id: providerMessageId, target_jid: target, timestamp: new Date().toISOString() };
+  }
   const record = await lifecycleRequest('outbound', {
     recipient: to,
     text: message,
@@ -76,10 +93,7 @@ async function sendTrackedWhatsApp(to, message, replyToProviderMessageId = null)
     });
     throw new Error('WhatsApp is not connected');
   }
-  const target = to.includes('@') ? to : (() => {
-      const clean = to.replace(/[^0-9]/g, '');
-      return jidMap[clean] || jidMap[`+${clean}`] || `${clean}@s.whatsapp.net`;
-  })();
+  const target = resolveTargetJid(to);
   let sent;
   try {
     sent = await sock.sendMessage(target, { text: message });
@@ -111,7 +125,7 @@ async function recordWhatsAppReceipt(update) {
   const rawStatus = Number(update?.update?.status);
   const statusByBaileys = { 2: 'sent', 3: 'delivered', 4: 'read', 5: 'read', 0: 'failed' };
   const deliveryStatus = statusByBaileys[rawStatus];
-  if (!providerMessageId || !deliveryStatus || update?.key?.fromMe !== true) return;
+  if (!LIFECYCLE_ENABLED || !providerMessageId || !deliveryStatus || update?.key?.fromMe !== true) return;
   await lifecycleRequest('delivery', { provider_message_id: providerMessageId, delivery_status: deliveryStatus });
 }
 
@@ -370,25 +384,33 @@ async function initWhatsApp() {
           continue;
         }
 
-        let persistedInbound;
-        try {
-          persistedInbound = await lifecycleRequest('inbound', {
-            sender_jid: senderJid,
-            provider_message_id: providerMessageId,
-            phone_number: `+${phone}`,
-            push_name: pushName,
-            text
-          });
-        } catch (persistErr) {
-          console.error('[WhatsApp lifecycle] Inbound could not be persisted; processing was stopped:', persistErr.message);
-          continue;
+        let persistedInbound = {};
+        if (LIFECYCLE_ENABLED) {
+          try {
+            persistedInbound = await lifecycleRequest('inbound', {
+              sender_jid: senderJid,
+              provider_message_id: providerMessageId,
+              phone_number: `+${phone}`,
+              push_name: pushName,
+              text
+            });
+          } catch (persistErr) {
+            console.error('[WhatsApp lifecycle] Inbound could not be persisted; processing was stopped:', persistErr.message);
+            continue;
+          }
+          if (persistedInbound.duplicate) {
+            console.log('[WhatsApp lifecycle] Duplicate inbound event suppressed.');
+            continue;
+          }
+          console.log('[WhatsApp Ingress] Persisted inbound event; starting workflow processing.');
+        } else {
+          // Without lifecycle persistence, n8n's logger stores the turn; suppress provider redeliveries in memory.
+          if (isRecentlyDispatched(`inbound:${providerMessageId}`)) {
+            console.log('[WhatsApp Ingress] Duplicate inbound event suppressed.');
+            continue;
+          }
+          console.log('[WhatsApp Ingress] Inbound event received; starting workflow processing.');
         }
-        if (persistedInbound.duplicate) {
-          console.log('[WhatsApp lifecycle] Duplicate inbound event suppressed.');
-          continue;
-        }
-
-        console.log('[WhatsApp Ingress] Persisted inbound event; starting workflow processing.');
 
         const payload = {
           channel: 'whatsapp',
@@ -400,6 +422,7 @@ async function initWhatsApp() {
           customer_id: persistedInbound.customer_id,
           conversation_id: persistedInbound.conversation_id,
           inbound_message_id: persistedInbound.message_id,
+          lifecycle_persisted: LIFECYCLE_ENABLED,
           jid: senderJid,
           full_name: pushName,
           start_time: Date.now(),
@@ -496,8 +519,31 @@ async function initWhatsApp() {
 // Express Web Server & REST API
 // -----------------------------------------------------------------------------
 const app = express();
-app.use(cors());
 app.use(express.json());
+
+// Control routes can send messages or destroy the paired session, so they need the
+// shared service token. No CORS headers are emitted, so other sites cannot read
+// responses; the Origin check below lets only the bridge's own /qr page log out.
+function tokenMatches(token) {
+  if (!WHATSAPP_INGEST_TOKEN || typeof token !== 'string') return false;
+  const expected = Buffer.from(WHATSAPP_INGEST_TOKEN);
+  const provided = Buffer.from(token);
+  return provided.length === expected.length && crypto.timingSafeEqual(provided, expected);
+}
+function isSameOriginBrowserRequest(req) {
+  const origin = req.get('origin');
+  return Boolean(origin) && origin === `${req.protocol}://${req.get('host')}`;
+}
+function requireBridgeToken({ allowSameOrigin = false } = {}) {
+  return (req, res, next) => {
+    if (!WHATSAPP_INGEST_TOKEN) {
+      return res.status(503).json({ error: 'Bridge control API is not configured' });
+    }
+    if (tokenMatches(req.get('x-nexaserve-webhook-token'))) return next();
+    if (allowSameOrigin && isSameOriginBrowserRequest(req)) return next();
+    return res.status(401).json({ error: 'Unauthorized' });
+  };
+}
 
 app.get('/health', (req, res) => {
   res.json({
@@ -718,7 +764,7 @@ app.get('/qr.png', async (req, res) => {
 });
 
 // Outbound Message Dispatch endpoint (Called by n8n SubWF 06)
-app.post('/send', async (req, res) => {
+app.post('/send', requireBridgeToken(), async (req, res) => {
   try {
     const { to, message } = req.body;
     if (!to || !message) {
@@ -733,7 +779,7 @@ app.post('/send', async (req, res) => {
 });
 
 // Simulation endpoint for test and health checks
-app.post('/simulate', async (req, res) => {
+app.post('/simulate', requireBridgeToken(), async (req, res) => {
   try {
     const message = req.body.customer_message || req.body.message || '';
     const name = req.body.full_name || req.body.name || 'Citizen';
@@ -805,7 +851,7 @@ app.post('/simulate', async (req, res) => {
   }
 });
 
-app.post('/logout', async (req, res) => {
+app.post('/logout', requireBridgeToken({ allowSameOrigin: true }), async (req, res) => {
   try {
     if (sock) {
       await sock.logout();
@@ -833,7 +879,7 @@ app.get('/cache/status', (req, res) => {
     maxTTL: 60000
   });
 });
-app.post('/cache/invalidate', (req, res) => {
+app.post('/cache/invalidate', requireBridgeToken(), (req, res) => {
   const newVersion = invalidateCache();
   res.json({ success: true, new_version: newVersion, cleared_entries: responseCache.size });
 });
@@ -865,6 +911,8 @@ async function prewarmOllama() {
 app.listen(PORT, () => {
   console.log(`[WhatsApp Bridge] HTTP Server listening on port ${PORT}`);
   console.log(`[WhatsApp Bridge] Web UI available at: http://localhost:${PORT}/qr`);
+  console.log(`[WhatsApp Bridge] Control API auth: ${WHATSAPP_INGEST_TOKEN ? 'enabled' : 'NOT CONFIGURED (control routes return 503)'}`);
+  console.log(`[WhatsApp Bridge] Lifecycle persistence: ${LIFECYCLE_ENABLED ? 'enabled' : 'disabled'}`);
   prewarmOllama();
   initWhatsApp().catch((err) => {
     console.error('[WhatsApp Bridge] Initialization error:', err);

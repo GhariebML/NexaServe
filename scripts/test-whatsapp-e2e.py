@@ -25,6 +25,8 @@ import urllib.request
 import urllib.error
 from collections import Counter
 
+from bridge_auth import bridge_headers
+
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 if hasattr(sys.stderr, 'reconfigure'):
@@ -287,10 +289,10 @@ def send_simulate(message, name, phone):
     req = urllib.request.Request(
         SIMULATE_URL,
         data=payload,
-        headers={
+        headers=bridge_headers({
             "Content-Type": "application/json; charset=utf-8",
             "Accept": "application/json",
-        },
+        }),
         method="POST",
     )
 
@@ -410,7 +412,7 @@ def main():
     try:
         req = urllib.request.Request(
             CACHE_INV_URL, data=b"", method="POST",
-            headers={"Content-Type": "application/json"}
+            headers=bridge_headers({"Content-Type": "application/json"})
         )
         with urllib.request.urlopen(req, timeout=5) as resp:
             inv = json.loads(resp.read().decode("utf-8"))

@@ -16,6 +16,8 @@ import os
 import argparse
 import datetime
 import re
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'scripts'))
+from bridge_auth import bridge_headers  # noqa: E402
 
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
@@ -52,7 +54,7 @@ def send_query(query, webhook_url, timeout=60):
     }
     start = time.time()
     try:
-        resp = requests.post(webhook_url, json=payload, timeout=timeout)
+        resp = requests.post(webhook_url, json=payload, headers=bridge_headers(), timeout=timeout)
         elapsed_ms = int((time.time() - start) * 1000)
         try:
             body = resp.json()

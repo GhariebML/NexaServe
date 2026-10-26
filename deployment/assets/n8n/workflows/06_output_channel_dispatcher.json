@@ -164,13 +164,15 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env[\"WHATSAPP_BRIDGE_URL\"] || 'http://cs-whatsapp:8080' }}/send",
+        "url": "http://cs-whatsapp:8080/send",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"to\": \"{{ $json.recipient }}\",\n  \"message\": {{ JSON.stringify($json.message) }}\n}",
         "options": {
           "timeout": 5000
-        }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "id": "node-dispatch-whatsapp",
       "name": "Dispatch WhatsApp Message",
@@ -180,7 +182,13 @@
         860,
         120
       ],
-      "continueOnFail": true
+      "continueOnFail": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CS_WA_BRIDGE_CRED_01",
+          "name": "WhatsApp Bridge Token"
+        }
+      }
     }
   ],
   "connections": {

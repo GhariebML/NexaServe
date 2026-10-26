@@ -45,13 +45,19 @@ $csDbName = if ($envVars.ContainsKey('CS_DB_NAME') -and $envVars['CS_DB_NAME']) 
 $csDbUser = if ($envVars.ContainsKey('CS_DB_USER') -and $envVars['CS_DB_USER']) { $envVars['CS_DB_USER'] } else { 'cs_app_user' }
 $csDbPass = if ($envVars.ContainsKey('CS_DB_PASSWORD')) { $envVars['CS_DB_PASSWORD'] } else { '' }
 $redisPass = if ($envVars.ContainsKey('REDIS_PASSWORD')) { $envVars['REDIS_PASSWORD'] } else { '' }
+$waBridgeToken = if ($envVars.ContainsKey('WHATSAPP_INGEST_TOKEN')) { $envVars['WHATSAPP_INGEST_TOKEN'] } else { '' }
+if (-not $waBridgeToken) {
+    Write-Error "WHATSAPP_INGEST_TOKEN must be set in .env (the n8n dispatcher authenticates to the WhatsApp bridge with it)"
+    exit 1
+}
 
 # Substitute environment variables
 $resolvedContent = $templateContent `
     -replace '\$\{CS_DB_NAME\}', $csDbName `
     -replace '\$\{CS_DB_USER\}', $csDbUser `
     -replace '\$\{CS_DB_PASSWORD\}', $csDbPass `
-    -replace '\$\{REDIS_PASSWORD\}', $redisPass
+    -replace '\$\{REDIS_PASSWORD\}', $redisPass `
+    -replace '\$\{WHATSAPP_INGEST_TOKEN\}', $waBridgeToken
 
 $tempFile = Join-Path $ProjectDir "scratch\temp_creds.json"
 $scratchDir = Join-Path $ProjectDir "scratch"

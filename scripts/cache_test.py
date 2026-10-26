@@ -6,6 +6,8 @@ import urllib.request
 import time
 import ssl
 
+from bridge_auth import bridge_headers
+
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
@@ -18,9 +20,9 @@ SIMULATE_URL = "http://localhost:8080/simulate"
 
 def http_post(url, payload, timeout=90):
     data = json.dumps(payload).encode('utf-8')
-    req = urllib.request.Request(url, data=data, headers={
+    req = urllib.request.Request(url, data=data, headers=bridge_headers({
         'Content-Type': 'application/json'
-    }, method='POST')
+    }), method='POST')
     start = time.time()
     try:
         with urllib.request.urlopen(req, timeout=timeout, context=ctx) as resp:
@@ -92,7 +94,7 @@ except Exception as e:
 print("")
 print("Step 4: Bump cache version via invalidation endpoint")
 try:
-    req = urllib.request.Request("http://localhost:8080/cache/invalidate", method='POST')
+    req = urllib.request.Request("http://localhost:8080/cache/invalidate", headers=bridge_headers(), method='POST')
     with urllib.request.urlopen(req, timeout=5, context=ctx) as resp:
         inv_info = json.loads(resp.read().decode('utf-8'))
         print("Invalidation: " + json.dumps(inv_info, ensure_ascii=False))
