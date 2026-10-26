@@ -46,6 +46,20 @@ All six items above are fixed and deployed to the local stack (backup: `backups/
 | 1.6 | `node_modules` for the WhatsApp bridge is committed (2,892 files). | `infra/whatsapp/node_modules` | `git rm -r --cached`, add to `.gitignore`; build installs from `package-lock.json` with `npm ci`. |
 | 1.7 | Hardcoded LID mapping in source (`jidMap = { "127182672252935": … }`) and Saudi default phone `+966500000000` in `/simulate`. | `server.js:167, 740` | Remove; load only from `jid_cache.json`; require phone in simulate or use an obviously synthetic test number. |
 
+### Phase 1 status — branch `fix/p1-security` (2026-10-26)
+
+Done and verified on the local stack: 1.1 (cache keyed per sender; live check: same text from a second sender no longer hits the cache), 1.2 + 1.3 (DB-backed sessions with `admin_users.token_version`, migration 005; forced change returns 403 `password_change_required` on every route except change-password; password change and logout revoke tokens; 5 failures per username+IP → 429 for 15 min; 8 h token TTL via `DASHBOARD_JWT_TTL_SECONDS`), 1.4, 1.5 (widened: see below), 1.6, 1.7.
+
+Found while doing it:
+- **Password change never worked**: `admin_users` predates migration 002 on the live DB, so `updated_at` was missing and every change-password call returned 500. Migration 005 adds it idempotently.
+- **Stored XSS via WhatsApp display name**: conversation rows rendered `customer_name` raw, and the tickets table's quick-respond button could be broken out of with a `"` in the name. All API strings rendered via `innerHTML` are now escaped (`escapeHtml`, `jsArg` for inline handlers); verified in the browser with a hostile name.
+- Login screen listed the seeded account names (removed); unknown usernames now take as long as wrong passwords.
+
+Still open from Phase 1:
+- **Lifecycle double-logging** (see Phase 0 status) — needs the 05 logger / 02 session changes before `WHATSAPP_LIFECYCLE_API` is enabled.
+- **n8n webhooks are unauthenticated** (`customer-service`, `agent-response`, `agent-manage`, `kb-admin`, `csat-submit`, `analytics-report`). They bind to 127.0.0.1, but anything on the Docker network or host can message customers via `agent-response`. Add header auth (n8n credential) and send it from the dashboard and bridge.
+- Tokens still live in `localStorage`; moving to an HttpOnly cookie needs CSRF protection and is worth doing with the router split in Phase 4.
+
 ## Phase 2 — Reliability & correctness (P2)
 
 | # | Issue | Location | Fix |
