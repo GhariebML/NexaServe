@@ -329,10 +329,10 @@ def _n8n_api_request(endpoint: str, method: str = "GET", payload: Optional[Dict[
 
 def _n8n_webhook_post(url: str, payload: Dict[str, Any], timeout: float = 60.0) -> Tuple[int, Any, Optional[str], float]:
     target_url = _resolve_n8n_url(url)
+    # Webhooks must not receive the n8n API key: it would be stored in execution data.
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "X-N8N-API-KEY": N8N_API_KEY # Added API key for webhook calls
     }
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(target_url, data=data, headers=headers, method="POST")
