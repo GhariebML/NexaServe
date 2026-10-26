@@ -29,6 +29,16 @@ const I18N = {
     lbl_password: "Password",
     btn_login: "Authenticate Session",
     btn_logout: "Logout",
+    btn_change_password: "Password",
+    pw_title: "Change Password",
+    pw_forced_note: "Your account requires a new password before you can continue.",
+    pw_current: "Current password",
+    pw_new: "New password (at least 12 characters)",
+    pw_confirm: "Confirm new password",
+    pw_submit: "Update Password",
+    pw_cancel: "Cancel",
+    pw_mismatch: "The new passwords do not match.",
+    pw_too_short: "The new password must be at least 12 characters.",
     nav_executive: "Executive KPIs",
     nav_customers: "Customers & Students",
     nav_conversations: "Conversations",
@@ -140,6 +150,16 @@ const I18N = {
     lbl_password: "كلمة المرور",
     btn_login: "تسجيل الدخول للنظام",
     btn_logout: "خروج",
+    btn_change_password: "كلمة المرور",
+    pw_title: "تغيير كلمة المرور",
+    pw_forced_note: "يتطلب حسابك تعيين كلمة مرور جديدة قبل المتابعة.",
+    pw_current: "كلمة المرور الحالية",
+    pw_new: "كلمة المرور الجديدة (12 حرفاً على الأقل)",
+    pw_confirm: "تأكيد كلمة المرور الجديدة",
+    pw_submit: "تحديث كلمة المرور",
+    pw_cancel: "إلغاء",
+    pw_mismatch: "كلمتا المرور الجديدتان غير متطابقتين.",
+    pw_too_short: "يجب ألا تقل كلمة المرور الجديدة عن 12 حرفاً.",
     nav_executive: "المؤشرات التنفيذية",
     nav_customers: "العملاء والطلاب",
     nav_conversations: "المحادثات المباشرة",
@@ -252,9 +272,16 @@ function escapeHtml(value) {
   }[char]));
 }
 
+// Encodes a value as a JS string literal that is safe inside a double-quoted inline handler attribute.
+function jsArg(value) {
+  return escapeHtml(JSON.stringify(String(value ?? '')));
+}
+
 function formatMetric(value, suffix = '') {
   return value === null || value === undefined ? 'N/A' : `${Number(value).toLocaleString()}${suffix}`;
 }
+
+const PASSWORD_CHANGE_REQUIRED = 'password_change_required';
 
 // API Fetch Helper with Bearer Token
 async function apiRequest(endpoint, options = {}) {
@@ -266,12 +293,16 @@ async function apiRequest(endpoint, options = {}) {
 
   const res = await fetch(endpoint, options);
   if (res.status === 401) {
-    logout();
+    clearSession();
     throw new Error('Session expired or unauthorized');
   }
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
     const detail = errorData.detail;
+    if (res.status === 403 && detail === PASSWORD_CHANGE_REQUIRED) {
+      showPasswordModal(true);
+      throw new Error(I18N[STATE.currentLang].pw_forced_note);
+    }
     let errMsg;
     if (Array.isArray(detail)) {
       // Pydantic validation error format
@@ -290,13 +321,86 @@ async function apiRequest(endpoint, options = {}) {
 document.addEventListener('DOMContentLoaded', () => {
   applyLanguage(STATE.currentLang);
   setupAuthForm();
+  setupPasswordForm();
 
   if (STATE.token && STATE.user) {
-    showAppShell();
+    enterSession();
   } else {
     showLoginModal();
   }
 });
+
+function storeSession(data) {
+  STATE.token = data.access_token;
+  STATE.user = data.user;
+  localStorage.setItem('nexaserve_jwt_token', data.access_token);
+  localStorage.setItem('nexaserve_user', JSON.stringify(data.user));
+}
+
+// Accounts flagged for a forced password change see only the password screen.
+function enterSession() {
+  if (STATE.user && STATE.user.must_change_password) {
+    showPasswordModal(true);
+  } else {
+    showAppShell();
+  }
+}
+
+function showPasswordModal(forced) {
+  const modal = document.getElementById('password-modal');
+  document.getElementById('password-form').reset();
+  document.getElementById('password-error').style.display = 'none';
+  document.getElementById('password-forced-note').style.display = forced ? 'block' : 'none';
+  document.getElementById('password-cancel').style.display = forced ? 'none' : 'block';
+  document.getElementById('password-signout').style.display = forced ? 'block' : 'none';
+  modal.dataset.forced = forced ? 'true' : 'false';
+  document.getElementById('login-modal').style.display = 'none';
+  if (forced) document.getElementById('app-shell').style.display = 'none';
+  modal.style.display = 'flex';
+  document.getElementById('pw-current').focus();
+}
+
+function hidePasswordModal() {
+  document.getElementById('password-modal').style.display = 'none';
+}
+
+function setupPasswordForm() {
+  const form = document.getElementById('password-form');
+  document.getElementById('password-cancel').addEventListener('click', hidePasswordModal);
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const t = I18N[STATE.currentLang];
+    const errBox = document.getElementById('password-error');
+    errBox.style.display = 'none';
+    const oldPassword = document.getElementById('pw-current').value;
+    const newPassword = document.getElementById('pw-new').value;
+    const confirmPassword = document.getElementById('pw-confirm').value;
+    const showError = (message) => { errBox.textContent = message; errBox.style.display = 'block'; };
+    if (newPassword.length < 12) return showError(t.pw_too_short);
+    if (newPassword !== confirmPassword) return showError(t.pw_mismatch);
+
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${STATE.token}` },
+        body: JSON.stringify({ old_password: oldPassword, new_password: newPassword })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        clearSession();
+        return;
+      }
+      if (!res.ok) throw new Error(data.detail || `Request failed with status ${res.status}`);
+      // The server revoked the previous token; continue with the one it issued.
+      const wasForced = document.getElementById('password-modal').dataset.forced === 'true';
+      storeSession(data);
+      hidePasswordModal();
+      if (wasForced) showAppShell();
+    } catch (err) {
+      showError(err.message);
+    }
+  });
+}
 
 function applyLanguage(lang) {
   STATE.currentLang = lang;
@@ -342,15 +446,11 @@ function setupAuthForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.detail || 'Login failed');
 
-      STATE.token = data.access_token;
-      STATE.user = data.user;
-      localStorage.setItem('nexaserve_jwt_token', data.access_token);
-      localStorage.setItem('nexaserve_user', JSON.stringify(data.user));
-
-      showAppShell();
+      storeSession(data);
+      enterSession();
     } catch (err) {
       errBox.innerText = err.message;
       errBox.style.display = 'block';
@@ -373,12 +473,21 @@ function showAppShell() {
   switchView('executive');
 }
 
-function logout() {
+function clearSession() {
   STATE.token = null;
   STATE.user = null;
   localStorage.removeItem('nexaserve_jwt_token');
   localStorage.removeItem('nexaserve_user');
+  hidePasswordModal();
   showLoginModal();
+}
+
+function logout() {
+  // Revoke server-side too, so a copied token stops working; sign out locally even if this fails.
+  if (STATE.token) {
+    fetch('/api/auth/logout', { method: 'POST', headers: { Authorization: `Bearer ${STATE.token}` } }).catch(() => {});
+  }
+  clearSession();
 }
 
 function switchView(viewName) {
@@ -458,11 +567,14 @@ async function exportCurrentReport() {
       headers: STATE.token ? { Authorization: `Bearer ${STATE.token}` } : {}
     });
     if (response.status === 401) {
-      logout();
+      clearSession();
       throw new Error('Session expired or unauthorized');
     }
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
+      if (response.status === 403 && error.detail === PASSWORD_CHANGE_REQUIRED) {
+        showPasswordModal(true);
+      }
       throw new Error(error.detail || t.export_error);
     }
     const blob = await response.blob();
@@ -608,7 +720,7 @@ async function loadExecutiveKPIs() {
       </div>
     `;
   } catch (err) {
-    container.innerHTML = `<div class="empty-state" style="color:var(--accent-rose);">Failed to load KPIs: ${err.message}</div>`;
+    container.innerHTML = `<div class="empty-state" style="color:var(--accent-rose);">Failed to load KPIs: ${escapeHtml(err.message)}</div>`;
   }
 }
 
@@ -638,13 +750,13 @@ async function loadCustomers() {
       <tr>
         <td style="font-family:monospace; font-size:0.75rem; color:var(--text-muted);">${c.id.substring(0,8)}...</td>
         <td><button class="btn-page" onclick="openCustomerProfile('${c.id}')" style="font-weight:600;">${escapeHtml(c.full_name)}</button></td>
-        <td><code>${c.phone_masked || 'N/A'}</code></td>
-        <td><span class="badge ${c.program === 'DEPI' ? 'badge-depi' : 'badge-digilians'}">${c.program}</span></td>
+        <td><code>${escapeHtml(c.phone_masked || 'N/A')}</code></td>
+        <td><span class="badge ${c.program === 'DEPI' ? 'badge-depi' : 'badge-digilians'}">${escapeHtml(c.program)}</span></td>
         <td>${c.created_at ? new Date(c.created_at).toLocaleDateString() : 'N/A'}</td>
         <td>${c.last_interaction ? new Date(c.last_interaction).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'N/A'}</td>
         <td>${c.conversation_count}</td>
         <td>${c.open_tickets > 0 ? `<span style="color:#F87171; font-weight:700;">${c.open_tickets}</span>` : '0'}</td>
-        <td><span class="badge ${c.customer_status === 'Active' ? 'badge-resolved' : 'badge-pending'}">${c.customer_status}</span></td>
+        <td><span class="badge ${c.customer_status === 'Active' ? 'badge-resolved' : 'badge-pending'}">${escapeHtml(c.customer_status)}</span></td>
       </tr>
     `).join('');
 
@@ -653,7 +765,7 @@ async function loadCustomers() {
       loadCustomers();
     });
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="9" class="empty-state" style="color:var(--accent-rose);">${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="empty-state" style="color:var(--accent-rose);">${escapeHtml(err.message)}</td></tr>`;
   }
 }
 
@@ -686,12 +798,12 @@ async function loadConversations() {
     tbody.innerHTML = data.items.map(c => `
       <tr>
         <td style="font-family:monospace; font-size:0.75rem; color:var(--text-muted);">${c.id.substring(0,8)}...</td>
-        <td style="font-weight:600;">${c.customer_name}</td>
-        <td><span class="badge ${c.program === 'DEPI' ? 'badge-depi' : 'badge-digilians'}">${c.program}</span></td>
-        <td><span class="badge badge-normal">${c.channel}</span></td>
-        <td><code>${c.intent}</code></td>
+        <td style="font-weight:600;">${escapeHtml(c.customer_name)}</td>
+        <td><span class="badge ${c.program === 'DEPI' ? 'badge-depi' : 'badge-digilians'}">${escapeHtml(c.program)}</span></td>
+        <td><span class="badge badge-normal">${escapeHtml(c.channel)}</span></td>
+        <td><code>${escapeHtml(c.intent)}</code></td>
         <td>${Math.round(c.avg_confidence * 100)}%</td>
-        <td><span class="badge ${c.status === 'active' ? 'badge-resolved' : 'badge-pending'}">${c.status}</span></td>
+        <td><span class="badge ${c.status === 'active' ? 'badge-resolved' : 'badge-pending'}">${escapeHtml(c.status)}</span></td>
         <td>${c.created_at ? new Date(c.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : 'N/A'}</td>
         <td>
           <button class="btn-page" onclick="openConversationDetail('${c.id}')">View</button>
@@ -704,7 +816,7 @@ async function loadConversations() {
       loadConversations();
     });
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="9" class="empty-state" style="color:var(--accent-rose);">${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="empty-state" style="color:var(--accent-rose);">${escapeHtml(err.message)}</td></tr>`;
   }
 }
 
@@ -819,7 +931,6 @@ async function loadTickets() {
       if (t.sla_status === 'BREACHED') slaClass = 'badge-open';
       else if (t.sla_status === 'AT_RISK') slaClass = 'badge-pending';
 
-      const safeCust = (t.customer_name || 'Customer').replace(/'/g, "\\'");
       const displayTitle = t.title || t.reason || 'Support Request';
       const truncatedTitle = displayTitle.length > 45 ? displayTitle.substring(0, 42) + '...' : displayTitle;
 
@@ -827,27 +938,27 @@ async function loadTickets() {
         <tr>
           <td>
             <a href="javascript:void(0)" onclick="openTicketDetailsModal('${t.id}')" style="color:#60A5FA; font-weight:700; text-decoration:none;">
-              ${t.ticket_number}
+              ${escapeHtml(t.ticket_number)}
             </a>
           </td>
           <td>
             <div style="font-weight:600;">${escapeHtml(t.customer_name || 'Unknown')}</div>
             <div style="font-size:0.75rem; color:var(--text-muted);">${escapeHtml(truncatedTitle)}</div>
           </td>
-          <td><span class="badge ${t.program === 'DEPI' ? 'badge-depi' : 'badge-digilians'}">${t.program || 'DEPI'}</span></td>
-          <td><span class="badge badge-normal">${t.source_channel || t.channel || 'whatsapp'}</span></td>
-          <td><span class="badge badge-${t.priority}">${t.priority}</span></td>
-          <td><span class="badge badge-${t.status}">${t.status}</span></td>
+          <td><span class="badge ${t.program === 'DEPI' ? 'badge-depi' : 'badge-digilians'}">${escapeHtml(t.program || 'DEPI')}</span></td>
+          <td><span class="badge badge-normal">${escapeHtml(t.source_channel || t.channel || 'whatsapp')}</span></td>
+          <td><span class="badge badge-${escapeHtml(t.priority)}">${escapeHtml(t.priority)}</span></td>
+          <td><span class="badge badge-${escapeHtml(t.status)}">${escapeHtml(t.status)}</span></td>
           <td>${escapeHtml(t.assigned_agent || 'Unassigned')}</td>
           <td>${t.sla_deadline ? new Date(t.sla_deadline).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) : 'None'}</td>
-          <td><span class="badge ${slaClass}">${t.sla_status || 'ON_TRACK'}</span></td>
+          <td><span class="badge ${slaClass}">${escapeHtml(t.sla_status || 'ON_TRACK')}</span></td>
           <td>${t.created_at ? new Date(t.created_at).toLocaleDateString() : 'N/A'}</td>
           <td>
             <div style="display:flex; gap:6px;">
               <button class="btn-icon" style="font-size:0.75rem; padding:4px 8px; background:rgba(59,130,246,0.2); color:#60A5FA; border:1px solid rgba(59,130,246,0.4); border-radius:var(--radius-sm); cursor:pointer;" onclick="openTicketDetailsModal('${t.id}')" title="Inspect Full Lifecycle & Timeline">
                 🔍 Details
               </button>
-              <button class="btn-icon" style="font-size:0.75rem; padding:4px 8px; background:var(--primary); color:#fff; border-radius:var(--radius-sm); border:none; cursor:pointer;" onclick="openTicketModal('${t.id}', '${t.ticket_number}', '${safeCust}')" title="Quick Respond / Resolve">
+              <button class="btn-icon" style="font-size:0.75rem; padding:4px 8px; background:var(--primary); color:#fff; border-radius:var(--radius-sm); border:none; cursor:pointer;" onclick="openTicketModal(${jsArg(t.id)}, ${jsArg(t.ticket_number)}, ${jsArg(t.customer_name || 'Customer')})" title="Quick Respond / Resolve">
                 💬
               </button>
             </div>
@@ -861,7 +972,7 @@ async function loadTickets() {
       loadTickets();
     });
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="10" class="empty-state" style="color:var(--accent-rose);">${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" class="empty-state" style="color:var(--accent-rose);">${escapeHtml(err.message)}</td></tr>`;
   }
 }
 
@@ -917,7 +1028,7 @@ async function loadRAGMetrics() {
       }
     });
   } catch (err) {
-    kpiGrid.innerHTML = `<div class="empty-state" style="color:var(--accent-rose);">${err.message}</div>`;
+    kpiGrid.innerHTML = `<div class="empty-state" style="color:var(--accent-rose);">${escapeHtml(err.message)}</div>`;
   }
 }
 
@@ -940,7 +1051,7 @@ async function loadKBMetrics() {
     const progBox = document.getElementById('kb-prog-list');
     progBox.innerHTML = data.documents_by_program.map(p => `
       <div style="display:flex; justify-content:space-between; padding: 8px 12px; background:var(--bg-subtle); border-radius:var(--radius-sm);">
-        <span style="font-weight:600;">${p.program}</span>
+        <span style="font-weight:600;">${escapeHtml(p.program)}</span>
         <span class="badge badge-normal">${p.count} docs</span>
       </div>
     `).join('');
@@ -948,12 +1059,12 @@ async function loadKBMetrics() {
     const srcBox = document.getElementById('kb-source-list');
     srcBox.innerHTML = data.documents_by_source.map(s => `
       <div style="display:flex; justify-content:space-between; padding: 8px 12px; background:var(--bg-subtle); border-radius:var(--radius-sm);">
-        <span style="font-size:0.85rem; max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${s.source}</span>
+        <span style="font-size:0.85rem; max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(s.source)}</span>
         <span class="badge badge-normal">${s.count} docs</span>
       </div>
     `).join('');
   } catch (err) {
-    kpiGrid.innerHTML = `<div class="empty-state" style="color:var(--accent-rose);">${err.message}</div>`;
+    kpiGrid.innerHTML = `<div class="empty-state" style="color:var(--accent-rose);">${escapeHtml(err.message)}</div>`;
   }
 }
 
@@ -972,10 +1083,10 @@ async function loadSystemHealth() {
     grid.innerHTML = data.services.map(s => `
       <div class="health-card">
         <div style="display:flex; justify-content:space-between; align-items:center;">
-          <span style="font-weight:700; font-size:0.95rem;">${s.name}</span>
+          <span style="font-weight:700; font-size:0.95rem;">${escapeHtml(s.name)}</span>
           <div style="display:flex; align-items:center; gap:6px;">
-            <span class="status-dot ${s.status.toLowerCase()}"></span>
-            <span style="font-size:0.75rem; font-weight:700;">${s.status}</span>
+            <span class="status-dot ${escapeHtml(s.status.toLowerCase())}"></span>
+            <span style="font-size:0.75rem; font-weight:700;">${escapeHtml(s.status)}</span>
           </div>
         </div>
         <div style="font-size:0.8rem; color:var(--text-muted); display:flex; justify-content:space-between; margin-top:8px;">
@@ -985,11 +1096,11 @@ async function loadSystemHealth() {
         <div style="font-size:0.7rem; color:var(--text-subtle);">
           Last check: ${new Date(s.last_check).toLocaleTimeString()}
         </div>
-        ${s.error ? `<div style="font-size:0.75rem; color:#F87171; margin-top:6px;">${s.error}</div>` : ''}
+        ${s.error ? `<div style="font-size:0.75rem; color:#F87171; margin-top:6px;">${escapeHtml(s.error)}</div>` : ''}
       </div>
     `).join('');
   } catch (err) {
-    grid.innerHTML = `<div class="empty-state" style="color:var(--accent-rose);">${err.message}</div>`;
+    grid.innerHTML = `<div class="empty-state" style="color:var(--accent-rose);">${escapeHtml(err.message)}</div>`;
   }
 }
 
@@ -1004,17 +1115,17 @@ async function loadRecentActivity() {
 
     tbody.innerHTML = data.items.map(a => `
       <tr>
-        <td style="font-family:monospace; color:var(--text-muted);">${a.id}</td>
-        <td><code>${a.event_type}</code></td>
-        <td style="font-size:0.8rem;">${a.workflow_name}</td>
-        <td><span class="badge badge-normal">${a.channel || 'system'}</span></td>
-        <td style="max-width:320px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${a.description}</td>
+        <td style="font-family:monospace; color:var(--text-muted);">${escapeHtml(a.id)}</td>
+        <td><code>${escapeHtml(a.event_type)}</code></td>
+        <td style="font-size:0.8rem;">${escapeHtml(a.workflow_name)}</td>
+        <td><span class="badge badge-normal">${escapeHtml(a.channel || 'system')}</span></td>
+        <td style="max-width:320px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(a.description)}</td>
         <td>${a.latency_ms ? a.latency_ms + ' ms' : '-'}</td>
         <td style="font-size:0.75rem; color:var(--text-muted);">${a.created_at ? new Date(a.created_at).toLocaleTimeString() : 'N/A'}</td>
       </tr>
     `).join('');
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="7" class="empty-state" style="color:var(--accent-rose);">${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-state" style="color:var(--accent-rose);">${escapeHtml(err.message)}</td></tr>`;
   }
 }
 
@@ -1117,7 +1228,7 @@ async function openConversationDetail(convId, page = 1) {
       <div style="background:var(--bg-subtle); padding:16px; border-radius:var(--radius-md); display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px;">
         <div>
           <div style="font-weight:700; font-size:1.05rem;">${escapeHtml(data.customer.full_name)}</div>
-          <div style="font-size:0.8rem; color:var(--text-muted);">Phone: <code>${data.customer.phone_masked || 'N/A'}</code> | Email: <code>${data.customer.email_masked || 'N/A'}</code></div>
+          <div style="font-size:0.8rem; color:var(--text-muted);">Phone: <code>${escapeHtml(data.customer.phone_masked || 'N/A')}</code> | Email: <code>${escapeHtml(data.customer.email_masked || 'N/A')}</code></div>
         </div>
         <div style="display:flex; gap:8px;">
           <span class="badge ${data.customer.program === 'DEPI' ? 'badge-depi' : 'badge-digilians'}">${escapeHtml(data.customer.program)}</span>
@@ -1162,8 +1273,8 @@ async function openConversationDetail(convId, page = 1) {
                   <button class="btn-page" onclick="openTicketDetailsModal('${encodeURIComponent(t.ticket_number)}')">${escapeHtml(t.ticket_number)}</button> - <span style="font-size:0.8rem; color:var(--text-muted);">${escapeHtml(t.reason)}</span>
                 </div>
                 <div style="display:flex; gap:6px;">
-                  <span class="badge badge-${t.priority}">${t.priority}</span>
-                  <span class="badge badge-${t.status}">${t.status}</span>
+                  <span class="badge badge-${escapeHtml(t.priority)}">${escapeHtml(t.priority)}</span>
+                  <span class="badge badge-${escapeHtml(t.status)}">${escapeHtml(t.status)}</span>
                 </div>
               </div>
             `).join('')}
@@ -1172,7 +1283,7 @@ async function openConversationDetail(convId, page = 1) {
       </div>
     `;
   } catch (err) {
-    body.innerHTML = `<div class="empty-state" style="color:var(--accent-rose);">${err.message}</div>`;
+    body.innerHTML = `<div class="empty-state" style="color:var(--accent-rose);">${escapeHtml(err.message)}</div>`;
   }
 }
 
@@ -1241,19 +1352,19 @@ async function loadN8nData() {
     } else {
       wfTbody.innerHTML = wfData.items.map(wf => `
         <tr>
-          <td><code>${wf.id}</code></td>
-          <td style="font-weight:600;">${wf.name}</td>
+          <td><code>${escapeHtml(wf.id)}</code></td>
+          <td style="font-weight:600;">${escapeHtml(wf.name)}</td>
           <td><span class="badge">${wf.nodes_count} nodes</span></td>
-          <td>${(wf.tags && wf.tags.length) ? wf.tags.map(t => `<span class="badge" style="background:var(--bg-card-hover);">${t}</span>`).join(' ') : '<span style="color:var(--text-subtle);">None</span>'}</td>
+          <td>${(wf.tags && wf.tags.length) ? wf.tags.map(t => `<span class="badge" style="background:var(--bg-card-hover);">${escapeHtml(t)}</span>`).join(' ') : '<span style="color:var(--text-subtle);">None</span>'}</td>
           <td>${wf.updated_at ? new Date(wf.updated_at).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) : 'N/A'}</td>
           <td>
             <label class="switch">
-              <input type="checkbox" ${wf.active ? 'checked' : ''} onchange="toggleWorkflow('${wf.id}', ${wf.active})">
+              <input type="checkbox" ${wf.active ? 'checked' : ''} onchange="toggleWorkflow(${jsArg(wf.id)}, ${wf.active === true})">
               <span class="slider"></span>
             </label>
           </td>
           <td>
-            <a href="${wf.n8n_url}" target="_blank" class="btn-icon" style="text-decoration:none; padding:4px 8px; font-size:0.8rem; background:var(--bg-subtle);" title="Open in n8n">
+            <a href="${escapeHtml(wf.n8n_url)}" target="_blank" rel="noopener noreferrer" class="btn-icon" style="text-decoration:none; padding:4px 8px; font-size:0.8rem; background:var(--bg-subtle);" title="Open in n8n">
               ↗ Canvas
             </a>
           </td>
@@ -1273,28 +1384,28 @@ async function loadN8nData() {
 
         return `
           <tr>
-            <td><strong>#${ex.id}</strong></td>
-            <td><code>${ex.workflow_id || 'N/A'}</code></td>
-            <td><span class="badge">${ex.mode}</span></td>
-            <td><span class="badge ${stBadge}">${ex.status.toUpperCase()}</span></td>
+            <td><strong>#${escapeHtml(ex.id)}</strong></td>
+            <td><code>${escapeHtml(ex.workflow_id || 'N/A')}</code></td>
+            <td><span class="badge">${escapeHtml(ex.mode)}</span></td>
+            <td><span class="badge ${stBadge}">${escapeHtml(ex.status.toUpperCase())}</span></td>
             <td>${ex.started_at ? new Date(ex.started_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'}) : 'N/A'}</td>
             <td>${ex.duration_ms !== null ? ex.duration_ms + ' ms' : (ex.finished ? 'N/A' : 'Running...')}</td>
             <td>
-              ${ex.n8n_url ? `<a href="${ex.n8n_url}" target="_blank" class="btn-icon" style="text-decoration:none; padding:4px 8px; font-size:0.75rem; background:var(--primary); color:#fff; border-radius:var(--radius-sm);">Inspect ↗</a>` : '-'}
+              ${ex.n8n_url ? `<a href="${escapeHtml(ex.n8n_url)}" target="_blank" rel="noopener noreferrer" class="btn-icon" style="text-decoration:none; padding:4px 8px; font-size:0.75rem; background:var(--primary); color:#fff; border-radius:var(--radius-sm);">Inspect ↗</a>` : '-'}
             </td>
           </tr>
         `;
       }).join('');
     }
   } catch (err) {
-    kpiGrid.innerHTML = `<div class="empty-state" style="color:var(--accent-rose);">${err.message}</div>`;
+    kpiGrid.innerHTML = `<div class="empty-state" style="color:var(--accent-rose);">${escapeHtml(err.message)}</div>`;
   }
 }
 
 async function toggleWorkflow(workflowId, currentState) {
   const action = currentState ? 'deactivate' : 'activate';
   try {
-    await apiRequest(`/api/dashboard/n8n/workflows/${workflowId}/${action}`, { method: 'POST' });
+    await apiRequest(`/api/dashboard/n8n/workflows/${encodeURIComponent(workflowId)}/${action}`, { method: 'POST' });
     loadN8nData();
   } catch (err) {
     alert(`Failed to ${action} workflow: ${err.message}`);
@@ -1436,7 +1547,7 @@ async function handleSimSubmit(e) {
     const errBubble = document.createElement('div');
     errBubble.className = 'chat-bubble bot';
     errBubble.style.borderColor = 'var(--accent-rose)';
-    errBubble.innerHTML = `<span style="color:var(--accent-rose);">Error executing n8n gateway: ${err.message}</span>`;
+    errBubble.innerHTML = `<span style="color:var(--accent-rose);">Error executing n8n gateway: ${escapeHtml(err.message)}</span>`;
     container.appendChild(errBubble);
     latencyBadge.innerText = 'Failed';
     telemBadge.innerText = 'ERROR';
@@ -1645,7 +1756,7 @@ function renderTicketTimeline(messages, initialReason) {
     html += `
       <div style="max-width:85%; ${borderStyle} padding:10px 14px; border-radius:12px; margin-bottom:8px;">
         <div style="display:flex; justify-content:space-between; gap:12px; font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">
-          <strong>${senderLabel}</strong>
+          <strong>${escapeHtml(senderLabel)}</strong>
           <span>${timeStr}</span>
         </div>
         <div style="font-size:0.88rem; line-height:1.45; white-space:pre-wrap;">${escapeHtml(m.message || m.content || '')}</div>
@@ -1683,7 +1794,7 @@ function renderTicketEvents(events) {
         <span style="font-size:1.1rem;">${icon}</span>
         <div style="flex:1;">
           <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-muted);">
-            <strong style="color:var(--text-main); text-transform:uppercase;">${e.event_type.replace(/_/g, ' ')}</strong>
+            <strong style="color:var(--text-main); text-transform:uppercase;">${escapeHtml((e.event_type || '').replace(/_/g, ' '))}</strong>
             <span>${timeStr}</span>
           </div>
           <div style="font-size:0.8rem; color:var(--text-subtle); margin-top:2px;">by ${escapeHtml(actor)}</div>

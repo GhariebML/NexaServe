@@ -39,9 +39,36 @@
         <button type="submit" class="btn-primary" data-i18n="btn_login">Authenticate Session</button>
       </form>
 
-      <div style="font-size: 0.75rem; color: var(--text-subtle); text-align: center; border-top: 1px solid var(--border-color); padding-top: 12px;">
-        Role credentials seeded: <code>admin</code>, <code>agent</code>, <code>readonly</code>
+    </div>
+  </div>
+
+  <!-- CHANGE PASSWORD SCREEN (forced on first sign-in, or opened from the sidebar) -->
+  <div id="password-modal" class="login-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="password-title">
+    <div class="login-card">
+      <div>
+        <h2 id="password-title" style="font-size: 1.25rem; font-weight: 700;" data-i18n="pw_title">Change Password</h2>
+        <p id="password-forced-note" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;" data-i18n="pw_forced_note">Your account requires a new password before you can continue.</p>
       </div>
+
+      <div id="password-error" role="alert" style="display:none; padding: 10px; background: rgba(239, 68, 68, 0.15); border: 1px solid var(--accent-rose); border-radius: var(--radius-sm); color: #F87171; font-size: 0.8rem;"></div>
+
+      <form id="password-form" style="display: flex; flex-direction: column; gap: 16px;">
+        <div>
+          <label for="pw-current" style="display: block; font-size: 0.8rem; margin-bottom: 6px; color: var(--text-muted);" data-i18n="pw_current">Current password</label>
+          <input type="password" id="pw-current" required autocomplete="current-password" style="width: 100%;">
+        </div>
+        <div>
+          <label for="pw-new" style="display: block; font-size: 0.8rem; margin-bottom: 6px; color: var(--text-muted);" data-i18n="pw_new">New password (at least 12 characters)</label>
+          <input type="password" id="pw-new" required minlength="12" autocomplete="new-password" style="width: 100%;">
+        </div>
+        <div>
+          <label for="pw-confirm" style="display: block; font-size: 0.8rem; margin-bottom: 6px; color: var(--text-muted);" data-i18n="pw_confirm">Confirm new password</label>
+          <input type="password" id="pw-confirm" required minlength="12" autocomplete="new-password" style="width: 100%;">
+        </div>
+        <button type="submit" class="btn-primary" data-i18n="pw_submit">Update Password</button>
+        <button type="button" id="password-cancel" class="logout-btn" style="padding: 10px;" data-i18n="pw_cancel">Cancel</button>
+        <button type="button" id="password-signout" class="logout-btn" style="padding: 10px;" onclick="logout()" data-i18n="btn_logout">Logout</button>
+      </form>
     </div>
   </div>
 
@@ -76,6 +103,7 @@
           <span class="name" id="user-display-name">Admin User</span>
           <span class="role-badge" id="user-role-badge">ADMIN</span>
         </div>
+        <button class="logout-btn" onclick="showPasswordModal(false)" data-i18n="btn_change_password">Password</button>
         <button class="logout-btn" onclick="logout()" data-i18n="btn_logout">Logout</button>
       </div>
     </aside>
