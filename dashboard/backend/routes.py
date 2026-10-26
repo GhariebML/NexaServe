@@ -754,7 +754,17 @@ async def get_conversations(
             c.created_at,
             c.closed_at,
             (SELECT COUNT(*) FROM messages WHERE conversation_id = c.id) as message_count,
-            (SELECT AVG(confidence) FROM messages WHERE conversation_id = c.id AND confidence IS NOT NULL) as avg_confidence
+            (SELECT AVG(confidence) FROM messages WHERE conversation_id = c.id AND confidence IS NOT NULL) as avg_confidence,
+            (SELECT MAX(created_at) FROM messages WHERE conversation_id = c.id) as last_activity_at,
+            (SELECT COALESCE(json_agg(json_build_object(
+                'id', t.id,
+                'ticket_number', t.ticket_number,
+                'status', t.status,
+                'priority', t.priority,
+                'reason', t.reason,
+                'created_at', t.created_at
+            ) ORDER BY t.created_at DESC), '[]'::json)
+             FROM tickets t WHERE t.conversation_id = c.id) as tickets
         FROM conversations c
         JOIN customers cust ON c.customer_id = cust.id
         WHERE {where_sql}
@@ -823,8 +833,18 @@ async def get_conversations(
             "intent": r["current_intent"],
             "language": r["language"],
             "created_at": r["created_at"].isoformat() if r["created_at"] else None,
+            "last_activity_at": r["last_activity_at"].isoformat() if r.get("last_activity_at") else (r["created_at"].isoformat() if r.get("created_at") else None),
             "message_count": r["message_count"],
-            "avg_confidence": round(float(r["avg_confidence"]), 2) if r["avg_confidence"] else None
+            "avg_confidence": round(float(r["avg_confidence"]), 2) if r["avg_confidence"] else None,
+            "tickets": [{
+                "id": str(t["id"]),
+                "ticket_number": t["ticket_number"],
+                "status": t["status"],
+                "priority": t["priority"],
+                "reason": t.get("reason"),
+                "created_at": t["created_at"].isoformat() if isinstance(t.get("created_at"), datetime) else t.get("created_at")
+            } for t in (r.get("tickets") or [])],
+            "ticket_count": len(r.get("tickets") or [])
         } for r in rows],
         "metrics": {
             "total_conversations": summary_counts["total"] if summary_counts else 0,
@@ -951,6 +971,7 @@ async def get_tickets(
             t.ticket_number,
             COALESCE(t.title, t.reason) as title,
             t.customer_id,
+            t.conversation_id,
             c.full_name as customer_name,
             c.phone_number as customer_phone,
             COALESCE(c.metadata->>'program', 'UNKNOWN') as program,
@@ -986,6 +1007,7 @@ async def get_tickets(
             "ticket_number": r["ticket_number"],
             "title": r["title"],
             "customer_id": str(r["customer_id"]),
+            "conversation_id": str(r["conversation_id"]) if r.get("conversation_id") else None,
             "customer_name": r["customer_name"],
             "customer_phone_masked": mask_phone(r["customer_phone"], can_view_pii),
             "program": r["program"],
@@ -1079,6 +1101,7 @@ async def get_ticket_details(
         "id": str(ticket["id"]),
         "ticket_number": ticket["ticket_number"],
         "title": ticket["title"] or ticket["reason"][:60],
+        "conversation_id": str(ticket["conversation_id"]) if ticket.get("conversation_id") else None,
         "customer": {
             "id": str(ticket["customer_id"]),
             "full_name": ticket["customer_name"],
@@ -1827,6 +1850,7 @@ async def get_conversation_detail(
         WHERE conversation_id = %s AND sender_type IN ('customer', 'ai', 'agent')
     """, (conversation_uuid,))
     message_total = int(message_total_row["count"] if message_total_row else 0)
+
     messages = query_all("""
         SELECT 
             id, sender_type, content, intent, confidence, created_at, metadata,
@@ -1841,15 +1865,15 @@ async def get_conversation_detail(
         SELECT summary, unresolved_questions, topics
         FROM conversation_summaries
         WHERE conversation_id = %s
-    """, (conversation_id,))
+    """, (conversation_uuid,))
 
     tickets = query_all("""
         SELECT 
-            ticket_number, priority, status, reason, sla_due_at, assigned_agent, created_at
+            id, ticket_number, priority, status, reason, sla_due_at, assigned_agent, created_at
         FROM tickets
         WHERE conversation_id = %s
         ORDER BY created_at DESC
-    """, (conversation_id,))
+    """, (conversation_uuid,))
 
     # Sanitize message metadata to ensure system prompts or internal keys are never exposed
     safe_messages = []
@@ -1861,7 +1885,7 @@ async def get_conversation_detail(
             "rag_evidence": raw_meta.get("rag_evidence") or raw_meta.get("sources"),
             "delivery_status": m.get("delivery_status") or raw_meta.get("delivery_status"),
             "provider_message_id": m.get("provider_message_id") or raw_meta.get("provider_message_id"),
-            "delivery_updated_at": m["delivery_updated_at"].isoformat() if m.get("delivery_updated_at") else None
+            "delivery_updated_at": m["delivery_updated_at"].isoformat() if m.get("delivery_updated_at") else (raw_meta.get("delivery_updated_at") if isinstance(raw_meta.get("delivery_updated_at"), str) else None)
         }
         safe_messages.append({
             "id": str(m["id"]),
@@ -1898,6 +1922,7 @@ async def get_conversation_detail(
         "message_total": message_total,
         "message_pages": (message_total + limit - 1) // limit,
         "tickets": [{
+            "id": str(t["id"]),
             "ticket_number": t["ticket_number"],
             "priority": t["priority"],
             "status": t["status"],
@@ -1905,6 +1930,43 @@ async def get_conversation_detail(
             "assigned_agent": t["assigned_agent"],
             "sla_deadline": t["sla_due_at"].isoformat() if t["sla_due_at"] else None,
             "created_at": t["created_at"].isoformat() if t["created_at"] else None
+        } for t in tickets]
+    }
+
+@router.get("/conversations/{conversation_id}/tickets")
+async def get_conversation_tickets(
+    conversation_id: str,
+    user: Dict[str, Any] = Depends(get_current_user)
+):
+    try:
+        conversation_uuid = str(UUID(conversation_id))
+    except (ValueError, TypeError, AttributeError):
+        raise HTTPException(status_code=404, detail="Conversation not found")
+        
+    tickets = query_all("""
+        SELECT 
+            t.id, t.ticket_number, t.title, t.priority, t.status, t.reason,
+            t.assigned_agent, t.assigned_team, t.sla_due_at, t.created_at, t.updated_at
+        FROM tickets t
+        WHERE t.conversation_id = %s
+        ORDER BY t.created_at DESC
+    """, (conversation_uuid,))
+    
+    return {
+        "conversation_id": conversation_id,
+        "total": len(tickets),
+        "items": [{
+            "id": str(t["id"]),
+            "ticket_number": t["ticket_number"],
+            "title": t["title"] or t["reason"][:60],
+            "priority": t["priority"],
+            "status": t["status"],
+            "reason": t["reason"],
+            "assigned_agent": t["assigned_agent"],
+            "assigned_team": t["assigned_team"],
+            "sla_deadline": t["sla_due_at"].isoformat() if t["sla_due_at"] else None,
+            "created_at": t["created_at"].isoformat() if t["created_at"] else None,
+            "updated_at": t["updated_at"].isoformat() if t["updated_at"] else None
         } for t in tickets]
     }
 
