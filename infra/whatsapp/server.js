@@ -143,25 +143,34 @@ function isRecentlyDispatched(key) {
   return false;
 }
 
-// Response cache for AI generation (TTL: 60s) — prevents duplicate Ollama calls
+// Response cache for AI generation (TTL: 60s) — absorbs a customer re-sending the same message.
+// Keys are scoped to the sender: replies can carry personal context (tickets, history, escalations),
+// so one customer must never receive a reply generated for another.
 // Cache keys include KB_CACHE_VERSION so KB updates invalidate old entries
+const RESPONSE_CACHE_TTL_MS = 60000;
 let kbCacheVersion = parseInt(process.env.KB_CACHE_VERSION || '1', 10);
 const responseCache = new Map();
-function getCacheKey(msg) {
-  return kbCacheVersion + ':' + (msg || '').trim().toLowerCase().replace(/\s+/g, ' ');
+function getCacheKey(senderId, msg) {
+  const sender = String(senderId || '').trim().toLowerCase();
+  return kbCacheVersion + ':' + sender + ':' + (msg || '').trim().toLowerCase().replace(/\s+/g, ' ');
 }
-function getCachedReply(msg) {
-  const key = getCacheKey(msg);
+function getCachedReply(senderId, msg) {
+  if (!senderId) return null;
+  const key = getCacheKey(senderId, msg);
   if (responseCache.has(key)) {
     const entry = responseCache.get(key);
-    if (Date.now() - entry.timestamp < 60000) return entry.reply;
+    if (Date.now() - entry.timestamp < RESPONSE_CACHE_TTL_MS) return entry.reply;
     responseCache.delete(key);
   }
   return null;
 }
-function setCachedReply(msg, reply) {
-  const key = getCacheKey(msg);
-  responseCache.set(key, { reply, timestamp: Date.now() });
+function setCachedReply(senderId, msg, reply) {
+  if (!senderId) return;
+  const now = Date.now();
+  for (const [k, entry] of responseCache.entries()) {
+    if (now - entry.timestamp >= RESPONSE_CACHE_TTL_MS) responseCache.delete(k);
+  }
+  responseCache.set(getCacheKey(senderId, msg), { reply, timestamp: now });
 }
 function invalidateCache() {
   kbCacheVersion++;
@@ -180,7 +189,8 @@ function replyBilingual(ar, en, lang) {
 }
 
 const JID_CACHE_FILE = path.join(AUTH_DIR, 'jid_cache.json');
-let jidMap = { "127182672252935": "127182672252935@lid" };
+// Learned from inbound traffic and persisted next to the auth state; no contacts are hardcoded.
+let jidMap = {};
 try {
   if (fs.existsSync(JID_CACHE_FILE)) {
     jidMap = { ...jidMap, ...JSON.parse(fs.readFileSync(JID_CACHE_FILE, 'utf8')) };
@@ -459,7 +469,7 @@ async function initWhatsApp() {
         // 1. Attempt dispatch to n8n workflow
         try {
           // Check response cache first
-          const cached = getCachedReply(text);
+          const cached = getCachedReply(senderJid, text);
           if (cached) {
             replyText = cached;
             replySource = 'cache';
@@ -483,7 +493,7 @@ async function initWhatsApp() {
             // Extract response string if returned synchronously from n8n webhook
             if (replyText) {
               replySource = 'n8n';
-              setCachedReply(text, replyText);
+              setCachedReply(senderJid, text, replyText);
             } else {
               console.warn(`[WhatsApp Bridge] n8n did not return a successful customer reply (HTTP ${response.status}).`);
             }
@@ -783,10 +793,11 @@ app.post('/simulate', requireBridgeToken(), async (req, res) => {
   try {
     const message = req.body.customer_message || req.body.message || '';
     const name = req.body.full_name || req.body.name || 'Citizen';
-    const phone = req.body.phone_number || req.body.phone || '+966500000000';
+    // Synthetic identity for anonymous simulations (not a real subscriber number).
+    const phone = req.body.phone_number || req.body.phone || '+200000000000';
 
     // Check cache first
-    const cached = getCachedReply(message);
+    const cached = getCachedReply(phone, message);
     if (cached) {
       return res.json({
         success: true,
@@ -825,7 +836,7 @@ app.post('/simulate', requireBridgeToken(), async (req, res) => {
         replyText = extractN8nReply(n8nResp.status, json);
         if (replyText) {
           source = 'n8n';
-          setCachedReply(message, replyText);
+          setCachedReply(phone, message, replyText);
         }
         console.log(`[Simulate -> n8n] Status ${n8nResp.status} (${elapsed}ms)`);
       } else {
