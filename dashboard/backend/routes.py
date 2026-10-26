@@ -53,6 +53,8 @@ class WhatsAppOutboundEvent(BaseModel):
     recipient: str
     text: str
     reply_to_provider_message_id: Optional[str] = None
+    # Row already written by the workflow that produced the message (e.g. an agent reply from 04D).
+    message_id: Optional[str] = None
 
 
 class WhatsAppDeliveryEvent(BaseModel):
@@ -185,16 +187,69 @@ async def persist_whatsapp_outbound(
     event: WhatsAppOutboundEvent,
     x_nexaserve_webhook_token: Optional[str] = Header(None, alias="X-NexaServe-Webhook-Token"),
 ):
-    """Create or return the single queued response associated with an inbound provider event."""
+    """Create, claim, or return the single queued record for an outbound WhatsApp message.
+
+    The workflow that produced a message stores it once (05 for bot replies, 04D for agent
+    replies); the bridge then claims that row here instead of inserting a copy. A row that was
+    already claimed or sent is reported as a duplicate so the bridge never sends it twice.
+    """
     _require_whatsapp_ingest_token(x_nexaserve_webhook_token)
     recipient = event.recipient.strip()
     body = event.text.strip()
     if not recipient or not body or len(body) > 10000:
         raise HTTPException(status_code=422, detail="Invalid WhatsApp outbound message")
+    if event.message_id:
+        try:
+            prerecorded_id = UUID(event.message_id)
+        except ValueError:
+            raise HTTPException(status_code=422, detail="Invalid WhatsApp outbound message")
     phone = _normalize_whatsapp_number(recipient)
+
+    def recipient_matches(cur, customer_id) -> bool:
+        cur.execute("SELECT phone_number, whatsapp_id FROM customers WHERE id = %s", (customer_id,))
+        identity = cur.fetchone()
+        return bool(identity and (
+            identity[1] == recipient or
+            (phone and _normalize_whatsapp_number(identity[0]) == phone)
+        ))
+
+    def claim(cur, row) -> Dict[str, Any]:
+        """row = (id, customer_id, conversation_id, provider_message_id, delivery_status, claimed)."""
+        message_id, customer_id, conversation_id, provider_message_id, delivery_status, claimed = row
+        if provider_message_id or claimed:
+            return {"message_id": str(message_id), "provider_message_id": provider_message_id,
+                    "delivery_status": delivery_status, "duplicate": True}
+        cur.execute("""
+            UPDATE messages
+            SET provider = 'whatsapp', content = %s, delivery_status = 'queued',
+                delivery_updated_at = CURRENT_TIMESTAMP,
+                metadata = COALESCE(metadata, '{}'::jsonb)
+                           || jsonb_build_object('dispatch_claimed_at', CURRENT_TIMESTAMP::text)
+            WHERE id = %s
+        """, (body, message_id))
+        return {"message_id": str(message_id), "customer_id": str(customer_id),
+                "conversation_id": str(conversation_id), "delivery_status": "queued", "duplicate": False}
+
+    claim_columns = """id, customer_id, conversation_id, provider_message_id, delivery_status,
+                       COALESCE(metadata ? 'dispatch_claimed_at', FALSE)"""
+    lock_key = (f"wa-claim:{event.message_id}" if event.message_id
+                else f"wa-reply:{event.reply_to_provider_message_id or recipient}")
     with get_db() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (f"wa-reply:{event.reply_to_provider_message_id or recipient}",))
+            cur.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (lock_key,))
+            if event.message_id:
+                cur.execute(f"""
+                    SELECT {claim_columns} FROM messages
+                    WHERE id = %s AND sender_type IN ('ai', 'agent')
+                """, (str(prerecorded_id),))
+                prerecorded = cur.fetchone()
+                if not prerecorded:
+                    raise HTTPException(status_code=404, detail="WhatsApp outbound message not found")
+                if not recipient_matches(cur, prerecorded[1]):
+                    raise HTTPException(status_code=409, detail="Outbound recipient does not match the message's customer")
+                result = claim(cur, prerecorded)
+                conn.commit()
+                return result
             if event.reply_to_provider_message_id:
                 cur.execute("""
                     SELECT customer_id, conversation_id FROM messages
@@ -205,24 +260,18 @@ async def persist_whatsapp_outbound(
                 if not inbound:
                     raise HTTPException(status_code=404, detail="WhatsApp inbound message not found")
                 customer_id, conversation_id = inbound
-                cur.execute("SELECT phone_number, whatsapp_id FROM customers WHERE id = %s", (customer_id,))
-                identity = cur.fetchone()
-                recipient_matches = identity and (
-                    identity[1] == recipient or
-                    (phone and _normalize_whatsapp_number(identity[0]) == phone)
-                )
-                if not recipient_matches:
+                if not recipient_matches(cur, customer_id):
                     raise HTTPException(status_code=409, detail="Outbound recipient does not match the inbound customer")
-                cur.execute("""
-                    SELECT id, provider_message_id, delivery_status FROM messages
+                cur.execute(f"""
+                    SELECT {claim_columns} FROM messages
                     WHERE provider = 'whatsapp' AND reply_to_provider_message_id = %s
                       AND sender_type IN ('ai', 'agent') LIMIT 1
                 """, (event.reply_to_provider_message_id,))
                 existing = cur.fetchone()
                 if existing:
+                    result = claim(cur, existing)
                     conn.commit()
-                    return {"message_id": str(existing[0]), "provider_message_id": existing[1],
-                            "delivery_status": existing[2], "duplicate": True}
+                    return result
             else:
                 customer_query = "SELECT id FROM customers WHERE whatsapp_id = %s"
                 cur.execute(customer_query + " LIMIT 1", (recipient,))
@@ -329,10 +378,12 @@ def _n8n_api_request(endpoint: str, method: str = "GET", payload: Optional[Dict[
 
 def _n8n_webhook_post(url: str, payload: Dict[str, Any], timeout: float = 60.0) -> Tuple[int, Any, Optional[str], float]:
     target_url = _resolve_n8n_url(url)
-    # Webhooks must not receive the n8n API key: it would be stored in execution data.
+    # Webhooks authenticate with the shared service token (n8n header auth), never the n8n API
+    # key, which would be stored in execution data.
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
+        "X-NexaServe-Webhook-Token": WHATSAPP_INGEST_TOKEN,
     }
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(target_url, data=data, headers=headers, method="POST")
@@ -2194,7 +2245,9 @@ async def respond_to_ticket(
         VALUES (%s, %s, 'agent_reply', 'agent', %s, %s, %s)
     """, (ticket["id"], ticket["ticket_number"], req.agent_name or user.get("full_name", "Agent"), req.response_message, new_status))
 
-    if ticket.get("conversation_id"):
+    # SubWF 04D records (and for WhatsApp, delivers) the agent message; only keep a record here
+    # when n8n did not accept the reply, so the conversation history still shows it.
+    if ticket.get("conversation_id") and n8n_code != 200:
         execute_commit("""
             INSERT INTO messages (conversation_id, customer_id, sender_type, content, intent)
             VALUES (%s, %s, 'agent', %s, 'agent_portal_resolution')

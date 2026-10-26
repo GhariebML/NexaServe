@@ -16,9 +16,16 @@
         "httpMethod": "POST",
         "path": "analytics-report",
         "responseMode": "responseNode",
-        "options": {}
+        "options": {},
+        "authentication": "headerAuth"
       },
-      "webhookId": "cs-analytics-webhook"
+      "webhookId": "cs-analytics-webhook",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CS_WA_BRIDGE_CRED_01",
+          "name": "NexaServe Service Token"
+        }
+      }
     },
     {
       "id": "node-load-metrics",
@@ -35,8 +42,8 @@
       },
       "credentials": {
         "postgres": {
-          "id": "CS_PG_CRED_01",
-          "name": "CustomerService Postgres"
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
         }
       }
     },

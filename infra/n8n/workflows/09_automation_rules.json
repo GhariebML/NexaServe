@@ -34,12 +34,12 @@
       ],
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT * FROM automation_rules WHERE is_active = TRUE;",
-        "credentials": {
-          "postgres": {
-            "id": "CS_PG_CRED_01",
-            "name": "CustomerService Postgres"
-          }
+        "query": "SELECT * FROM automation_rules WHERE is_active = TRUE;"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
         }
       }
     },

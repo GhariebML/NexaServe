@@ -13,6 +13,8 @@ import urllib.error
 import time
 import sys
 
+from bridge_auth import bridge_headers
+
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
@@ -164,9 +166,9 @@ def send_message(query, lang):
     }
     
     data = json.dumps(payload).encode('utf-8')
-    req = urllib.request.Request(WEBHOOK_URL, data=data, headers={
+    req = urllib.request.Request(WEBHOOK_URL, data=data, headers=bridge_headers({
         "Content-Type": "application/json; charset=utf-8"
-    }, method="POST")
+    }), method="POST")
 
     start = time.time()
     try:

@@ -68,7 +68,14 @@ function resolveTargetJid(to) {
   return jidMap[clean] || jidMap[`+${clean}`] || `${clean}@s.whatsapp.net`;
 }
 
-async function sendTrackedWhatsApp(to, message, replyToProviderMessageId = null) {
+// n8n webhooks require the shared service token (header auth on every Webhook node).
+function n8nWebhookHeaders() {
+  return { 'Content-Type': 'application/json', 'X-NexaServe-Webhook-Token': WHATSAPP_INGEST_TOKEN };
+}
+
+// lifecycleMessageId: a row the producing workflow already stored (agent replies from 04D);
+// the dashboard claims it instead of inserting a duplicate.
+async function sendTrackedWhatsApp(to, message, replyToProviderMessageId = null, lifecycleMessageId = null) {
   if (!LIFECYCLE_ENABLED) {
     if (connectionState !== 'CONNECTED' || !sock) throw new Error('WhatsApp is not connected');
     const target = resolveTargetJid(to);
@@ -80,7 +87,8 @@ async function sendTrackedWhatsApp(to, message, replyToProviderMessageId = null)
   const record = await lifecycleRequest('outbound', {
     recipient: to,
     text: message,
-    reply_to_provider_message_id: replyToProviderMessageId
+    reply_to_provider_message_id: replyToProviderMessageId,
+    message_id: lifecycleMessageId
   });
   if (record.duplicate) {
     return { success: true, duplicate_suppressed: true, message_id: record.provider_message_id || null,
@@ -253,7 +261,7 @@ setInterval(async () => {
     const timeout = setTimeout(() => controller.abort(), 10000);
     const res = await fetch(N8N_WEBHOOK_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: n8nWebhookHeaders(),
       body: JSON.stringify(item.payload),
       signal: controller.signal
     });
@@ -479,7 +487,7 @@ async function initWhatsApp() {
             const startTime = Date.now();
             const response = await fetch(N8N_WEBHOOK_URL, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: n8nWebhookHeaders(),
               body: JSON.stringify(payload),
               signal: controller.signal
             });
@@ -780,7 +788,8 @@ app.post('/send', requireBridgeToken(), async (req, res) => {
     if (!to || !message) {
       return res.status(400).json({ error: 'Parameters "to" and "message" are required.' });
     }
-    const result = await sendTrackedWhatsApp(to, String(message), req.body.reply_to_provider_message_id || null);
+    const result = await sendTrackedWhatsApp(to, String(message), req.body.reply_to_provider_message_id || null,
+      req.body.lifecycle_message_id || null);
     res.status(200).json(result);
   } catch (err) {
     console.error('[WhatsApp Egress Error]:', err.message);
@@ -825,7 +834,7 @@ app.post('/simulate', requireBridgeToken(), async (req, res) => {
       const startTime = Date.now();
       const n8nResp = await fetch(N8N_WEBHOOK_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: n8nWebhookHeaders(),
         body: JSON.stringify(payload),
         signal: controller.signal
       });

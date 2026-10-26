@@ -17,7 +17,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "=INSERT INTO messages (conversation_id, customer_id, sender_type, content, intent, confidence, pii_detected, metadata)\nVALUES (\n  '{{ ($json.conversation && $json.conversation.id && $json.conversation.id !== \"null\" && $json.conversation.id !== \"undefined\") ? $json.conversation.id : \"a0000000-0000-0000-0000-000000000001\" }}'::uuid,\n  '{{ ($json.customer && $json.customer.id && $json.customer.id !== \"null\" && $json.customer.id !== \"undefined\") ? $json.customer.id : \"a0000000-0000-0000-0000-000000000001\" }}'::uuid,\n  'customer',\n  '{{ ($json.sanitized_message || $json.customer_message || \"\").replace(/'/g, \"''\") }}',\n  '{{ $json.ai_output?.intent || \"unknown\" }}',\n  {{ $json.ai_output?.confidence || 0 }},\n  {{ $json.pii_detected ? 'TRUE' : 'FALSE' }},\n  '{{ JSON.stringify({entities: $json.ai_output?.entities || {}, request_id: $json.request_id || null, execution_id: $json.execution_id || null}).replace(/'/g, \"''\") }}'::jsonb\n);"
+        "query": "=WITH lifecycle_row AS (\n  -- Lifecycle mode: the WhatsApp bridge already stored this inbound message; enrich it instead of inserting a copy.\n  UPDATE messages\n  SET intent = '{{ $json.ai_output?.intent || \"unknown\" }}',\n      confidence = {{ $json.ai_output?.confidence || 0 }},\n      pii_detected = pii_detected OR {{ $json.pii_detected ? 'TRUE' : 'FALSE' }},\n      metadata = COALESCE(metadata, '{}'::jsonb) || '{{ JSON.stringify({entities: $json.ai_output?.entities || {}, request_id: $json.request_id || null, execution_id: $json.execution_id || null}).replace(/'/g, \"''\") }}'::jsonb\n  WHERE id = NULLIF('{{ $json.lifecycle_persisted === true ? ($json.inbound_message_id || '') : '' }}', '')::uuid\n  RETURNING id\n)\nINSERT INTO messages (conversation_id, customer_id, sender_type, content, intent, confidence, pii_detected, metadata)\nSELECT\n  '{{ ($json.conversation && $json.conversation.id && $json.conversation.id !== \"null\" && $json.conversation.id !== \"undefined\") ? $json.conversation.id : \"a0000000-0000-0000-0000-000000000001\" }}'::uuid,\n  '{{ ($json.customer && $json.customer.id && $json.customer.id !== \"null\" && $json.customer.id !== \"undefined\") ? $json.customer.id : \"a0000000-0000-0000-0000-000000000001\" }}'::uuid,\n  'customer',\n  '{{ ($json.sanitized_message || $json.customer_message || \"\").replace(/'/g, \"''\") }}',\n  '{{ $json.ai_output?.intent || \"unknown\" }}',\n  {{ $json.ai_output?.confidence || 0 }},\n  {{ $json.pii_detected ? 'TRUE' : 'FALSE' }},\n  '{{ JSON.stringify({entities: $json.ai_output?.entities || {}, request_id: $json.request_id || null, execution_id: $json.execution_id || null}).replace(/'/g, \"''\") }}'::jsonb\nWHERE NOT EXISTS (SELECT 1 FROM lifecycle_row);"
       },
       "id": "node-save-cust-msg",
       "name": "Save Customer Message",
@@ -29,15 +29,15 @@
       ],
       "credentials": {
         "postgres": {
-          "id": "CS_PG_CRED_01",
-          "name": "CustomerService Postgres"
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
         }
       }
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "=INSERT INTO messages (conversation_id, customer_id, sender_type, content, intent, confidence, metadata)\nVALUES (\n  '{{ ($('Execute Workflow Trigger').first().json.conversation && $('Execute Workflow Trigger').first().json.conversation.id && $('Execute Workflow Trigger').first().json.conversation.id !== \"null\" && $('Execute Workflow Trigger').first().json.conversation.id !== \"undefined\") ? $('Execute Workflow Trigger').first().json.conversation.id : \"a0000000-0000-0000-0000-000000000001\" }}'::uuid,\n  '{{ ($('Execute Workflow Trigger').first().json.customer && $('Execute Workflow Trigger').first().json.customer.id && $('Execute Workflow Trigger').first().json.customer.id !== \"null\" && $('Execute Workflow Trigger').first().json.customer.id !== \"undefined\") ? $('Execute Workflow Trigger').first().json.customer.id : \"a0000000-0000-0000-0000-000000000001\" }}'::uuid,\n  'ai',\n  '{{ ($('Execute Workflow Trigger').first().json.final_reply || \"\").replace(/'/g, \"''\") }}',\n  '{{ $('Execute Workflow Trigger').first().json.ai_output?.intent || \"unknown\" }}',\n  {{ $('Execute Workflow Trigger').first().json.ai_output?.confidence || 0 }},\n  json_build_object('sentiment', '{{ $('Execute Workflow Trigger').first().json.ai_output?.sentiment || \"neutral\" }}', 'locale', '{{ $('Execute Workflow Trigger').first().json.locale || \"ar\" }}', 'request_id', '{{ $('Execute Workflow Trigger').first().json.request_id || \"\" }}', 'execution_id', '{{ $('Execute Workflow Trigger').first().json.execution_id || \"\" }}')\n);"
+        "query": "=INSERT INTO messages (conversation_id, customer_id, sender_type, content, intent, confidence, metadata,\n                      provider, reply_to_provider_message_id)\nVALUES (\n  '{{ ($('Execute Workflow Trigger').first().json.conversation && $('Execute Workflow Trigger').first().json.conversation.id && $('Execute Workflow Trigger').first().json.conversation.id !== \"null\" && $('Execute Workflow Trigger').first().json.conversation.id !== \"undefined\") ? $('Execute Workflow Trigger').first().json.conversation.id : \"a0000000-0000-0000-0000-000000000001\" }}'::uuid,\n  '{{ ($('Execute Workflow Trigger').first().json.customer && $('Execute Workflow Trigger').first().json.customer.id && $('Execute Workflow Trigger').first().json.customer.id !== \"null\" && $('Execute Workflow Trigger').first().json.customer.id !== \"undefined\") ? $('Execute Workflow Trigger').first().json.customer.id : \"a0000000-0000-0000-0000-000000000001\" }}'::uuid,\n  'ai',\n  '{{ ($('Execute Workflow Trigger').first().json.final_reply || \"\").replace(/'/g, \"''\") }}',\n  '{{ $('Execute Workflow Trigger').first().json.ai_output?.intent || \"unknown\" }}',\n  {{ $('Execute Workflow Trigger').first().json.ai_output?.confidence || 0 }},\n  json_build_object('sentiment', '{{ $('Execute Workflow Trigger').first().json.ai_output?.sentiment || \"neutral\" }}', 'locale', '{{ $('Execute Workflow Trigger').first().json.locale || \"ar\" }}', 'request_id', '{{ $('Execute Workflow Trigger').first().json.request_id || \"\" }}', 'execution_id', '{{ $('Execute Workflow Trigger').first().json.execution_id || \"\" }}'),\n  -- Lifecycle mode: this row is the reply the bridge will send; its /outbound call claims it\n  -- (by reply_to_provider_message_id) instead of inserting a second copy.\n  NULLIF('{{ $('Execute Workflow Trigger').first().json.lifecycle_persisted === true ? 'whatsapp' : '' }}', ''),\n  NULLIF('{{ $('Execute Workflow Trigger').first().json.lifecycle_persisted === true ? ($('Execute Workflow Trigger').first().json.provider_message_id || '') : '' }}', '')\n)\nON CONFLICT DO NOTHING;"
       },
       "id": "node-save-ai-msg",
       "name": "Save AI Response",
@@ -49,8 +49,8 @@
       ],
       "credentials": {
         "postgres": {
-          "id": "CS_PG_CRED_01",
-          "name": "CustomerService Postgres"
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
         }
       }
     },
@@ -69,8 +69,8 @@
       ],
       "credentials": {
         "postgres": {
-          "id": "CS_PG_CRED_01",
-          "name": "CustomerService Postgres"
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
         }
       }
     },

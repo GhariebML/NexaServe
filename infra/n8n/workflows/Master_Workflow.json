@@ -425,8 +425,8 @@
       ],
       "credentials": {
         "postgres": {
-          "id": "CS_PG_CRED_01",
-          "name": "CustomerService Postgres"
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
         }
       }
     },
@@ -445,8 +445,8 @@
       ],
       "credentials": {
         "postgres": {
-          "id": "CS_PG_CRED_01",
-          "name": "CustomerService Postgres"
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
         }
       }
     },
@@ -592,8 +592,8 @@
       ],
       "credentials": {
         "postgres": {
-          "id": "CS_PG_CRED_01",
-          "name": "CustomerService Postgres"
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
         }
       }
     },
@@ -652,8 +652,8 @@
       ],
       "credentials": {
         "postgres": {
-          "id": "CS_PG_CRED_01",
-          "name": "CustomerService Postgres"
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
         }
       }
     },
@@ -746,8 +746,8 @@
       ],
       "credentials": {
         "postgres": {
-          "id": "CS_PG_CRED_01",
-          "name": "CustomerService Postgres"
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
         }
       }
     },
@@ -766,8 +766,8 @@
       ],
       "credentials": {
         "postgres": {
-          "id": "CS_PG_CRED_01",
-          "name": "CustomerService Postgres"
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
         }
       }
     },
@@ -786,8 +786,8 @@
       ],
       "credentials": {
         "postgres": {
-          "id": "CS_PG_CRED_01",
-          "name": "CustomerService Postgres"
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
         }
       }
     },
@@ -852,8 +852,8 @@
       ],
       "credentials": {
         "postgres": {
-          "id": "CS_PG_CRED_01",
-          "name": "CustomerService Postgres"
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
         }
       }
     },
@@ -872,8 +872,8 @@
       ],
       "credentials": {
         "postgres": {
-          "id": "CS_PG_CRED_01",
-          "name": "CustomerService Postgres"
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
         }
       }
     },
@@ -892,8 +892,8 @@
       ],
       "credentials": {
         "postgres": {
-          "id": "CS_PG_CRED_01",
-          "name": "CustomerService Postgres"
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
         }
       }
     },
@@ -912,8 +912,8 @@
       ],
       "credentials": {
         "postgres": {
-          "id": "CS_PG_CRED_01",
-          "name": "CustomerService Postgres"
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
         }
       }
     },
@@ -974,8 +974,8 @@
       ],
       "credentials": {
         "postgres": {
-          "id": "CS_PG_CRED_01",
-          "name": "CustomerService Postgres"
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
         }
       }
     },
@@ -994,8 +994,8 @@
       ],
       "credentials": {
         "postgres": {
-          "id": "CS_PG_CRED_01",
-          "name": "CustomerService Postgres"
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
         }
       }
     },
@@ -1014,8 +1014,8 @@
       ],
       "credentials": {
         "postgres": {
-          "id": "CS_PG_CRED_01",
-          "name": "CustomerService Postgres"
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
         }
       }
     },
@@ -1194,8 +1194,8 @@
       ],
       "credentials": {
         "postgres": {
-          "id": "CS_PG_CRED_01",
-          "name": "CustomerService Postgres"
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
         }
       }
     },

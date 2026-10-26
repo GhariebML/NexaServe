@@ -15,7 +15,14 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "kb-admin",
-        "responseMode": "responseNode"
+        "responseMode": "responseNode",
+        "authentication": "headerAuth"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CS_WA_BRIDGE_CRED_01",
+          "name": "NexaServe Service Token"
+        }
       }
     },
     {
@@ -85,12 +92,12 @@
       ],
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO knowledge_base (category, question, answer, keywords, question_ar, answer_ar, keywords_ar, is_active) VALUES ('{{ $json.body?.category || \"general\" }}', '{{ ($json.body?.question || '').replace(/'/g, \"''\") }}', '{{ ($json.body?.answer || '').replace(/'/g, \"''\") }}', ARRAY['general'], '{{ ($json.body?.question_ar || '').replace(/'/g, \"''\") }}', '{{ ($json.body?.answer_ar || '').replace(/'/g, \"''\") }}', ARRAY['general'], TRUE) RETURNING *;",
-        "credentials": {
-          "postgres": {
-            "id": "CS_PG_CRED_01",
-            "name": "CustomerService Postgres"
-          }
+        "query": "INSERT INTO knowledge_base (category, question, answer, keywords, question_ar, answer_ar, keywords_ar, is_active) VALUES ('{{ $json.body?.category || \"general\" }}', '{{ ($json.body?.question || '').replace(/'/g, \"''\") }}', '{{ ($json.body?.answer || '').replace(/'/g, \"''\") }}', ARRAY['general'], '{{ ($json.body?.question_ar || '').replace(/'/g, \"''\") }}', '{{ ($json.body?.answer_ar || '').replace(/'/g, \"''\") }}', ARRAY['general'], TRUE) RETURNING *;"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
         }
       }
     },
@@ -105,12 +112,12 @@
       ],
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT * FROM knowledge_base WHERE is_active = TRUE AND (question ILIKE '%{{ $json.body?.query || '' }}%' OR answer ILIKE '%{{ $json.body?.query || '' }}%') LIMIT 20;",
-        "credentials": {
-          "postgres": {
-            "id": "CS_PG_CRED_01",
-            "name": "CustomerService Postgres"
-          }
+        "query": "SELECT * FROM knowledge_base WHERE is_active = TRUE AND (question ILIKE '%{{ $json.body?.query || '' }}%' OR answer ILIKE '%{{ $json.body?.query || '' }}%') LIMIT 20;"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
         }
       }
     },

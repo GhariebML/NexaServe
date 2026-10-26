@@ -2,9 +2,13 @@ import urllib.request
 import urllib.error
 import json
 import time
+import os
+import sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'scripts'))
+from bridge_auth import bridge_headers  # noqa: E402
 
 URL = "http://127.0.0.1:5678/webhook/customer-service"
-HEADERS = {"Content-Type": "application/json"}
+HEADERS = bridge_headers({"Content-Type": "application/json"})
 
 TEST_CASES = [
     {

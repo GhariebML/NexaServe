@@ -15,7 +15,14 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "agent-manage",
-        "responseMode": "responseNode"
+        "responseMode": "responseNode",
+        "authentication": "headerAuth"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CS_WA_BRIDGE_CRED_01",
+          "name": "NexaServe Service Token"
+        }
       }
     },
     {
@@ -98,12 +105,12 @@
       ],
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO agents (name, email, role, team) VALUES ('{{ $json.body?.name }}', '{{ $json.body?.email }}', '{{ $json.body?.role || \"tier1\" }}', 'DEPI Support') RETURNING *;",
-        "credentials": {
-          "postgres": {
-            "id": "CS_PG_CRED_01",
-            "name": "CustomerService Postgres"
-          }
+        "query": "INSERT INTO agents (name, email, role, team) VALUES ('{{ $json.body?.name }}', '{{ $json.body?.email }}', '{{ $json.body?.role || \"tier1\" }}', 'DEPI Support') RETURNING *;"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
         }
       }
     },
@@ -118,12 +125,12 @@
       ],
       "parameters": {
         "operation": "executeQuery",
-        "query": "UPDATE agents SET status = '{{ $json.body?.status }}', updated_at = NOW() WHERE email = '{{ $json.body?.email }}';",
-        "credentials": {
-          "postgres": {
-            "id": "CS_PG_CRED_01",
-            "name": "CustomerService Postgres"
-          }
+        "query": "UPDATE agents SET status = '{{ $json.body?.status }}', updated_at = NOW() WHERE email = '{{ $json.body?.email }}';"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
         }
       }
     },
@@ -138,12 +145,12 @@
       ],
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT * FROM agents WHERE status = 'available' ORDER BY RANDOM() LIMIT 1;",
-        "credentials": {
-          "postgres": {
-            "id": "CS_PG_CRED_01",
-            "name": "CustomerService Postgres"
-          }
+        "query": "SELECT * FROM agents WHERE status = 'available' ORDER BY RANDOM() LIMIT 1;"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
         }
       }
     },

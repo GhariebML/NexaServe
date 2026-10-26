@@ -10,6 +10,8 @@ param (
 )
 
 $ErrorActionPreference = "Continue"
+. "$PSScriptRoot\BridgeAuth.ps1"
+$ServiceHeaders = Get-NexaServeServiceHeaders
 
 Write-Host "======================================================================" -ForegroundColor Cyan
 Write-Host " 🚀 MCIT Enterprise AI Customer Service - Verification Suite" -ForegroundColor Cyan
@@ -66,7 +68,7 @@ $waPayload = @{
 } | ConvertTo-Json -Depth 6
 
 try {
-    $res1 = Invoke-RestMethod -Uri $GatewayUrl -Method Post -Body $waPayload -ContentType "application/json" -TimeoutSec 45
+    $res1 = Invoke-RestMethod -Headers $ServiceHeaders -Uri $GatewayUrl -Method Post -Body $waPayload -ContentType "application/json" -TimeoutSec 45
     Assert-Test "WhatsApp Ingress returns HTTP 200 & success status" ($res1.status -eq "success") "Channel: $($res1.channel)"
     Assert-Test "Detected Channel is WhatsApp" ($res1.channel -eq "whatsapp") "Resolved channel: $($res1.channel)"
     Assert-Test "Language detected as Arabic ('ar')" ($res1.locale -eq "ar") "Locale: $($res1.locale)"
@@ -101,7 +103,7 @@ $tgPayload = @{
 } | ConvertTo-Json -Depth 5
 
 try {
-    $res2 = Invoke-RestMethod -Uri $GatewayUrl -Method Post -Body $tgPayload -ContentType "application/json" -TimeoutSec 45
+    $res2 = Invoke-RestMethod -Headers $ServiceHeaders -Uri $GatewayUrl -Method Post -Body $tgPayload -ContentType "application/json" -TimeoutSec 45
     Assert-Test "Telegram Ingress returns HTTP 200 & success status" ($res2.status -eq "success") "Channel: $($res2.channel)"
     Assert-Test "Detected Channel is Telegram" ($res2.channel -eq "telegram") "Resolved channel: $($res2.channel)"
     Assert-Test "Intent classified as order_lookup" ($res2.intent -eq "order_lookup") "Intent: $($res2.intent)"
@@ -125,7 +127,7 @@ $escalatePayload = @{
 $createdTicketNumber = $null
 
 try {
-    $res3 = Invoke-RestMethod -Uri $GatewayUrl -Method Post -Body $escalatePayload -ContentType "application/json" -TimeoutSec 45
+    $res3 = Invoke-RestMethod -Headers $ServiceHeaders -Uri $GatewayUrl -Method Post -Body $escalatePayload -ContentType "application/json" -TimeoutSec 45
     Assert-Test "Webchat Ingress returns HTTP 200" ($res3.status -eq "success") "Channel: $($res3.channel)"
     Assert-Test "MCIT PII Masking triggered on Saudi National ID" ($res3.pii_masked -eq $true) "PII Masked flag: $($res3.pii_masked)"
     Assert-Test "Intent classified as human_escalation" ($res3.intent -eq "human_escalation") "Intent: $($res3.intent)"
@@ -153,7 +155,7 @@ $agentPayload = @{
 } | ConvertTo-Json
 
 try {
-    $res4 = Invoke-RestMethod -Uri $AgentUrl -Method Post -Body $agentPayload -ContentType "application/json" -TimeoutSec 20
+    $res4 = Invoke-RestMethod -Headers $ServiceHeaders -Uri $AgentUrl -Method Post -Body $agentPayload -ContentType "application/json" -TimeoutSec 20
     Assert-Test "Agent Callback Webhook returns success" ($res4.status -eq "success") "Ticket: $($res4.ticket_number)"
     Assert-Test "Ticket matched and customer identified" ($res4.customer_name -ne $null) "Customer: $($res4.customer_name)"
     Assert-Test "Response marked as delivered to customer channel" ($res4.delivered_to_channel -ne $null) "Channel: $($res4.delivered_to_channel)"
@@ -174,7 +176,7 @@ $guardrailPayload = @{
 } | ConvertTo-Json
 
 try {
-    $res5 = Invoke-RestMethod -Uri $GatewayUrl -Method Post -Body $guardrailPayload -ContentType "application/json" -TimeoutSec 35
+    $res5 = Invoke-RestMethod -Headers $ServiceHeaders -Uri $GatewayUrl -Method Post -Body $guardrailPayload -ContentType "application/json" -TimeoutSec 35
     Assert-Test "Guardrail attack intercepted safely" ($res5.status -eq "success") "Status: $($res5.status)"
     Assert-Test "Safe defensive response returned without leak" ($res5.response -notmatch "API" -and ($res5.response -match "security policies" -or $res5.response -match "assist you" -or $res5.response -match "معايير الأمان")) "Deflection: $($res5.response)"
 } catch {
