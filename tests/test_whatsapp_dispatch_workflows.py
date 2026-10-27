@@ -177,3 +177,18 @@ def test_session_manager_pins_lifecycle_conversation_and_excludes_current_messag
     assert "pinned AS" in _node(wf, "Find or Upsert Customer")["parameters"]["query"]
     conv_sql = _node(wf, "Get or Start Conversation")["parameters"]["query"]
     assert "pinned AS" in conv_sql and "inbound_message_id" in conv_sql
+
+
+# --- Webchat identity: the visitor's name is kept and their session reuses one customer ---
+
+def test_webchat_name_is_read_from_customer_name_too():
+    out = _sanitize({"channel": "webchat", "customer_message": "hello", "customer_name": "  مريم   عادل ", "session_id": "web-1"})
+    assert out["full_name"] == "مريم عادل"
+    assert out["channel_user_id"] == "web-1"
+
+
+def test_session_manager_matches_and_tags_webchat_sessions():
+    query = _node(_workflow("02_customer_session.json"), "Find or Upsert Customer")["parameters"]["query"]
+    assert "metadata->>'webchat_id'" in query and "jsonb_build_object('webchat_id'" in query
+    assert "startsWith('req-')" in query  # per-turn request ids never identify a returning visitor
+    assert "renamed AS (" in query and "'Valued Citizen'" in query
