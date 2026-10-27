@@ -75,10 +75,16 @@ Live and verified:
 - **Lifecycle tracking enabled** (`WHATSAPP_LIFECYCLE_API` in `.env`): one row per message, bot replies
   claimed rather than duplicated, delivery receipts recorded (replay test 7/7).
 
+- `agent-manage` (10) and `kb-admin` (11): credential fix + header auth pushed and published; no/wrong token → 403.
+  All 7 live webhooks now require the service token.
+
 Still open:
-- `agent-manage` (10) and `kb-admin` (11) webhooks are **unauthenticated**: n8n refuses to publish them
-  because their Postgres nodes have no credential (it was stored under `parameters`). Fixed in the repo;
-  pushing the repo versions fixes both. Same credential bug in 09.
+- **10/11 never route a request.** Their "Route Action" switch rules lack an operator (pre-2.x format), so no
+  branch matches and nothing responds. 11 is also miswired (`update` → search query, `search` → no query).
+  Both build SQL by string interpolation from the request body; fix with parameterised queries when repairing.
+- **09 Automation Rules never runs**: its `cronTrigger` node type no longer exists in n8n 2.x, so it cannot be
+  published (0 executions ever). Converting it to `scheduleTrigger` would start it every 15 minutes; its final
+  `respondToWebhook` node must be removed first or every run errors.
 - 123 tickets / 1,190 messages remain on placeholder customer `a0000000-…-0001` (historical; new ones are correct).
 - n8n API returns 404 for `iCaqLqFkUvx3L2SR`, `eLlfjgNzIdgszmA7`, `jyb6y54uLD3ZoNHF`; delete/archive them in the UI.
   `4FyNJ9LFrf1o2Lh4` is an active duplicate of 07 that cannot register its path; deactivate it.
