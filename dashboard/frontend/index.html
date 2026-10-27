@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/style.css?v=20261027-ticket-feed">
   <!-- Chart.js for enterprise analytics visualizations -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
@@ -89,7 +89,7 @@
         <li class="nav-item"><button class="active" data-view="executive" onclick="switchView('executive')">📊 <span data-i18n="nav_executive">Executive KPIs</span></button></li>
         <li class="nav-item"><button data-view="customers" onclick="switchView('customers')">👥 <span data-i18n="nav_customers">Customers & Students</span></button></li>
         <li class="nav-item"><button data-view="conversations" onclick="switchView('conversations')">💬 <span data-i18n="nav_conversations">Conversations</span></button></li>
-        <li class="nav-item"><button data-view="tickets" onclick="switchView('tickets')">🎫 <span data-i18n="nav_tickets">Tickets & HITL</span></button></li>
+        <li class="nav-item"><button data-view="tickets" onclick="switchView('tickets')">🎫 <span data-i18n="nav_tickets">Tickets & HITL</span><span class="nav-badge" id="nav-ticket-badge" hidden>0</span></button></li>
         <li class="nav-item"><button data-view="n8n" onclick="switchView('n8n')">⚡ <span data-i18n="nav_n8n">n8n Automation</span></button></li>
         <li class="nav-item"><button data-view="simulator" onclick="switchView('simulator')">🤖 <span data-i18n="nav_simulator">Live AI Simulator</span></button></li>
         <li class="nav-item"><button data-view="rag" onclick="switchView('rag')">🧠 <span data-i18n="nav_rag">RAG & AI Quality</span></button></li>
@@ -147,11 +147,16 @@
           <button class="btn-icon" id="lang-toggle-btn" onclick="toggleLanguage()" title="Toggle Arabic / English">
             <span id="lang-label">عربي</span>
           </button>
+          <button class="btn-icon ticket-alerts-btn" id="ticket-alerts-btn" type="button" onclick="toggleTicketAlerts()"
+                  title="New-ticket sound & desktop alerts" aria-pressed="false">
+            <span id="ticket-alerts-icon" aria-hidden="true">🔕</span>
+          </button>
           <button class="btn-icon" onclick="refreshCurrentView()" title="Refresh Live DB Data">
             🔄
           </button>
         </div>
       </header>
+      <div id="ticket-toasts" class="ticket-toasts" role="region" aria-live="polite" aria-label="New tickets"></div>
 
       <!-- BODY SECTIONS -->
       <main class="content-body" id="content-container">
@@ -740,6 +745,6 @@
     </div>
   </div>
 
-  <script src="/static/app.js?v=20261027-tickets"></script>
+  <script src="/static/app.js?v=20261027-ticket-feed"></script>
 </body>
 </html>

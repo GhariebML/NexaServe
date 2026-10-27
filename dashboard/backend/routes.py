@@ -531,11 +531,12 @@ async def get_summary(
     program: Optional[str] = Query("all"),
     user: Dict[str, Any] = Depends(get_current_user)
 ):
-    # Total customers
+    # Total customers. NexaServe serves DEPI only: customers created by live conversations carry
+    # no (or an 'UNKNOWN') program tag, so those count as DEPI in every program filter.
     cust_prog_filter = ""
     cust_params: List[Any] = []
     if program and program.upper() != "ALL":
-        cust_prog_filter = " WHERE (metadata->>'program') ILIKE %s"
+        cust_prog_filter = " WHERE COALESCE(NULLIF(metadata->>'program', 'UNKNOWN'), 'DEPI') ILIKE %s"
         cust_params.append(f"%{program}%")
     
     total_customers_row = query_one(f"SELECT COUNT(*) as count FROM customers{cust_prog_filter}", tuple(cust_params))
@@ -545,7 +546,7 @@ async def get_summary(
     conv_filter = " WHERE 1=1"
     conv_params: List[Any] = []
     if program and program.upper() != "ALL":
-        conv_filter += " AND c.id IN (SELECT conv.id FROM conversations conv JOIN customers cust ON conv.customer_id = cust.id WHERE (cust.metadata->>'program') ILIKE %s)"
+        conv_filter += " AND c.id IN (SELECT conv.id FROM conversations conv JOIN customers cust ON conv.customer_id = cust.id WHERE COALESCE(NULLIF(cust.metadata->>'program', 'UNKNOWN'), 'DEPI') ILIKE %s)"
         conv_params.append(f"%{program}%")
     
     d_filter, d_params = build_date_filter(period, None, None, "c.created_at")
@@ -568,7 +569,7 @@ async def get_summary(
     tick_filter = " WHERE 1=1"
     tick_params: List[Any] = []
     if program and program.upper() != "ALL":
-        tick_filter += " AND t.customer_id IN (SELECT id FROM customers WHERE (metadata->>'program') ILIKE %s)"
+        tick_filter += " AND t.customer_id IN (SELECT id FROM customers WHERE COALESCE(NULLIF(metadata->>'program', 'UNKNOWN'), 'DEPI') ILIKE %s)"
         tick_params.append(f"%{program}%")
     
     td_filter, td_params = build_date_filter(period, None, None, "t.created_at")
@@ -639,7 +640,7 @@ async def get_customers(
     params: List[Any] = []
 
     if program and program.upper() != "ALL":
-        where_clauses.append("(c.metadata->>'program') ILIKE %s")
+        where_clauses.append("COALESCE(NULLIF(c.metadata->>'program', 'UNKNOWN'), 'DEPI') ILIKE %s")
         params.append(f"%{program}%")
 
     if search:
@@ -658,7 +659,7 @@ async def get_customers(
             c.full_name, 
             c.phone_number, 
             c.email,
-            COALESCE(c.metadata->>'program', 'UNKNOWN') as program,
+            COALESCE(NULLIF(c.metadata->>'program', 'UNKNOWN'), 'DEPI') as program,
             c.created_at,
             c.last_activity_at,
             (SELECT COUNT(*) FROM conversations WHERE customer_id = c.id) as conversation_count,
@@ -744,7 +745,7 @@ async def get_customer_profile(
             "phone_masked": mask_phone(customer.get("phone_number"), can_view_pii),
             "email_masked": mask_email(customer.get("email"), can_view_pii),
             "preferred_language": customer.get("preferred_language"),
-            "program": metadata.get("program", "UNKNOWN"),
+            "program": metadata.get("program") if metadata.get("program") not in (None, "", "UNKNOWN") else "DEPI",
             "created_at": customer["created_at"].isoformat() if customer.get("created_at") else None,
             "last_activity_at": customer["last_activity_at"].isoformat() if customer.get("last_activity_at") else None
         },
@@ -774,7 +775,7 @@ async def get_conversations(
     params: List[Any] = []
 
     if program and program.upper() != "ALL":
-        where_clauses.append("(cust.metadata->>'program') ILIKE %s")
+        where_clauses.append("COALESCE(NULLIF(cust.metadata->>'program', 'UNKNOWN'), 'DEPI') ILIKE %s")
         params.append(f"%{program}%")
 
     d_filter, d_params = build_date_filter(period, None, None, "c.created_at")
@@ -797,7 +798,7 @@ async def get_conversations(
             c.id,
             c.customer_id,
             cust.full_name as customer_name,
-            COALESCE(cust.metadata->>'program', 'UNKNOWN') as program,
+            COALESCE(NULLIF(cust.metadata->>'program', 'UNKNOWN'), 'DEPI') as program,
             c.channel,
             c.status,
             COALESCE(c.current_intent, 'general_inquiry') as current_intent,
@@ -837,7 +838,7 @@ async def get_conversations(
 
     # Aggregations for charts
     prog_dist = query_all(f"""
-        SELECT COALESCE(cust.metadata->>'program', 'UNKNOWN') as label, COUNT(*) as count
+        SELECT COALESCE(NULLIF(cust.metadata->>'program', 'UNKNOWN'), 'DEPI') as label, COUNT(*) as count
         FROM conversations c
         JOIN customers cust ON c.customer_id = cust.id
         WHERE {where_sql}
@@ -983,7 +984,7 @@ async def get_tickets(
         params.extend([term, term, term, term, term])
 
     if program and program.upper() != "ALL":
-        where_clauses.append("(c.metadata->>'program') ILIKE %s")
+        where_clauses.append("COALESCE(NULLIF(c.metadata->>'program', 'UNKNOWN'), 'DEPI') ILIKE %s")
         params.append(f"%{program}%")
 
     if sla_breached is True:
@@ -1037,7 +1038,7 @@ async def get_tickets(
             t.conversation_id,
             c.full_name as customer_name,
             c.phone_number as customer_phone,
-            COALESCE(c.metadata->>'program', 'UNKNOWN') as program,
+            COALESCE(NULLIF(c.metadata->>'program', 'UNKNOWN'), 'DEPI') as program,
             t.priority,
             t.status,
             COALESCE(t.assigned_agent, 'Unassigned') as assigned_agent,
@@ -1095,6 +1096,57 @@ async def get_tickets(
         "pages": (total_count + limit - 1) // limit
     }
 
+@router.get("/tickets/feed")
+async def get_ticket_feed(
+    since: Optional[str] = Query(None, max_length=40),
+    user: Dict[str, Any] = Depends(get_current_user)
+):
+    """New-ticket feed for live dashboard alerts.
+
+    Without ``since`` it only returns the server clock, so a fresh dashboard starts from
+    "now" instead of alerting on history. Clients pass back ``server_time`` each poll. The
+    query looks back two minutes because ``created_at`` is the inserting transaction's start
+    time, which can precede an earlier poll; clients de-duplicate by ticket id.
+    """
+    server_time = query_one("SELECT NOW() AS now")["now"]
+    queue = query_one("""
+        SELECT COUNT(*) FILTER (WHERE status = 'open') AS open,
+               COUNT(*) FILTER (WHERE status = 'open' AND assigned_agent IS NULL) AS unassigned,
+               COUNT(*) FILTER (WHERE status = 'open' AND sla_due_at < NOW()) AS breached
+        FROM tickets
+    """) or {}
+    items: List[Dict[str, Any]] = []
+    if since:
+        try:
+            since_ts = datetime.fromisoformat(since.replace("Z", "+00:00"))
+        except ValueError:
+            raise HTTPException(status_code=422, detail="since must be an ISO-8601 timestamp")
+        rows = query_all("""
+            SELECT t.id, t.ticket_number, COALESCE(t.title, t.reason) AS title, t.reason, t.priority, t.status,
+                   COALESCE(t.source_channel, t.escalation_channel, 'whatsapp') AS source_channel,
+                   t.sla_due_at, t.created_at, c.full_name AS customer_name,
+                   COALESCE(tc.name, 'general') AS category_name, COALESCE(tc.name_ar, 'عام') AS category_name_ar
+            FROM tickets t
+            JOIN customers c ON c.id = t.customer_id
+            LEFT JOIN ticket_categories tc ON tc.id = t.category_id
+            WHERE t.created_at > %s::timestamptz - INTERVAL '2 minutes'
+            ORDER BY t.created_at ASC
+            LIMIT 50
+        """, (since_ts,))
+        items = [{
+            "id": str(r["id"]), "ticket_number": r["ticket_number"], "title": r["title"], "reason": r["reason"],
+            "priority": r["priority"], "status": r["status"], "source_channel": r["source_channel"],
+            "customer_name": r["customer_name"], "category_name": r["category_name"],
+            "category_name_ar": r["category_name_ar"],
+            "sla_deadline": r["sla_due_at"].isoformat() if r["sla_due_at"] else None,
+            "created_at": r["created_at"].isoformat() if r["created_at"] else None,
+        } for r in rows]
+    return {
+        "server_time": server_time.isoformat(),
+        "items": items,
+        "queue": {key: int(queue.get(key) or 0) for key in ("open", "unassigned", "breached")},
+    }
+
 @router.get("/tickets/{ticket_id}")
 async def get_ticket_details(
     ticket_id: str,
@@ -1109,7 +1161,7 @@ async def get_ticket_details(
             c.full_name as customer_name,
             c.phone_number as customer_phone,
             c.email as customer_email,
-            COALESCE(c.metadata->>'program', 'UNKNOWN') as program,
+            COALESCE(NULLIF(c.metadata->>'program', 'UNKNOWN'), 'DEPI') as program,
             t.conversation_id,
             t.priority,
             t.status,

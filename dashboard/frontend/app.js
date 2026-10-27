@@ -471,9 +471,11 @@ function showAppShell() {
   document.getElementById('user-role-badge').innerText = (STATE.user.role || 'READONLY').toUpperCase();
 
   switchView('executive');
+  startTicketFeed();
 }
 
 function clearSession() {
+  stopTicketFeed();
   STATE.token = null;
   STATE.user = null;
   localStorage.removeItem('nexaserve_jwt_token');
@@ -490,8 +492,189 @@ function logout() {
   clearSession();
 }
 
+// --- LIVE NEW-TICKET ALERTS ---
+// Polls /tickets/feed; each new ticket gets an alert card, the Tickets nav badge and tab title
+// count go up, and the row is highlighted when the ticket list is open. Sound and desktop
+// notifications are opt-in through the bell button (browsers require a user gesture).
+const TICKET_FEED_INTERVAL_MS = 15000;
+const TICKET_FEED_TEXT = {
+  en: { kicker: 'New ticket', open: 'Open ticket', dismiss: 'Dismiss', respond: 'Respond within', overdue: 'SLA overdue',
+        alerts_on: 'Sound & desktop alerts on', alerts_off: 'Sound & desktop alerts off', more: 'more new tickets' },
+  ar: { kicker: 'تذكرة جديدة', open: 'فتح التذكرة', dismiss: 'إخفاء', respond: 'الرد خلال', overdue: 'تجاوز SLA',
+        alerts_on: 'تنبيهات الصوت وسطح المكتب مفعلة', alerts_off: 'تنبيهات الصوت وسطح المكتب متوقفة', more: 'تذاكر جديدة أخرى' }
+};
+const TICKET_FEED = { since: null, timer: null, unseen: 0, seen: new Set(), fresh: new Set(), baseTitle: document.title };
+
+function feedText(key) {
+  return (TICKET_FEED_TEXT[STATE.currentLang] || TICKET_FEED_TEXT.en)[key];
+}
+
+function ticketAlertsEnabled() {
+  try { return localStorage.getItem('nexaserve_ticket_alerts') === 'on'; } catch (e) { return false; }
+}
+
+function renderTicketAlertsButton() {
+  const on = ticketAlertsEnabled();
+  const btn = document.getElementById('ticket-alerts-btn');
+  if (!btn) return;
+  btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  btn.title = feedText(on ? 'alerts_on' : 'alerts_off');
+  document.getElementById('ticket-alerts-icon').textContent = on ? '🔔' : '🔕';
+}
+
+async function toggleTicketAlerts() {
+  const next = !ticketAlertsEnabled();
+  if (next && 'Notification' in window && Notification.permission === 'default') {
+    try { await Notification.requestPermission(); } catch (e) { /* desktop alerts stay off */ }
+  }
+  try { localStorage.setItem('nexaserve_ticket_alerts', next ? 'on' : 'off'); } catch (e) { /* not persisted */ }
+  renderTicketAlertsButton();
+  if (next) playTicketChime();
+}
+
+function playTicketChime() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [[880, 0], [1320, 0.12]].forEach(([freq, at]) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime + at);
+      gain.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + at + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + at + 0.35);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(ctx.currentTime + at);
+      osc.stop(ctx.currentTime + at + 0.4);
+    });
+    setTimeout(() => ctx.close(), 1000);
+  } catch (e) { /* audio unavailable */ }
+}
+
+function slaLabel(deadline) {
+  if (!deadline) return '';
+  const mins = Math.round((new Date(deadline) - Date.now()) / 60000);
+  if (mins <= 0) return { text: feedText('overdue'), overdue: true };
+  const value = mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h ${mins % 60 ? (mins % 60) + 'm' : ''}`.trim();
+  return { text: `${feedText('respond')} ${value}`, overdue: false };
+}
+
+function updateTicketBadge() {
+  const badge = document.getElementById('nav-ticket-badge');
+  if (badge) {
+    badge.textContent = TICKET_FEED.unseen > 99 ? '99+' : String(TICKET_FEED.unseen);
+    badge.hidden = TICKET_FEED.unseen === 0;
+  }
+  document.title = TICKET_FEED.unseen ? `(${TICKET_FEED.unseen}) ${TICKET_FEED.baseTitle}` : TICKET_FEED.baseTitle;
+}
+
+function dismissTicketToast(el) {
+  if (!el || el.classList.contains('leaving')) return;
+  el.classList.add('leaving');
+  setTimeout(() => el.remove(), 260);
+}
+
+function showTicketToast(t) {
+  const stack = document.getElementById('ticket-toasts');
+  if (!stack) return;
+  const priority = ['urgent', 'high', 'medium', 'low'].includes(t.priority) ? t.priority : 'medium';
+  const sla = slaLabel(t.sla_deadline);
+  const category = STATE.currentLang === 'ar' ? t.category_name_ar : t.category_name;
+  const sticky = priority === 'urgent';
+  const lifetime = 15000;
+  const el = document.createElement('div');
+  el.className = `ticket-toast priority-${priority}`;
+  el.setAttribute('role', 'alert');
+  el.innerHTML = `
+    <div class="ticket-toast-head">
+      <span class="ticket-toast-kicker">🎫 ${escapeHtml(feedText('kicker'))} · <strong>${escapeHtml(t.ticket_number)}</strong></span>
+      <span class="badge badge-${escapeHtml(priority)}">${escapeHtml(priority)}</span>
+    </div>
+    <div class="ticket-toast-title">${escapeHtml((t.title || t.reason || '').slice(0, 110))}</div>
+    <div class="ticket-toast-meta">
+      <span>👤 ${escapeHtml(t.customer_name || 'Customer')}</span>
+      <span>${escapeHtml(t.source_channel || '')}</span>
+      ${category ? `<span>${escapeHtml(category)}</span>` : ''}
+      ${sla ? `<span class="ticket-toast-sla${sla.overdue ? ' overdue' : ''}">⏱ ${escapeHtml(sla.text)}</span>` : ''}
+    </div>
+    <div class="ticket-toast-actions">
+      <button type="button" class="primary" data-action="open">${escapeHtml(feedText('open'))}</button>
+      <button type="button" data-action="dismiss">${escapeHtml(feedText('dismiss'))}</button>
+    </div>
+    ${sticky ? '' : `<div class="ticket-toast-progress" style="animation-duration:${lifetime}ms"></div>`}`;
+  el.querySelector('[data-action="open"]').addEventListener('click', () => {
+    dismissTicketToast(el);
+    switchView('tickets');
+    openTicketDetailsModal(t.id);
+  });
+  el.querySelector('[data-action="dismiss"]').addEventListener('click', () => dismissTicketToast(el));
+  stack.prepend(el);
+  if (!sticky) setTimeout(() => dismissTicketToast(el), lifetime);
+  while (stack.children.length > 4) stack.lastElementChild.remove();
+}
+
+function notifyDesktop(tickets) {
+  if (!ticketAlertsEnabled() || !('Notification' in window) || Notification.permission !== 'granted' || !document.hidden) return;
+  const t = tickets[tickets.length - 1];
+  const body = `${t.title || t.reason || ''}\n${t.customer_name || ''} · ${t.priority}` +
+    (tickets.length > 1 ? `\n+${tickets.length - 1} ${feedText('more')}` : '');
+  try {
+    const n = new Notification(`🎫 ${feedText('kicker')} ${t.ticket_number}`, { body, tag: 'nexaserve-new-ticket' });
+    n.onclick = () => { window.focus(); switchView('tickets'); openTicketDetailsModal(t.id); n.close(); };
+  } catch (e) { /* notifications blocked */ }
+}
+
+async function pollTicketFeed() {
+  if (!STATE.token) return;
+  try {
+    const query = TICKET_FEED.since ? `?since=${encodeURIComponent(TICKET_FEED.since)}` : '';
+    const data = await apiRequest(`/api/dashboard/tickets/feed${query}`);
+    const firstPoll = TICKET_FEED.since === null;
+    TICKET_FEED.since = data.server_time;
+    const fresh = (data.items || []).filter(t => !TICKET_FEED.seen.has(t.id));
+    fresh.forEach(t => TICKET_FEED.seen.add(t.id));
+    if (firstPoll || fresh.length === 0) return;
+
+    fresh.forEach(t => { showTicketToast(t); TICKET_FEED.fresh.add(t.id); });
+    setTimeout(() => fresh.forEach(t => TICKET_FEED.fresh.delete(t.id)), 120000);
+    if (STATE.currentView === 'tickets' && !document.hidden) {
+      loadTickets();
+    } else {
+      TICKET_FEED.unseen += fresh.length;
+      updateTicketBadge();
+      if (STATE.currentView === 'executive') refreshCurrentView();
+    }
+    if (ticketAlertsEnabled()) playTicketChime();
+    notifyDesktop(fresh);
+  } catch (e) {
+    /* transient network/auth errors: the next poll retries */
+  }
+}
+
+function startTicketFeed() {
+  stopTicketFeed();
+  TICKET_FEED.since = null;
+  renderTicketAlertsButton();
+  pollTicketFeed();
+  TICKET_FEED.timer = setInterval(pollTicketFeed, TICKET_FEED_INTERVAL_MS);
+}
+
+function stopTicketFeed() {
+  clearInterval(TICKET_FEED.timer);
+  TICKET_FEED.timer = null;
+  TICKET_FEED.unseen = 0;
+  updateTicketBadge();
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && TICKET_FEED.timer) pollTicketFeed();
+});
+
 function switchView(viewName) {
   STATE.currentView = viewName;
+  if (viewName === 'tickets' && TICKET_FEED.unseen) {
+    TICKET_FEED.unseen = 0;
+    updateTicketBadge();
+  }
   document.querySelectorAll('.nav-item button').forEach(b => {
     b.classList.toggle('active', b.getAttribute('data-view') === viewName);
   });
@@ -934,12 +1117,13 @@ async function loadTickets() {
       const displayTitle = t.title || t.reason || 'Support Request';
       const truncatedTitle = displayTitle.length > 45 ? displayTitle.substring(0, 42) + '...' : displayTitle;
 
+      const isNew = TICKET_FEED.fresh.has(t.id);
       return `
-        <tr>
+        <tr${isNew ? ' class="ticket-row-new"' : ''}>
           <td>
             <a href="javascript:void(0)" onclick="openTicketDetailsModal('${t.id}')" style="color:#60A5FA; font-weight:700; text-decoration:none;">
               ${escapeHtml(t.ticket_number)}
-            </a>
+            </a>${isNew ? '<span class="badge badge-new">NEW</span>' : ''}
           </td>
           <td>
             <div style="font-weight:600;">${escapeHtml(truncatedTitle)}</div>
