@@ -45,9 +45,25 @@ def _format(item):
 
 # --- 06: only explicit agent replies are sent, never to a placeholder number -----------------
 
-def test_inbound_turns_are_not_dispatched_by_n8n():
+def test_simulated_turns_without_a_provider_id_are_never_sent():
+    # /simulate and test scripts post channel=whatsapp with arbitrary numbers; they must not message anyone.
     out = _format({"channel": "whatsapp", "phone_number": "+201234567890", "final_reply": "hi"})
     assert out["dispatched"] is False
+
+
+def test_real_bridge_turns_are_delivered_and_linked_to_the_inbound_message():
+    # The bridge only sends offline fallbacks; n8n owns successful replies.
+    out = _format({"channel": "whatsapp", "whatsapp_id": "123@lid", "provider_message_id": "3EB0ABC",
+                   "final_reply": "answer"})
+    assert out["dispatched"] is True
+    assert out["recipient"] == "123@lid"
+    assert out["reply_to_provider_message_id"] == "3EB0ABC"
+
+
+def test_logger_runs_before_the_dispatcher():
+    wf = _workflow("01_gateway_dispatcher.json")
+    order = [c["node"] for c in wf["connections"]["Assemble Response & Metrics"]["main"][0]]
+    assert order.index("Call SubWF 05 - Logger") < order.index("Call SubWF 06 - Output Dispatcher")
 
 
 def test_explicit_dispatch_without_recipient_sends_nothing():
