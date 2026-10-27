@@ -67,7 +67,8 @@ Live and verified:
   and knowledge base used `nexaserve_final`. Post-split rows were merged (`scripts/db_merge_customerservice.py`,
   idempotent; CSV backups in `backups/db_merge_20261026_235804/`) and every NexaServe workflow now uses
   `CS_PG_FINAL_01`. `customerservice` is no longer written to; keep it read-only until you drop it.
-- **No stray WhatsApp sends.** 06 dispatches only explicit agent replies (04D), never to a placeholder number.
+- **No stray WhatsApp sends.** 06 dispatches explicit agent replies (04D) and replies to real bridge-relayed turns (those carrying a provider message id); simulated/test turns are never sent, and there is no placeholder number.
+  - *Correction (2026-10-27):* an earlier revision gated 06 to agent replies only, on the mistaken belief that the bridge answered inbound turns itself. The bridge sends only offline fallbacks, so that gate stopped all bot replies until commit 4a9431d restored them.
 - **Agent replies** reach the real ticket (04D lookup bug fixed) and are delivered over WhatsApp for WhatsApp tickets.
 - **Escalation tickets** attach to the real customer/conversation (04C).
 - **Webhook auth** (`X-NexaServe-Webhook-Token`) on customer-service, agent-response, csat-submit,
