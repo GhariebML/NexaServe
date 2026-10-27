@@ -53,6 +53,8 @@ class WhatsAppOutboundEvent(BaseModel):
     recipient: str
     text: str
     reply_to_provider_message_id: Optional[str] = None
+    # Row already written by the workflow that produced the message (e.g. an agent reply from 04D).
+    message_id: Optional[str] = None
 
 
 class WhatsAppDeliveryEvent(BaseModel):
@@ -185,16 +187,69 @@ async def persist_whatsapp_outbound(
     event: WhatsAppOutboundEvent,
     x_nexaserve_webhook_token: Optional[str] = Header(None, alias="X-NexaServe-Webhook-Token"),
 ):
-    """Create or return the single queued response associated with an inbound provider event."""
+    """Create, claim, or return the single queued record for an outbound WhatsApp message.
+
+    The workflow that produced a message stores it once (05 for bot replies, 04D for agent
+    replies); the bridge then claims that row here instead of inserting a copy. A row that was
+    already claimed or sent is reported as a duplicate so the bridge never sends it twice.
+    """
     _require_whatsapp_ingest_token(x_nexaserve_webhook_token)
     recipient = event.recipient.strip()
     body = event.text.strip()
     if not recipient or not body or len(body) > 10000:
         raise HTTPException(status_code=422, detail="Invalid WhatsApp outbound message")
+    if event.message_id:
+        try:
+            prerecorded_id = UUID(event.message_id)
+        except ValueError:
+            raise HTTPException(status_code=422, detail="Invalid WhatsApp outbound message")
     phone = _normalize_whatsapp_number(recipient)
+
+    def recipient_matches(cur, customer_id) -> bool:
+        cur.execute("SELECT phone_number, whatsapp_id FROM customers WHERE id = %s", (customer_id,))
+        identity = cur.fetchone()
+        return bool(identity and (
+            identity[1] == recipient or
+            (phone and _normalize_whatsapp_number(identity[0]) == phone)
+        ))
+
+    def claim(cur, row) -> Dict[str, Any]:
+        """row = (id, customer_id, conversation_id, provider_message_id, delivery_status, claimed)."""
+        message_id, customer_id, conversation_id, provider_message_id, delivery_status, claimed = row
+        if provider_message_id or claimed:
+            return {"message_id": str(message_id), "provider_message_id": provider_message_id,
+                    "delivery_status": delivery_status, "duplicate": True}
+        cur.execute("""
+            UPDATE messages
+            SET provider = 'whatsapp', content = %s, delivery_status = 'queued',
+                delivery_updated_at = CURRENT_TIMESTAMP,
+                metadata = COALESCE(metadata, '{}'::jsonb)
+                           || jsonb_build_object('dispatch_claimed_at', CURRENT_TIMESTAMP::text)
+            WHERE id = %s
+        """, (body, message_id))
+        return {"message_id": str(message_id), "customer_id": str(customer_id),
+                "conversation_id": str(conversation_id), "delivery_status": "queued", "duplicate": False}
+
+    claim_columns = """id, customer_id, conversation_id, provider_message_id, delivery_status,
+                       COALESCE(metadata ? 'dispatch_claimed_at', FALSE)"""
+    lock_key = (f"wa-claim:{event.message_id}" if event.message_id
+                else f"wa-reply:{event.reply_to_provider_message_id or recipient}")
     with get_db() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (f"wa-reply:{event.reply_to_provider_message_id or recipient}",))
+            cur.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (lock_key,))
+            if event.message_id:
+                cur.execute(f"""
+                    SELECT {claim_columns} FROM messages
+                    WHERE id = %s AND sender_type IN ('ai', 'agent')
+                """, (str(prerecorded_id),))
+                prerecorded = cur.fetchone()
+                if not prerecorded:
+                    raise HTTPException(status_code=404, detail="WhatsApp outbound message not found")
+                if not recipient_matches(cur, prerecorded[1]):
+                    raise HTTPException(status_code=409, detail="Outbound recipient does not match the message's customer")
+                result = claim(cur, prerecorded)
+                conn.commit()
+                return result
             if event.reply_to_provider_message_id:
                 cur.execute("""
                     SELECT customer_id, conversation_id FROM messages
@@ -205,24 +260,18 @@ async def persist_whatsapp_outbound(
                 if not inbound:
                     raise HTTPException(status_code=404, detail="WhatsApp inbound message not found")
                 customer_id, conversation_id = inbound
-                cur.execute("SELECT phone_number, whatsapp_id FROM customers WHERE id = %s", (customer_id,))
-                identity = cur.fetchone()
-                recipient_matches = identity and (
-                    identity[1] == recipient or
-                    (phone and _normalize_whatsapp_number(identity[0]) == phone)
-                )
-                if not recipient_matches:
+                if not recipient_matches(cur, customer_id):
                     raise HTTPException(status_code=409, detail="Outbound recipient does not match the inbound customer")
-                cur.execute("""
-                    SELECT id, provider_message_id, delivery_status FROM messages
+                cur.execute(f"""
+                    SELECT {claim_columns} FROM messages
                     WHERE provider = 'whatsapp' AND reply_to_provider_message_id = %s
                       AND sender_type IN ('ai', 'agent') LIMIT 1
                 """, (event.reply_to_provider_message_id,))
                 existing = cur.fetchone()
                 if existing:
+                    result = claim(cur, existing)
                     conn.commit()
-                    return {"message_id": str(existing[0]), "provider_message_id": existing[1],
-                            "delivery_status": existing[2], "duplicate": True}
+                    return result
             else:
                 customer_query = "SELECT id FROM customers WHERE whatsapp_id = %s"
                 cur.execute(customer_query + " LIMIT 1", (recipient,))
@@ -329,10 +378,12 @@ def _n8n_api_request(endpoint: str, method: str = "GET", payload: Optional[Dict[
 
 def _n8n_webhook_post(url: str, payload: Dict[str, Any], timeout: float = 60.0) -> Tuple[int, Any, Optional[str], float]:
     target_url = _resolve_n8n_url(url)
+    # Webhooks authenticate with the shared service token (n8n header auth), never the n8n API
+    # key, which would be stored in execution data.
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "X-N8N-API-KEY": N8N_API_KEY # Added API key for webhook calls
+        "X-NexaServe-Webhook-Token": WHATSAPP_INGEST_TOKEN,
     }
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(target_url, data=data, headers=headers, method="POST")
@@ -480,11 +531,12 @@ async def get_summary(
     program: Optional[str] = Query("all"),
     user: Dict[str, Any] = Depends(get_current_user)
 ):
-    # Total customers
+    # Total customers. NexaServe serves DEPI only: customers created by live conversations carry
+    # no (or an 'UNKNOWN') program tag, so those count as DEPI in every program filter.
     cust_prog_filter = ""
     cust_params: List[Any] = []
     if program and program.upper() != "ALL":
-        cust_prog_filter = " WHERE (metadata->>'program') ILIKE %s"
+        cust_prog_filter = " WHERE COALESCE(NULLIF(metadata->>'program', 'UNKNOWN'), 'DEPI') ILIKE %s"
         cust_params.append(f"%{program}%")
     
     total_customers_row = query_one(f"SELECT COUNT(*) as count FROM customers{cust_prog_filter}", tuple(cust_params))
@@ -494,7 +546,7 @@ async def get_summary(
     conv_filter = " WHERE 1=1"
     conv_params: List[Any] = []
     if program and program.upper() != "ALL":
-        conv_filter += " AND c.id IN (SELECT conv.id FROM conversations conv JOIN customers cust ON conv.customer_id = cust.id WHERE (cust.metadata->>'program') ILIKE %s)"
+        conv_filter += " AND c.id IN (SELECT conv.id FROM conversations conv JOIN customers cust ON conv.customer_id = cust.id WHERE COALESCE(NULLIF(cust.metadata->>'program', 'UNKNOWN'), 'DEPI') ILIKE %s)"
         conv_params.append(f"%{program}%")
     
     d_filter, d_params = build_date_filter(period, None, None, "c.created_at")
@@ -517,7 +569,7 @@ async def get_summary(
     tick_filter = " WHERE 1=1"
     tick_params: List[Any] = []
     if program and program.upper() != "ALL":
-        tick_filter += " AND t.customer_id IN (SELECT id FROM customers WHERE (metadata->>'program') ILIKE %s)"
+        tick_filter += " AND t.customer_id IN (SELECT id FROM customers WHERE COALESCE(NULLIF(metadata->>'program', 'UNKNOWN'), 'DEPI') ILIKE %s)"
         tick_params.append(f"%{program}%")
     
     td_filter, td_params = build_date_filter(period, None, None, "t.created_at")
@@ -588,7 +640,7 @@ async def get_customers(
     params: List[Any] = []
 
     if program and program.upper() != "ALL":
-        where_clauses.append("(c.metadata->>'program') ILIKE %s")
+        where_clauses.append("COALESCE(NULLIF(c.metadata->>'program', 'UNKNOWN'), 'DEPI') ILIKE %s")
         params.append(f"%{program}%")
 
     if search:
@@ -607,7 +659,7 @@ async def get_customers(
             c.full_name, 
             c.phone_number, 
             c.email,
-            COALESCE(c.metadata->>'program', 'UNKNOWN') as program,
+            COALESCE(NULLIF(c.metadata->>'program', 'UNKNOWN'), 'DEPI') as program,
             c.created_at,
             c.last_activity_at,
             (SELECT COUNT(*) FROM conversations WHERE customer_id = c.id) as conversation_count,
@@ -693,7 +745,7 @@ async def get_customer_profile(
             "phone_masked": mask_phone(customer.get("phone_number"), can_view_pii),
             "email_masked": mask_email(customer.get("email"), can_view_pii),
             "preferred_language": customer.get("preferred_language"),
-            "program": metadata.get("program", "UNKNOWN"),
+            "program": metadata.get("program") if metadata.get("program") not in (None, "", "UNKNOWN") else "DEPI",
             "created_at": customer["created_at"].isoformat() if customer.get("created_at") else None,
             "last_activity_at": customer["last_activity_at"].isoformat() if customer.get("last_activity_at") else None
         },
@@ -723,7 +775,7 @@ async def get_conversations(
     params: List[Any] = []
 
     if program and program.upper() != "ALL":
-        where_clauses.append("(cust.metadata->>'program') ILIKE %s")
+        where_clauses.append("COALESCE(NULLIF(cust.metadata->>'program', 'UNKNOWN'), 'DEPI') ILIKE %s")
         params.append(f"%{program}%")
 
     d_filter, d_params = build_date_filter(period, None, None, "c.created_at")
@@ -746,7 +798,7 @@ async def get_conversations(
             c.id,
             c.customer_id,
             cust.full_name as customer_name,
-            COALESCE(cust.metadata->>'program', 'UNKNOWN') as program,
+            COALESCE(NULLIF(cust.metadata->>'program', 'UNKNOWN'), 'DEPI') as program,
             c.channel,
             c.status,
             COALESCE(c.current_intent, 'general_inquiry') as current_intent,
@@ -754,7 +806,17 @@ async def get_conversations(
             c.created_at,
             c.closed_at,
             (SELECT COUNT(*) FROM messages WHERE conversation_id = c.id) as message_count,
-            (SELECT AVG(confidence) FROM messages WHERE conversation_id = c.id AND confidence IS NOT NULL) as avg_confidence
+            (SELECT AVG(confidence) FROM messages WHERE conversation_id = c.id AND confidence IS NOT NULL) as avg_confidence,
+            (SELECT MAX(created_at) FROM messages WHERE conversation_id = c.id) as last_activity_at,
+            (SELECT COALESCE(json_agg(json_build_object(
+                'id', t.id,
+                'ticket_number', t.ticket_number,
+                'status', t.status,
+                'priority', t.priority,
+                'reason', t.reason,
+                'created_at', t.created_at
+            ) ORDER BY t.created_at DESC), '[]'::json)
+             FROM tickets t WHERE t.conversation_id = c.id) as tickets
         FROM conversations c
         JOIN customers cust ON c.customer_id = cust.id
         WHERE {where_sql}
@@ -776,7 +838,7 @@ async def get_conversations(
 
     # Aggregations for charts
     prog_dist = query_all(f"""
-        SELECT COALESCE(cust.metadata->>'program', 'UNKNOWN') as label, COUNT(*) as count
+        SELECT COALESCE(NULLIF(cust.metadata->>'program', 'UNKNOWN'), 'DEPI') as label, COUNT(*) as count
         FROM conversations c
         JOIN customers cust ON c.customer_id = cust.id
         WHERE {where_sql}
@@ -823,8 +885,18 @@ async def get_conversations(
             "intent": r["current_intent"],
             "language": r["language"],
             "created_at": r["created_at"].isoformat() if r["created_at"] else None,
+            "last_activity_at": r["last_activity_at"].isoformat() if r.get("last_activity_at") else (r["created_at"].isoformat() if r.get("created_at") else None),
             "message_count": r["message_count"],
-            "avg_confidence": round(float(r["avg_confidence"]), 2) if r["avg_confidence"] else None
+            "avg_confidence": round(float(r["avg_confidence"]), 2) if r["avg_confidence"] else None,
+            "tickets": [{
+                "id": str(t["id"]),
+                "ticket_number": t["ticket_number"],
+                "status": t["status"],
+                "priority": t["priority"],
+                "reason": t.get("reason"),
+                "created_at": t["created_at"].isoformat() if isinstance(t.get("created_at"), datetime) else t.get("created_at")
+            } for t in (r.get("tickets") or [])],
+            "ticket_count": len(r.get("tickets") or [])
         } for r in rows],
         "metrics": {
             "total_conversations": summary_counts["total"] if summary_counts else 0,
@@ -894,10 +966,6 @@ async def get_tickets(
     where_clauses = ["1=1"]
     params: List[Any] = []
 
-    if status and status.lower() != "all":
-        where_clauses.append("t.status = %s")
-        params.append(status.lower())
-
     if priority and priority.lower() != "all":
         where_clauses.append("t.priority = %s")
         params.append(priority.lower())
@@ -916,7 +984,7 @@ async def get_tickets(
         params.extend([term, term, term, term, term])
 
     if program and program.upper() != "ALL":
-        where_clauses.append("(c.metadata->>'program') ILIKE %s")
+        where_clauses.append("COALESCE(NULLIF(c.metadata->>'program', 'UNKNOWN'), 'DEPI') ILIKE %s")
         params.append(f"%{program}%")
 
     if sla_breached is True:
@@ -924,10 +992,26 @@ async def get_tickets(
     elif sla_breached is False:
         where_clauses.append("(t.status != 'open' OR t.sla_due_at >= NOW())")
 
+    # KPI cards summarise every status for the other active filters.
+    metrics_row = query_one(f"""
+        SELECT COUNT(*) AS total,
+               COUNT(*) FILTER (WHERE t.status = 'open') AS open,
+               COUNT(*) FILTER (WHERE t.status IN ('in_progress', 'assigned')) AS pending,
+               COUNT(*) FILTER (WHERE t.status = 'open' AND t.sla_due_at < NOW()) AS breached,
+               COUNT(*) FILTER (WHERE t.status IN ('resolved', 'closed')) AS resolved
+        FROM tickets t
+        JOIN customers c ON t.customer_id = c.id
+        WHERE {" AND ".join(where_clauses)}
+    """, tuple(params)) or {}
+
+    if status and status.lower() != "all":
+        where_clauses.append("t.status = %s")
+        params.append(status.lower())
+
     where_sql = " AND ".join(where_clauses)
 
     total_row = query_one(f"""
-        SELECT COUNT(*) as count 
+        SELECT COUNT(*) as count
         FROM tickets t
         JOIN customers c ON t.customer_id = c.id
         WHERE {where_sql}
@@ -951,9 +1035,10 @@ async def get_tickets(
             t.ticket_number,
             COALESCE(t.title, t.reason) as title,
             t.customer_id,
+            t.conversation_id,
             c.full_name as customer_name,
             c.phone_number as customer_phone,
-            COALESCE(c.metadata->>'program', 'UNKNOWN') as program,
+            COALESCE(NULLIF(c.metadata->>'program', 'UNKNOWN'), 'DEPI') as program,
             t.priority,
             t.status,
             COALESCE(t.assigned_agent, 'Unassigned') as assigned_agent,
@@ -986,6 +1071,7 @@ async def get_tickets(
             "ticket_number": r["ticket_number"],
             "title": r["title"],
             "customer_id": str(r["customer_id"]),
+            "conversation_id": str(r["conversation_id"]) if r.get("conversation_id") else None,
             "customer_name": r["customer_name"],
             "customer_phone_masked": mask_phone(r["customer_phone"], can_view_pii),
             "program": r["program"],
@@ -1003,10 +1089,62 @@ async def get_tickets(
             "updated_at": r["updated_at"].isoformat() if r["updated_at"] else None,
             "closed_at": r["closed_at"].isoformat() if r["closed_at"] else None
         } for r in rows],
+        "metrics": {key: int(metrics_row.get(key) or 0) for key in ("total", "open", "pending", "breached", "resolved")},
         "total": total_count,
         "page": page,
         "limit": limit,
         "pages": (total_count + limit - 1) // limit
+    }
+
+@router.get("/tickets/feed")
+async def get_ticket_feed(
+    since: Optional[str] = Query(None, max_length=40),
+    user: Dict[str, Any] = Depends(get_current_user)
+):
+    """New-ticket feed for live dashboard alerts.
+
+    Without ``since`` it only returns the server clock, so a fresh dashboard starts from
+    "now" instead of alerting on history. Clients pass back ``server_time`` each poll. The
+    query looks back two minutes because ``created_at`` is the inserting transaction's start
+    time, which can precede an earlier poll; clients de-duplicate by ticket id.
+    """
+    server_time = query_one("SELECT NOW() AS now")["now"]
+    queue = query_one("""
+        SELECT COUNT(*) FILTER (WHERE status = 'open') AS open,
+               COUNT(*) FILTER (WHERE status = 'open' AND assigned_agent IS NULL) AS unassigned,
+               COUNT(*) FILTER (WHERE status = 'open' AND sla_due_at < NOW()) AS breached
+        FROM tickets
+    """) or {}
+    items: List[Dict[str, Any]] = []
+    if since:
+        try:
+            since_ts = datetime.fromisoformat(since.replace("Z", "+00:00"))
+        except ValueError:
+            raise HTTPException(status_code=422, detail="since must be an ISO-8601 timestamp")
+        rows = query_all("""
+            SELECT t.id, t.ticket_number, COALESCE(t.title, t.reason) AS title, t.reason, t.priority, t.status,
+                   COALESCE(t.source_channel, t.escalation_channel, 'whatsapp') AS source_channel,
+                   t.sla_due_at, t.created_at, c.full_name AS customer_name,
+                   COALESCE(tc.name, 'general') AS category_name, COALESCE(tc.name_ar, 'عام') AS category_name_ar
+            FROM tickets t
+            JOIN customers c ON c.id = t.customer_id
+            LEFT JOIN ticket_categories tc ON tc.id = t.category_id
+            WHERE t.created_at > %s::timestamptz - INTERVAL '2 minutes'
+            ORDER BY t.created_at ASC
+            LIMIT 50
+        """, (since_ts,))
+        items = [{
+            "id": str(r["id"]), "ticket_number": r["ticket_number"], "title": r["title"], "reason": r["reason"],
+            "priority": r["priority"], "status": r["status"], "source_channel": r["source_channel"],
+            "customer_name": r["customer_name"], "category_name": r["category_name"],
+            "category_name_ar": r["category_name_ar"],
+            "sla_deadline": r["sla_due_at"].isoformat() if r["sla_due_at"] else None,
+            "created_at": r["created_at"].isoformat() if r["created_at"] else None,
+        } for r in rows]
+    return {
+        "server_time": server_time.isoformat(),
+        "items": items,
+        "queue": {key: int(queue.get(key) or 0) for key in ("open", "unassigned", "breached")},
     }
 
 @router.get("/tickets/{ticket_id}")
@@ -1023,7 +1161,7 @@ async def get_ticket_details(
             c.full_name as customer_name,
             c.phone_number as customer_phone,
             c.email as customer_email,
-            COALESCE(c.metadata->>'program', 'UNKNOWN') as program,
+            COALESCE(NULLIF(c.metadata->>'program', 'UNKNOWN'), 'DEPI') as program,
             t.conversation_id,
             t.priority,
             t.status,
@@ -1079,6 +1217,7 @@ async def get_ticket_details(
         "id": str(ticket["id"]),
         "ticket_number": ticket["ticket_number"],
         "title": ticket["title"] or ticket["reason"][:60],
+        "conversation_id": str(ticket["conversation_id"]) if ticket.get("conversation_id") else None,
         "customer": {
             "id": str(ticket["customer_id"]),
             "full_name": ticket["customer_name"],
@@ -1827,6 +1966,7 @@ async def get_conversation_detail(
         WHERE conversation_id = %s AND sender_type IN ('customer', 'ai', 'agent')
     """, (conversation_uuid,))
     message_total = int(message_total_row["count"] if message_total_row else 0)
+
     messages = query_all("""
         SELECT 
             id, sender_type, content, intent, confidence, created_at, metadata,
@@ -1841,15 +1981,15 @@ async def get_conversation_detail(
         SELECT summary, unresolved_questions, topics
         FROM conversation_summaries
         WHERE conversation_id = %s
-    """, (conversation_id,))
+    """, (conversation_uuid,))
 
     tickets = query_all("""
         SELECT 
-            ticket_number, priority, status, reason, sla_due_at, assigned_agent, created_at
+            id, ticket_number, priority, status, reason, sla_due_at, assigned_agent, created_at
         FROM tickets
         WHERE conversation_id = %s
         ORDER BY created_at DESC
-    """, (conversation_id,))
+    """, (conversation_uuid,))
 
     # Sanitize message metadata to ensure system prompts or internal keys are never exposed
     safe_messages = []
@@ -1861,7 +2001,7 @@ async def get_conversation_detail(
             "rag_evidence": raw_meta.get("rag_evidence") or raw_meta.get("sources"),
             "delivery_status": m.get("delivery_status") or raw_meta.get("delivery_status"),
             "provider_message_id": m.get("provider_message_id") or raw_meta.get("provider_message_id"),
-            "delivery_updated_at": m["delivery_updated_at"].isoformat() if m.get("delivery_updated_at") else None
+            "delivery_updated_at": m["delivery_updated_at"].isoformat() if m.get("delivery_updated_at") else (raw_meta.get("delivery_updated_at") if isinstance(raw_meta.get("delivery_updated_at"), str) else None)
         }
         safe_messages.append({
             "id": str(m["id"]),
@@ -1898,6 +2038,7 @@ async def get_conversation_detail(
         "message_total": message_total,
         "message_pages": (message_total + limit - 1) // limit,
         "tickets": [{
+            "id": str(t["id"]),
             "ticket_number": t["ticket_number"],
             "priority": t["priority"],
             "status": t["status"],
@@ -1905,6 +2046,43 @@ async def get_conversation_detail(
             "assigned_agent": t["assigned_agent"],
             "sla_deadline": t["sla_due_at"].isoformat() if t["sla_due_at"] else None,
             "created_at": t["created_at"].isoformat() if t["created_at"] else None
+        } for t in tickets]
+    }
+
+@router.get("/conversations/{conversation_id}/tickets")
+async def get_conversation_tickets(
+    conversation_id: str,
+    user: Dict[str, Any] = Depends(get_current_user)
+):
+    try:
+        conversation_uuid = str(UUID(conversation_id))
+    except (ValueError, TypeError, AttributeError):
+        raise HTTPException(status_code=404, detail="Conversation not found")
+        
+    tickets = query_all("""
+        SELECT 
+            t.id, t.ticket_number, t.title, t.priority, t.status, t.reason,
+            t.assigned_agent, t.assigned_team, t.sla_due_at, t.created_at, t.updated_at
+        FROM tickets t
+        WHERE t.conversation_id = %s
+        ORDER BY t.created_at DESC
+    """, (conversation_uuid,))
+    
+    return {
+        "conversation_id": conversation_id,
+        "total": len(tickets),
+        "items": [{
+            "id": str(t["id"]),
+            "ticket_number": t["ticket_number"],
+            "title": t["title"] or t["reason"][:60],
+            "priority": t["priority"],
+            "status": t["status"],
+            "reason": t["reason"],
+            "assigned_agent": t["assigned_agent"],
+            "assigned_team": t["assigned_team"],
+            "sla_deadline": t["sla_due_at"].isoformat() if t["sla_due_at"] else None,
+            "created_at": t["created_at"].isoformat() if t["created_at"] else None,
+            "updated_at": t["updated_at"].isoformat() if t["updated_at"] else None
         } for t in tickets]
     }
 
@@ -2132,7 +2310,9 @@ async def respond_to_ticket(
         VALUES (%s, %s, 'agent_reply', 'agent', %s, %s, %s)
     """, (ticket["id"], ticket["ticket_number"], req.agent_name or user.get("full_name", "Agent"), req.response_message, new_status))
 
-    if ticket.get("conversation_id"):
+    # SubWF 04D records (and for WhatsApp, delivers) the agent message; only keep a record here
+    # when n8n did not accept the reply, so the conversation history still shows it.
+    if ticket.get("conversation_id") and n8n_code != 200:
         execute_commit("""
             INSERT INTO messages (conversation_id, customer_id, sender_type, content, intent)
             VALUES (%s, %s, 'agent', %s, 'agent_portal_resolution')

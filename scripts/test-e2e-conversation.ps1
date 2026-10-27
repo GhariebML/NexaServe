@@ -8,6 +8,8 @@ param (
 )
 
 $ErrorActionPreference = "Continue"
+. "$PSScriptRoot\BridgeAuth.ps1"
+$ServiceHeaders = Get-NexaServeServiceHeaders
 
 Write-Host "================================================================" -ForegroundColor Cyan
 Write-Host " Customer Service AI Platform - End-to-End Test Suite" -ForegroundColor Cyan
@@ -28,7 +30,7 @@ function Send-CustomerMessage($name, $phone, $message, $expectedIntent) {
     
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
     try {
-        $resp = Invoke-RestMethod -Uri $WebhookUrl -Method Post -Body $payload -ContentType "application/json" -TimeoutSec 35
+        $resp = Invoke-RestMethod -Headers $ServiceHeaders -Uri $WebhookUrl -Method Post -Body $payload -ContentType "application/json" -TimeoutSec 35
         $stopwatch.Stop()
         
         Write-Host "[REPLY RECEIVED] (${stopwatch.ElapsedMilliseconds} ms)" -ForegroundColor Green

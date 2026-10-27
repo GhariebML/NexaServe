@@ -7,7 +7,8 @@
         "httpMethod": "POST",
         "path": "agent-response",
         "responseMode": "responseNode",
-        "options": {}
+        "options": {},
+        "authentication": "headerAuth"
       },
       "id": "node-agent-webhook",
       "name": "Agent Response Webhook",
@@ -17,7 +18,13 @@
         160,
         300
       ],
-      "webhookId": "cs-agent-webhook"
+      "webhookId": "cs-agent-webhook",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CS_WA_BRIDGE_CRED_01",
+          "name": "NexaServe Service Token"
+        }
+      }
     },
     {
       "id": "node-auto-assign",
@@ -34,8 +41,8 @@
       },
       "credentials": {
         "postgres": {
-          "id": "CS_PG_CRED_01",
-          "name": "CustomerService Postgres"
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
         }
       },
       "notesInFlow": true,
@@ -52,12 +59,12 @@
       ],
       "parameters": {
         "operation": "executeQuery",
-        "query": "=WITH found AS (\n  SELECT t.id AS ticket_id, t.ticket_number, t.status AS ticket_status, t.conversation_id, t.customer_id,\n         c.full_name, c.phone_number, c.telegram_id, c.whatsapp_id, c.email,\n         COALESCE(conv.channel, 'webchat') AS channel, COALESCE(conv.language, 'ar') AS language,\n         COALESCE(t.assigned_agent_id, 'a0000000-0000-0000-0000-000000000001'::uuid) AS assigned_agent_id,\n         COALESCE(t.category_id, 11) AS category_id\n  FROM tickets t\n  JOIN customers c ON t.customer_id = c.id\n  LEFT JOIN conversations conv ON t.conversation_id = conv.id\n  WHERE t.ticket_number = '{{ ($json.body?.ticket_number || $json.ticket_number || '').replace(/'/g, \"''\") }}'\n  LIMIT 1\n),\nfallback AS (\n  SELECT 'a0000000-0000-0000-0000-000000000001'::uuid AS ticket_id,\n         '{{ ($json.body?.ticket_number || $json.ticket_number || 'TICK-1001').replace(/'/g, \"''\") }}' AS ticket_number,\n         'open' AS ticket_status,\n         'a0000000-0000-0000-0000-000000000001'::uuid AS conversation_id,\n         'a0000000-0000-0000-0000-000000000001'::uuid AS customer_id,\n         'DEPI Citizen' AS full_name,\n         '+201000000000' AS phone_number,\n         'citizen_user' AS telegram_id,\n         '201000000000' AS whatsapp_id,\n         'citizen@digilians.gov.eg' AS email,\n         'webchat' AS channel,\n         'ar' AS language,\n         'a0000000-0000-0000-0000-000000000001'::uuid AS assigned_agent_id,\n         11 AS category_id\n  WHERE NOT EXISTS (SELECT 1 FROM found)\n)\nSELECT * FROM (SELECT * FROM found UNION ALL SELECT * FROM fallback) res LIMIT 1;"
+        "query": "=WITH found AS (\n  SELECT t.id AS ticket_id, t.ticket_number, t.status AS ticket_status, t.conversation_id, t.customer_id,\n         c.full_name, c.phone_number, c.telegram_id, c.whatsapp_id, c.email,\n         COALESCE(conv.channel, 'webchat') AS channel, COALESCE(conv.language, 'ar') AS language,\n         COALESCE(t.assigned_agent_id, 'a0000000-0000-0000-0000-000000000001'::uuid) AS assigned_agent_id,\n         COALESCE(t.category_id, 11) AS category_id\n  FROM tickets t\n  JOIN customers c ON t.customer_id = c.id\n  LEFT JOIN conversations conv ON t.conversation_id = conv.id\n  WHERE t.ticket_number = '{{ ($('Agent Response Webhook').first().json.body?.ticket_number || $('Agent Response Webhook').first().json.ticket_number || '').replace(/'/g, \"''\") }}'\n  LIMIT 1\n),\nfallback AS (\n  SELECT 'a0000000-0000-0000-0000-000000000001'::uuid AS ticket_id,\n         '{{ ($('Agent Response Webhook').first().json.body?.ticket_number || $('Agent Response Webhook').first().json.ticket_number || 'TICK-1001').replace(/'/g, \"''\") }}' AS ticket_number,\n         'open' AS ticket_status,\n         'a0000000-0000-0000-0000-000000000001'::uuid AS conversation_id,\n         'a0000000-0000-0000-0000-000000000001'::uuid AS customer_id,\n         'DEPI Citizen' AS full_name,\n         '+201000000000' AS phone_number,\n         'citizen_user' AS telegram_id,\n         '201000000000' AS whatsapp_id,\n         'citizen@digilians.gov.eg' AS email,\n         'webchat' AS channel,\n         'ar' AS language,\n         'a0000000-0000-0000-0000-000000000001'::uuid AS assigned_agent_id,\n         11 AS category_id\n  WHERE NOT EXISTS (SELECT 1 FROM found)\n)\nSELECT * FROM (SELECT * FROM found UNION ALL SELECT * FROM fallback) res LIMIT 1;"
       },
       "credentials": {
         "postgres": {
-          "id": "CS_PG_CRED_01",
-          "name": "CustomerService Postgres"
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
         }
       }
     },
@@ -76,8 +83,8 @@
       },
       "credentials": {
         "postgres": {
-          "id": "CS_PG_CRED_01",
-          "name": "CustomerService Postgres"
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
         }
       }
     },
@@ -96,8 +103,8 @@
       },
       "credentials": {
         "postgres": {
-          "id": "CS_PG_CRED_01",
-          "name": "CustomerService Postgres"
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
         }
       },
       "notesInFlow": true,
@@ -114,12 +121,12 @@
       ],
       "parameters": {
         "operation": "executeQuery",
-        "query": "=INSERT INTO messages (conversation_id, customer_id, sender_type, content, intent)\nVALUES (\n  '{{ $('Lookup Ticket & Customer').first().json.conversation_id || 'a0000000-0000-0000-0000-000000000001' }}'::uuid,\n  '{{ $('Lookup Ticket & Customer').first().json.customer_id || 'a0000000-0000-0000-0000-000000000001' }}'::uuid,\n  'agent',\n  '{{ ($('Agent Response Webhook').first().json.body?.agent_message || $('Agent Response Webhook').first().json.agent_message || '').replace(/'/g, \"''\") }}',\n  'agent_direct_response'\n);"
+        "query": "=INSERT INTO messages (conversation_id, customer_id, sender_type, content, intent, provider)\nVALUES (\n  '{{ $('Lookup Ticket & Customer').first().json.conversation_id || 'a0000000-0000-0000-0000-000000000001' }}'::uuid,\n  '{{ $('Lookup Ticket & Customer').first().json.customer_id || 'a0000000-0000-0000-0000-000000000001' }}'::uuid,\n  'agent',\n  '{{ ($('Agent Response Webhook').first().json.body?.agent_message || $('Agent Response Webhook').first().json.agent_message || '').replace(/'/g, \"''\") }}',\n  'agent_direct_response',\n  -- WhatsApp tickets are delivered by SubWF 06; the bridge claims this row via lifecycle_message_id.\n  NULLIF('{{ ($('Lookup Ticket & Customer').first().json.channel === 'whatsapp' && $('Lookup Ticket & Customer').first().json.ticket_id !== 'a0000000-0000-0000-0000-000000000001') ? 'whatsapp' : '' }}', '')\n)\nRETURNING id;"
       },
       "credentials": {
         "postgres": {
-          "id": "CS_PG_CRED_01",
-          "name": "CustomerService Postgres"
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
         }
       }
     },
@@ -138,8 +145,8 @@
       },
       "credentials": {
         "postgres": {
-          "id": "CS_PG_CRED_01",
-          "name": "CustomerService Postgres"
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
         }
       }
     },
@@ -158,8 +165,8 @@
       },
       "credentials": {
         "postgres": {
-          "id": "CS_PG_CRED_01",
-          "name": "CustomerService Postgres"
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
         }
       },
       "notesInFlow": true,
@@ -168,7 +175,7 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{\n  JSON.stringify({\n    status: \"success\",\n    ticket_number: $('Lookup Ticket & Customer').first().json.ticket_number,\n    customer_name: $('Lookup Ticket & Customer').first().json.full_name,\n    delivered_to_channel: $('Lookup Ticket & Customer').first().json.channel || 'webchat',\n    agent_message: $('Agent Response Webhook').first().json.body?.agent_message || $('Agent Response Webhook').first().json.body?.agent_response || $('Agent Response Webhook').first().json.agent_message || $('Agent Response Webhook').first().json.agent_response || '',\n    action: $('Agent Response Webhook').first().json.body?.action || $('Agent Response Webhook').first().json.action || 'reply',\n    timestamp: new Date().toISOString()\n  })\n}}",
+        "responseBody": "={{\n  JSON.stringify({\n    status: \"success\",\n    whatsapp_delivery_requested: $('Prepare Agent Delivery').first()?.json?.explicit_dispatch === true,\n    ticket_number: $('Lookup Ticket & Customer').first().json.ticket_number,\n    customer_name: $('Lookup Ticket & Customer').first().json.full_name,\n    delivered_to_channel: $('Lookup Ticket & Customer').first().json.channel || 'webchat',\n    agent_message: $('Agent Response Webhook').first().json.body?.agent_message || $('Agent Response Webhook').first().json.body?.agent_response || $('Agent Response Webhook').first().json.agent_message || $('Agent Response Webhook').first().json.agent_response || '',\n    action: $('Agent Response Webhook').first().json.body?.action || $('Agent Response Webhook').first().json.action || 'reply',\n    timestamp: new Date().toISOString()\n  })\n}}",
         "options": {}
       },
       "id": "node-respond-agent",
@@ -176,9 +183,59 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        2080,
+        2460,
         300
       ]
+    },
+    {
+      "id": "node-prepare-agent-delivery",
+      "name": "Prepare Agent Delivery",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1890,
+        300
+      ],
+      "parameters": {
+        "jsCode": "/* === Decide whether this agent reply must be delivered to the customer over WhatsApp === */\nconst FALLBACK_ID = 'a0000000-0000-0000-0000-000000000001';\nconst ticket = $('Lookup Ticket & Customer').first()?.json || {};\nconst recorded = $('Record Agent Message').first()?.json || {};\nconst hook = $('Agent Response Webhook').first()?.json || {};\nconst body = hook.body || hook;\nconst message = String(body.agent_message || body.agent_response || '').trim();\n\n// Only real tickets on WhatsApp conversations with a known address are sent; the lookup's\n// placeholder row (unknown ticket number) must never produce a message to anyone.\nconst recipient = String(ticket.whatsapp_id || ticket.phone_number || '');\nconst deliver = ticket.ticket_id && ticket.ticket_id !== FALLBACK_ID\n  && ticket.channel === 'whatsapp' && recipient !== '' && message !== '';\n\nreturn [{\n  json: {\n    channel: 'whatsapp',\n    explicit_dispatch: Boolean(deliver),\n    whatsapp_id: ticket.whatsapp_id || '',\n    phone_number: ticket.phone_number || '',\n    reply: message,\n    lifecycle_message_id: recorded.id || null,\n    ticket_number: ticket.ticket_number || null,\n    skip_reason: deliver ? null : 'not_a_whatsapp_ticket_or_missing_recipient'\n  }\n}];\n"
+      }
+    },
+    {
+      "id": "node-deliver-whatsapp-gate",
+      "name": "Deliver via WhatsApp?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        2080,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.explicit_dispatch === true }}",
+              "value2": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "node-call-agent-egress",
+      "name": "Call SubWF 06 - Deliver Agent Reply",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        2270,
+        180
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "F7kjakLJXmzBDsvS",
+          "mode": "id"
+        }
+      }
     }
   ],
   "connections": {
@@ -260,6 +317,46 @@
       ]
     },
     "Log Performance Metrics": {
+      "main": [
+        [
+          {
+            "node": "Prepare Agent Delivery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Agent Delivery": {
+      "main": [
+        [
+          {
+            "node": "Deliver via WhatsApp?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deliver via WhatsApp?": {
+      "main": [
+        [
+          {
+            "node": "Call SubWF 06 - Deliver Agent Reply",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call SubWF 06 - Deliver Agent Reply": {
       "main": [
         [
           {

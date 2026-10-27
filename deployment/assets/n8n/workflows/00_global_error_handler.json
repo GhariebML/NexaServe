@@ -8,7 +8,10 @@
       "name": "Error Trigger",
       "type": "n8n-nodes-base.errorTrigger",
       "typeVersion": 1,
-      "position": [200, 300]
+      "position": [
+        200,
+        300
+      ]
     },
     {
       "parameters": {
@@ -22,11 +25,14 @@
       "name": "Log Error to Postgres",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
-      "position": [440, 300],
+      "position": [
+        440,
+        300
+      ],
       "credentials": {
         "postgres": {
-          "id": "CS_PG_CRED_01",
-          "name": "CustomerService Postgres"
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
         }
       }
     }

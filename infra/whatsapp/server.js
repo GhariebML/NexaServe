@@ -1,5 +1,5 @@
 import express from 'express';
-import cors from 'cors';
+import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -21,6 +21,9 @@ const AUTH_DIR = process.env.AUTH_DIR || path.resolve(__dirname, '../../data/wha
 const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL || 'http://localhost:5678/webhook/customer-service';
 const WHATSAPP_LIFECYCLE_API = process.env.WHATSAPP_LIFECYCLE_API || '';
 const WHATSAPP_INGEST_TOKEN = process.env.WHATSAPP_INGEST_TOKEN || '';
+// Message/delivery persistence through the dashboard is opt-in: set WHATSAPP_LIFECYCLE_API to enable it.
+// When unset, messages are processed directly and n8n's conversation logger stores each turn.
+const LIFECYCLE_ENABLED = Boolean(WHATSAPP_LIFECYCLE_API && WHATSAPP_INGEST_TOKEN);
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434/api/generate';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'qwen2.5:3b';
 
@@ -59,11 +62,33 @@ async function lifecycleRequest(path, payload) {
   }
 }
 
-async function sendTrackedWhatsApp(to, message, replyToProviderMessageId = null) {
+function resolveTargetJid(to) {
+  if (to.includes('@')) return to;
+  const clean = to.replace(/[^0-9]/g, '');
+  return jidMap[clean] || jidMap[`+${clean}`] || `${clean}@s.whatsapp.net`;
+}
+
+// n8n webhooks require the shared service token (header auth on every Webhook node).
+function n8nWebhookHeaders() {
+  return { 'Content-Type': 'application/json', 'X-NexaServe-Webhook-Token': WHATSAPP_INGEST_TOKEN };
+}
+
+// lifecycleMessageId: a row the producing workflow already stored (agent replies from 04D);
+// the dashboard claims it instead of inserting a duplicate.
+async function sendTrackedWhatsApp(to, message, replyToProviderMessageId = null, lifecycleMessageId = null) {
+  if (!LIFECYCLE_ENABLED) {
+    if (connectionState !== 'CONNECTED' || !sock) throw new Error('WhatsApp is not connected');
+    const target = resolveTargetJid(to);
+    const sent = await sock.sendMessage(target, { text: message });
+    const providerMessageId = sent?.key?.id;
+    if (!providerMessageId) throw new Error('WhatsApp provider returned no message ID');
+    return { success: true, message_id: providerMessageId, target_jid: target, timestamp: new Date().toISOString() };
+  }
   const record = await lifecycleRequest('outbound', {
     recipient: to,
     text: message,
-    reply_to_provider_message_id: replyToProviderMessageId
+    reply_to_provider_message_id: replyToProviderMessageId,
+    message_id: lifecycleMessageId
   });
   if (record.duplicate) {
     return { success: true, duplicate_suppressed: true, message_id: record.provider_message_id || null,
@@ -76,10 +101,7 @@ async function sendTrackedWhatsApp(to, message, replyToProviderMessageId = null)
     });
     throw new Error('WhatsApp is not connected');
   }
-  const target = to.includes('@') ? to : (() => {
-      const clean = to.replace(/[^0-9]/g, '');
-      return jidMap[clean] || jidMap[`+${clean}`] || `${clean}@s.whatsapp.net`;
-  })();
+  const target = resolveTargetJid(to);
   let sent;
   try {
     sent = await sock.sendMessage(target, { text: message });
@@ -111,7 +133,7 @@ async function recordWhatsAppReceipt(update) {
   const rawStatus = Number(update?.update?.status);
   const statusByBaileys = { 2: 'sent', 3: 'delivered', 4: 'read', 5: 'read', 0: 'failed' };
   const deliveryStatus = statusByBaileys[rawStatus];
-  if (!providerMessageId || !deliveryStatus || update?.key?.fromMe !== true) return;
+  if (!LIFECYCLE_ENABLED || !providerMessageId || !deliveryStatus || update?.key?.fromMe !== true) return;
   await lifecycleRequest('delivery', { provider_message_id: providerMessageId, delivery_status: deliveryStatus });
 }
 
@@ -129,25 +151,34 @@ function isRecentlyDispatched(key) {
   return false;
 }
 
-// Response cache for AI generation (TTL: 60s) — prevents duplicate Ollama calls
+// Response cache for AI generation (TTL: 60s) — absorbs a customer re-sending the same message.
+// Keys are scoped to the sender: replies can carry personal context (tickets, history, escalations),
+// so one customer must never receive a reply generated for another.
 // Cache keys include KB_CACHE_VERSION so KB updates invalidate old entries
+const RESPONSE_CACHE_TTL_MS = 60000;
 let kbCacheVersion = parseInt(process.env.KB_CACHE_VERSION || '1', 10);
 const responseCache = new Map();
-function getCacheKey(msg) {
-  return kbCacheVersion + ':' + (msg || '').trim().toLowerCase().replace(/\s+/g, ' ');
+function getCacheKey(senderId, msg) {
+  const sender = String(senderId || '').trim().toLowerCase();
+  return kbCacheVersion + ':' + sender + ':' + (msg || '').trim().toLowerCase().replace(/\s+/g, ' ');
 }
-function getCachedReply(msg) {
-  const key = getCacheKey(msg);
+function getCachedReply(senderId, msg) {
+  if (!senderId) return null;
+  const key = getCacheKey(senderId, msg);
   if (responseCache.has(key)) {
     const entry = responseCache.get(key);
-    if (Date.now() - entry.timestamp < 60000) return entry.reply;
+    if (Date.now() - entry.timestamp < RESPONSE_CACHE_TTL_MS) return entry.reply;
     responseCache.delete(key);
   }
   return null;
 }
-function setCachedReply(msg, reply) {
-  const key = getCacheKey(msg);
-  responseCache.set(key, { reply, timestamp: Date.now() });
+function setCachedReply(senderId, msg, reply) {
+  if (!senderId) return;
+  const now = Date.now();
+  for (const [k, entry] of responseCache.entries()) {
+    if (now - entry.timestamp >= RESPONSE_CACHE_TTL_MS) responseCache.delete(k);
+  }
+  responseCache.set(getCacheKey(senderId, msg), { reply, timestamp: now });
 }
 function invalidateCache() {
   kbCacheVersion++;
@@ -166,7 +197,8 @@ function replyBilingual(ar, en, lang) {
 }
 
 const JID_CACHE_FILE = path.join(AUTH_DIR, 'jid_cache.json');
-let jidMap = { "127182672252935": "127182672252935@lid" };
+// Learned from inbound traffic and persisted next to the auth state; no contacts are hardcoded.
+let jidMap = {};
 try {
   if (fs.existsSync(JID_CACHE_FILE)) {
     jidMap = { ...jidMap, ...JSON.parse(fs.readFileSync(JID_CACHE_FILE, 'utf8')) };
@@ -229,7 +261,7 @@ setInterval(async () => {
     const timeout = setTimeout(() => controller.abort(), 10000);
     const res = await fetch(N8N_WEBHOOK_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: n8nWebhookHeaders(),
       body: JSON.stringify(item.payload),
       signal: controller.signal
     });
@@ -370,25 +402,33 @@ async function initWhatsApp() {
           continue;
         }
 
-        let persistedInbound;
-        try {
-          persistedInbound = await lifecycleRequest('inbound', {
-            sender_jid: senderJid,
-            provider_message_id: providerMessageId,
-            phone_number: `+${phone}`,
-            push_name: pushName,
-            text
-          });
-        } catch (persistErr) {
-          console.error('[WhatsApp lifecycle] Inbound could not be persisted; processing was stopped:', persistErr.message);
-          continue;
+        let persistedInbound = {};
+        if (LIFECYCLE_ENABLED) {
+          try {
+            persistedInbound = await lifecycleRequest('inbound', {
+              sender_jid: senderJid,
+              provider_message_id: providerMessageId,
+              phone_number: `+${phone}`,
+              push_name: pushName,
+              text
+            });
+          } catch (persistErr) {
+            console.error('[WhatsApp lifecycle] Inbound could not be persisted; processing was stopped:', persistErr.message);
+            continue;
+          }
+          if (persistedInbound.duplicate) {
+            console.log('[WhatsApp lifecycle] Duplicate inbound event suppressed.');
+            continue;
+          }
+          console.log('[WhatsApp Ingress] Persisted inbound event; starting workflow processing.');
+        } else {
+          // Without lifecycle persistence, n8n's logger stores the turn; suppress provider redeliveries in memory.
+          if (isRecentlyDispatched(`inbound:${providerMessageId}`)) {
+            console.log('[WhatsApp Ingress] Duplicate inbound event suppressed.');
+            continue;
+          }
+          console.log('[WhatsApp Ingress] Inbound event received; starting workflow processing.');
         }
-        if (persistedInbound.duplicate) {
-          console.log('[WhatsApp lifecycle] Duplicate inbound event suppressed.');
-          continue;
-        }
-
-        console.log('[WhatsApp Ingress] Persisted inbound event; starting workflow processing.');
 
         const payload = {
           channel: 'whatsapp',
@@ -400,6 +440,7 @@ async function initWhatsApp() {
           customer_id: persistedInbound.customer_id,
           conversation_id: persistedInbound.conversation_id,
           inbound_message_id: persistedInbound.message_id,
+          lifecycle_persisted: LIFECYCLE_ENABLED,
           jid: senderJid,
           full_name: pushName,
           start_time: Date.now(),
@@ -436,7 +477,7 @@ async function initWhatsApp() {
         // 1. Attempt dispatch to n8n workflow
         try {
           // Check response cache first
-          const cached = getCachedReply(text);
+          const cached = getCachedReply(senderJid, text);
           if (cached) {
             replyText = cached;
             replySource = 'cache';
@@ -446,7 +487,7 @@ async function initWhatsApp() {
             const startTime = Date.now();
             const response = await fetch(N8N_WEBHOOK_URL, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: n8nWebhookHeaders(),
               body: JSON.stringify(payload),
               signal: controller.signal
             });
@@ -460,7 +501,7 @@ async function initWhatsApp() {
             // Extract response string if returned synchronously from n8n webhook
             if (replyText) {
               replySource = 'n8n';
-              setCachedReply(text, replyText);
+              setCachedReply(senderJid, text, replyText);
             } else {
               console.warn(`[WhatsApp Bridge] n8n did not return a successful customer reply (HTTP ${response.status}).`);
             }
@@ -496,8 +537,31 @@ async function initWhatsApp() {
 // Express Web Server & REST API
 // -----------------------------------------------------------------------------
 const app = express();
-app.use(cors());
 app.use(express.json());
+
+// Control routes can send messages or destroy the paired session, so they need the
+// shared service token. No CORS headers are emitted, so other sites cannot read
+// responses; the Origin check below lets only the bridge's own /qr page log out.
+function tokenMatches(token) {
+  if (!WHATSAPP_INGEST_TOKEN || typeof token !== 'string') return false;
+  const expected = Buffer.from(WHATSAPP_INGEST_TOKEN);
+  const provided = Buffer.from(token);
+  return provided.length === expected.length && crypto.timingSafeEqual(provided, expected);
+}
+function isSameOriginBrowserRequest(req) {
+  const origin = req.get('origin');
+  return Boolean(origin) && origin === `${req.protocol}://${req.get('host')}`;
+}
+function requireBridgeToken({ allowSameOrigin = false } = {}) {
+  return (req, res, next) => {
+    if (!WHATSAPP_INGEST_TOKEN) {
+      return res.status(503).json({ error: 'Bridge control API is not configured' });
+    }
+    if (tokenMatches(req.get('x-nexaserve-webhook-token'))) return next();
+    if (allowSameOrigin && isSameOriginBrowserRequest(req)) return next();
+    return res.status(401).json({ error: 'Unauthorized' });
+  };
+}
 
 app.get('/health', (req, res) => {
   res.json({
@@ -718,13 +782,14 @@ app.get('/qr.png', async (req, res) => {
 });
 
 // Outbound Message Dispatch endpoint (Called by n8n SubWF 06)
-app.post('/send', async (req, res) => {
+app.post('/send', requireBridgeToken(), async (req, res) => {
   try {
     const { to, message } = req.body;
     if (!to || !message) {
       return res.status(400).json({ error: 'Parameters "to" and "message" are required.' });
     }
-    const result = await sendTrackedWhatsApp(to, String(message), req.body.reply_to_provider_message_id || null);
+    const result = await sendTrackedWhatsApp(to, String(message), req.body.reply_to_provider_message_id || null,
+      req.body.lifecycle_message_id || null);
     res.status(200).json(result);
   } catch (err) {
     console.error('[WhatsApp Egress Error]:', err.message);
@@ -733,14 +798,15 @@ app.post('/send', async (req, res) => {
 });
 
 // Simulation endpoint for test and health checks
-app.post('/simulate', async (req, res) => {
+app.post('/simulate', requireBridgeToken(), async (req, res) => {
   try {
     const message = req.body.customer_message || req.body.message || '';
     const name = req.body.full_name || req.body.name || 'Citizen';
-    const phone = req.body.phone_number || req.body.phone || '+966500000000';
+    // Synthetic identity for anonymous simulations (not a real subscriber number).
+    const phone = req.body.phone_number || req.body.phone || '+200000000000';
 
     // Check cache first
-    const cached = getCachedReply(message);
+    const cached = getCachedReply(phone, message);
     if (cached) {
       return res.json({
         success: true,
@@ -768,7 +834,7 @@ app.post('/simulate', async (req, res) => {
       const startTime = Date.now();
       const n8nResp = await fetch(N8N_WEBHOOK_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: n8nWebhookHeaders(),
         body: JSON.stringify(payload),
         signal: controller.signal
       });
@@ -779,7 +845,7 @@ app.post('/simulate', async (req, res) => {
         replyText = extractN8nReply(n8nResp.status, json);
         if (replyText) {
           source = 'n8n';
-          setCachedReply(message, replyText);
+          setCachedReply(phone, message, replyText);
         }
         console.log(`[Simulate -> n8n] Status ${n8nResp.status} (${elapsed}ms)`);
       } else {
@@ -805,7 +871,7 @@ app.post('/simulate', async (req, res) => {
   }
 });
 
-app.post('/logout', async (req, res) => {
+app.post('/logout', requireBridgeToken({ allowSameOrigin: true }), async (req, res) => {
   try {
     if (sock) {
       await sock.logout();
@@ -833,7 +899,7 @@ app.get('/cache/status', (req, res) => {
     maxTTL: 60000
   });
 });
-app.post('/cache/invalidate', (req, res) => {
+app.post('/cache/invalidate', requireBridgeToken(), (req, res) => {
   const newVersion = invalidateCache();
   res.json({ success: true, new_version: newVersion, cleared_entries: responseCache.size });
 });
@@ -865,6 +931,8 @@ async function prewarmOllama() {
 app.listen(PORT, () => {
   console.log(`[WhatsApp Bridge] HTTP Server listening on port ${PORT}`);
   console.log(`[WhatsApp Bridge] Web UI available at: http://localhost:${PORT}/qr`);
+  console.log(`[WhatsApp Bridge] Control API auth: ${WHATSAPP_INGEST_TOKEN ? 'enabled' : 'NOT CONFIGURED (control routes return 503)'}`);
+  console.log(`[WhatsApp Bridge] Lifecycle persistence: ${LIFECYCLE_ENABLED ? 'enabled' : 'disabled'}`);
   prewarmOllama();
   initWhatsApp().catch((err) => {
     console.error('[WhatsApp Bridge] Initialization error:', err);

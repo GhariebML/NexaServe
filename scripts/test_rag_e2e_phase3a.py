@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Phase 3A: End-to-End RAG Verification Test Suite"""
+from bridge_auth import bridge_headers
 import requests
 import json
 import sys
@@ -22,7 +23,7 @@ def run_test(name, payload, checks):
     
     try:
         start = time.time()
-        resp = requests.post(WEBHOOK_URL, json=payload, timeout=TIMEOUT)
+        resp = requests.post(WEBHOOK_URL, json=payload, headers=bridge_headers(), timeout=TIMEOUT)
         elapsed = round(time.time() - start, 2)
         print(f"  HTTP: {resp.status_code} ({elapsed}s)")
         

@@ -18,6 +18,8 @@ import time
 import sys
 import os
 import datetime
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'scripts'))
+from bridge_auth import bridge_headers  # noqa: E402
 
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
@@ -71,10 +73,10 @@ def run_whatsapp_resilience_tests():
     # Test 1: Arabic offline reply
     print("\n[TEST 1] Arabic message → offline fallback...")
     try:
-        resp = requests.post(WHATSAPP_SIMULATE_URL, json={
+        resp = requests.post(WHATSAPP_SIMULATE_URL, headers=bridge_headers(), json={
             "customer_message": "ما هي منح رواد مصر الرقمية؟",
             "full_name": "أحمد",
-            "phone_number": "+201000000010"
+            "phone_number": "+200000000010"
         }, timeout=65)
         body = resp.json()
         reply = body.get("reply", "")
@@ -113,10 +115,10 @@ def run_whatsapp_resilience_tests():
     # Test 2: English offline reply
     print("[TEST 2] English message → offline fallback...")
     try:
-        resp = requests.post(WHATSAPP_SIMULATE_URL, json={
+        resp = requests.post(WHATSAPP_SIMULATE_URL, headers=bridge_headers(), json={
             "customer_message": "What is the Digital Egypt Pioneers Initiative?",
             "full_name": "Ahmed",
-            "phone_number": "+201000000011"
+            "phone_number": "+200000000011"
         }, timeout=65)
         body = resp.json()
         reply = body.get("reply", "")
@@ -160,7 +162,7 @@ def run_whatsapp_resilience_tests():
     # Test 4: Cache invalidation
     print("[TEST 4] Cache invalidation...")
     try:
-        resp = requests.post("http://localhost:8080/cache/invalidate", timeout=5)
+        resp = requests.post("http://localhost:8080/cache/invalidate", headers=bridge_headers(), timeout=5)
         inv = resp.json()
         test4 = {"test": "cache_invalidation", "status": "PASS" if inv.get("success") else "FAIL", "data": inv}
         print(f"   {'✅' if inv.get('success') else '❌'} New version: {inv.get('new_version')}")

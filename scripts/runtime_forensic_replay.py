@@ -1,4 +1,5 @@
 """Synthetic webchat replay; never sends messages through the WhatsApp channel."""
+from bridge_auth import bridge_headers
 import json
 import time
 import argparse
@@ -36,7 +37,7 @@ def run_case(case):
         }
     started = time.monotonic()
     try:
-        response = requests.post(URL, json=payload, timeout=120)
+        response = requests.post(URL, json=payload, headers=bridge_headers(), timeout=120)
         elapsed_ms = round((time.monotonic() - started) * 1000)
         try:
             body = response.json()

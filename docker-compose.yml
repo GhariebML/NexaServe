@@ -17,6 +17,7 @@ services:
       - ./data/postgres:/var/lib/postgresql/data
       - ./infra/postgres/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh:ro
       - ./infra/postgres/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+      - ./deployment/migrations:/docker-entrypoint-initdb.d/migrations:ro
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     healthcheck:
@@ -126,7 +127,9 @@ services:
        PORT: 8080
        AUTH_DIR: /app/data/auth
        N8N_WEBHOOK_URL: http://cs-n8n:5678/webhook/customer-service
-       WHATSAPP_LIFECYCLE_API: http://dashboard:8090/api/dashboard/internal/whatsapp
+       # Opt-in: set to http://dashboard:8090/api/dashboard/internal/whatsapp once the
+       # n8n conversation logger stops double-storing lifecycle-persisted turns.
+       WHATSAPP_LIFECYCLE_API: ${WHATSAPP_LIFECYCLE_API:-}
        WHATSAPP_INGEST_TOKEN: ${WHATSAPP_INGEST_TOKEN:?set WHATSAPP_INGEST_TOKEN}
        OLLAMA_URL: http://ollama:11434/api/generate
     volumes:

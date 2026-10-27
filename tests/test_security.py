@@ -28,6 +28,7 @@ if hasattr(sys.stderr, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'scripts'))
+from bridge_auth import bridge_headers  # noqa: E402
 
 try:
     import requests
@@ -171,7 +172,7 @@ def send_query(query, timeout=60):
     }
     start = time.time()
     try:
-        resp = requests.post(WEBHOOK_URL, json=payload, timeout=timeout)
+        resp = requests.post(WEBHOOK_URL, json=payload, headers=bridge_headers(), timeout=timeout)
         elapsed = int((time.time() - start) * 1000)
         try:
             body = resp.json()

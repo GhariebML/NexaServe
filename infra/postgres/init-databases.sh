@@ -50,4 +50,17 @@ if [ -f "/docker-entrypoint-initdb.d/schema.sql" ]; then
     psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$CS_DB_NAME" -f /docker-entrypoint-initdb.d/schema.sql
 fi
 
+# Apply numbered additive migrations (the entrypoint does not run files in subdirectories itself)
+if [ -d "/docker-entrypoint-initdb.d/migrations" ]; then
+    for migration in /docker-entrypoint-initdb.d/migrations/[0-9]*.sql; do
+        case "$migration" in *.rollback.sql) continue ;; esac
+        echo "=== Applying migration $(basename "$migration") on $CS_DB_NAME ==="
+        psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$CS_DB_NAME" -f "$migration"
+    done
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$CS_DB_NAME" <<-EOSQL
+        GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO $CS_DB_USER;
+        GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO $CS_DB_USER;
+EOSQL
+fi
+
 echo "=== Application Databases, Dedicated Roles, and Schema Initialized Successfully ==="

@@ -15,14 +15,22 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "agent-manage",
-        "responseMode": "responseNode"
+        "responseMode": "responseNode",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CS_WA_BRIDGE_CRED_01",
+          "name": "NexaServe Service Token"
+        }
       }
     },
     {
-      "id": "n2",
+      "id": "node-agent-route",
       "name": "Route Action",
       "type": "n8n-nodes-base.switch",
-      "typeVersion": 2,
+      "typeVersion": 3.2,
       "position": [
         340,
         300
@@ -33,132 +41,220 @@
             {
               "conditions": {
                 "options": {
-                  "caseSensitive": false
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
                 },
                 "conditions": [
                   {
-                    "leftValue": "={{ $json.body?.action }}",
-                    "rightValue": "register"
+                    "leftValue": "={{ String($json.body?.action || '').trim().toLowerCase() }}",
+                    "rightValue": "register",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
                   }
-                ]
-              }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "register"
             },
             {
               "conditions": {
                 "options": {
-                  "caseSensitive": false
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
                 },
                 "conditions": [
                   {
-                    "leftValue": "={{ $json.body?.action }}",
-                    "rightValue": "status"
+                    "leftValue": "={{ String($json.body?.action || '').trim().toLowerCase() }}",
+                    "rightValue": "status",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
                   }
-                ]
-              }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "status"
             },
             {
               "conditions": {
                 "options": {
-                  "caseSensitive": false
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
                 },
                 "conditions": [
                   {
-                    "leftValue": "={{ $json.body?.action }}",
-                    "rightValue": "assign"
+                    "leftValue": "={{ String($json.body?.action || '').trim().toLowerCase() }}",
+                    "rightValue": "assign",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
                   }
-                ]
-              }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "assign"
             },
             {
               "conditions": {
                 "options": {
-                  "caseSensitive": false
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
                 },
                 "conditions": [
                   {
-                    "leftValue": "={{ $json.body?.action }}",
-                    "rightValue": "performance"
+                    "leftValue": "={{ String($json.body?.action || '').trim().toLowerCase() }}",
+                    "rightValue": "performance",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
                   }
-                ]
-              }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "performance"
             }
-          ],
-          "fallbackOutput": 4
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "unsupported"
         }
       }
     },
     {
-      "id": "n3a",
+      "id": "node-agent-register",
       "name": "AGENT - Register",
       "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2,
+      "typeVersion": 2.5,
       "position": [
         580,
-        50
+        0
       ],
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
+        }
+      },
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO agents (name, email, role, team) VALUES ('{{ $json.body?.name }}', '{{ $json.body?.email }}', '{{ $json.body?.role || \"tier1\" }}', 'DEPI Support') RETURNING *;",
-        "credentials": {
-          "postgres": {
-            "id": "CS_PG_CRED_01",
-            "name": "CustomerService Postgres"
-          }
+        "query": "WITH ins AS (INSERT INTO agents (name, email, role, team) SELECT $1::text, NULLIF($2::text, ''), COALESCE(NULLIF($3::text, ''), 'tier1'), 'DEPI Support' WHERE length(trim($1::text)) > 0 ON CONFLICT (email) DO NOTHING RETURNING id, name, email, role, team, status) SELECT 'created' AS result, ins.* FROM ins UNION ALL SELECT 'rejected', NULL::uuid, NULL, NULL, NULL, NULL, NULL WHERE NOT EXISTS (SELECT 1 FROM ins);",
+        "options": {
+          "queryReplacement": "={{ [String($json.body?.name || '').trim(), String($json.body?.email || '').trim().toLowerCase(), String($json.body?.role || '').trim()] }}"
         }
       }
     },
     {
-      "id": "n3b",
+      "id": "node-agent-status",
       "name": "AGENT - Update Status",
       "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2,
+      "typeVersion": 2.5,
       "position": [
         580,
-        200
+        150
       ],
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
+        }
+      },
       "parameters": {
         "operation": "executeQuery",
-        "query": "UPDATE agents SET status = '{{ $json.body?.status }}', updated_at = NOW() WHERE email = '{{ $json.body?.email }}';",
-        "credentials": {
-          "postgres": {
-            "id": "CS_PG_CRED_01",
-            "name": "CustomerService Postgres"
-          }
+        "query": "WITH upd AS (UPDATE agents SET status = CASE WHEN $1::text IN ('available', 'busy', 'away', 'offline') THEN $1::text ELSE status END, updated_at = NOW() WHERE email = $2::text AND $1::text IN ('available', 'busy', 'away', 'offline') RETURNING id, name, email, status) SELECT 'updated' AS result, upd.* FROM upd UNION ALL SELECT 'rejected', NULL::uuid, NULL, NULL, NULL WHERE NOT EXISTS (SELECT 1 FROM upd);",
+        "options": {
+          "queryReplacement": "={{ [String($json.body?.status || '').trim().toLowerCase(), String($json.body?.email || '').trim().toLowerCase()] }}"
         }
       }
     },
     {
-      "id": "n3c",
+      "id": "node-agent-available",
       "name": "AGENT - Get Available",
       "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2,
+      "typeVersion": 2.5,
       "position": [
         580,
-        350
+        300
       ],
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
+        }
+      },
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT * FROM agents WHERE status = 'available' ORDER BY RANDOM() LIMIT 1;",
-        "credentials": {
-          "postgres": {
-            "id": "CS_PG_CRED_01",
-            "name": "CustomerService Postgres"
-          }
-        }
-      }
+        "query": "SELECT id, name, email, role, team, status FROM agents WHERE status = 'available' ORDER BY random() LIMIT 1;",
+        "options": {}
+      },
+      "alwaysOutputData": true
     },
     {
-      "id": "n4",
+      "id": "node-agent-performance",
+      "name": "AGENT - Performance",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        580,
+        450
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
+        }
+      },
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT a.id, a.name, a.email, count(p.id) AS events, round(avg(p.response_time_ms)) AS avg_response_ms, max(p.created_at) AS last_event_at FROM agents a LEFT JOIN agent_performance p ON p.agent_id = a.id GROUP BY a.id, a.name, a.email ORDER BY events DESC;",
+        "options": {}
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "node-agent-respond",
       "name": "Respond Agent",
       "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 2,
+      "typeVersion": 1.1,
       "position": [
-        820,
+        840,
         300
       ],
       "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "node-agent-unsupported",
+      "name": "Respond Unsupported Action",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        580,
+        600
+      ],
+      "parameters": {
         "respondWith": "json",
-        "responseBody": "={ $json }"
+        "responseBody": "={{ { \"error\": \"unsupported_action\", \"action\": $json.body?.action ?? null } }}",
+        "options": {
+          "responseCode": 400
+        }
       }
     }
   ],
@@ -199,7 +295,14 @@
         ],
         [
           {
-            "node": "Respond Agent",
+            "node": "AGENT - Performance",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Unsupported Action",
             "type": "main",
             "index": 0
           }
@@ -229,6 +332,17 @@
       ]
     },
     "AGENT - Get Available": {
+      "main": [
+        [
+          {
+            "node": "Respond Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AGENT - Performance": {
       "main": [
         [
           {

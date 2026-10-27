@@ -5,19 +5,19 @@
   "nodes": [
     {
       "id": "n1",
-      "name": "Cron Trigger",
-      "type": "n8n-nodes-base.cronTrigger",
-      "typeVersion": 2,
+      "name": "Every 15 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
       "position": [
         100,
         300
       ],
       "parameters": {
-        "triggerTimes": {
-          "item": [
+        "rule": {
+          "interval": [
             {
-              "mode": "everyXMinutes",
-              "minutes": 15
+              "field": "minutes",
+              "minutesInterval": 15
             }
           ]
         }
@@ -27,19 +27,20 @@
       "id": "n2",
       "name": "Load Rules",
       "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2,
+      "typeVersion": 2.5,
       "position": [
         340,
         300
       ],
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT * FROM automation_rules WHERE is_active = TRUE;",
-        "credentials": {
-          "postgres": {
-            "id": "CS_PG_CRED_01",
-            "name": "CustomerService Postgres"
-          }
+        "options": {},
+        "query": "SELECT id, name, action_type, action_config, trigger_condition FROM automation_rules WHERE is_active = TRUE ORDER BY id;"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
         }
       }
     },
@@ -68,24 +69,10 @@
       "parameters": {
         "jsCode": "return $input.all().map(n => ({ json: { ...n.json, action_executed: n.json.action_type || \"none\" } }));"
       }
-    },
-    {
-      "id": "n5",
-      "name": "Respond",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 2,
-      "position": [
-        1060,
-        300
-      ],
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={ $json }"
-      }
     }
   ],
   "connections": {
-    "Cron Trigger": {
+    "Every 15 Minutes": {
       "main": [
         [
           {
@@ -112,17 +99,6 @@
         [
           {
             "node": "Execute Actions",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Execute Actions": {
-      "main": [
-        [
-          {
-            "node": "Respond",
             "type": "main",
             "index": 0
           }

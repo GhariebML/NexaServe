@@ -9,6 +9,8 @@ import json
 import sys
 import time
 
+from bridge_auth import bridge_headers
+
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 if hasattr(sys.stderr, 'reconfigure'):
@@ -46,7 +48,7 @@ def test_bridge_direct_simulation(customer_phone, customer_name, message_text):
         req = urllib.request.Request(
             BRIDGE_SIMULATE_URL,
             data=data,
-            headers={"Content-Type": "application/json", "Accept": "application/json"},
+            headers=bridge_headers({"Content-Type": "application/json", "Accept": "application/json"}),
             method="POST"
         )
         t0 = time.time()

@@ -1,6 +1,8 @@
 # MCIT Enterprise Customer Service - Interactive Terminal Client
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $Host.UI.RawUI.WindowTitle = "MCIT AI Customer Service Client"
+. "$PSScriptRoot\BridgeAuth.ps1"
+$ServiceHeaders = Get-NexaServeServiceHeaders
 
 Write-Host "================================================================" -ForegroundColor Cyan
 Write-Host "  MCIT Enterprise AI Customer Service - Local Interactive CLI" -ForegroundColor Green
@@ -31,7 +33,7 @@ while ($true) {
 
     try {
         $bytes = [System.Text.Encoding]::UTF8.GetBytes($payload)
-        $resp = Invoke-RestMethod -Uri "http://localhost:5678/webhook/customer-service" -Method Post -ContentType "application/json; charset=utf-8" -Body $bytes
+        $resp = Invoke-RestMethod -Headers $ServiceHeaders -Uri "http://localhost:5678/webhook/customer-service" -Method Post -ContentType "application/json; charset=utf-8" -Body $bytes
         $sw.Stop()
 
         Write-Host "`n------------------------ Response ------------------------" -ForegroundColor Cyan

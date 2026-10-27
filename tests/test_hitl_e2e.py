@@ -35,6 +35,7 @@ except ImportError:
     sys.exit(1)
 
 from db_config import get_db_connection
+from bridge_auth import bridge_headers  # noqa: E402
 
 WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL", "http://localhost:5678/webhook/customer-service")
 
@@ -50,7 +51,7 @@ def send_escalation_query(query, phone="+201000000003", name="HITL Test User"):
     }
     start = time.time()
     try:
-        resp = requests.post(WEBHOOK_URL, json=payload, timeout=60)
+        resp = requests.post(WEBHOOK_URL, json=payload, headers=bridge_headers(), timeout=60)
         elapsed = int((time.time() - start) * 1000)
         try:
             body = resp.json()
