@@ -76,7 +76,7 @@ def run_whatsapp_resilience_tests():
         resp = requests.post(WHATSAPP_SIMULATE_URL, headers=bridge_headers(), json={
             "customer_message": "ما هي منح رواد مصر الرقمية؟",
             "full_name": "أحمد",
-            "phone_number": "+201000000010"
+            "phone_number": "+200000000010"
         }, timeout=65)
         body = resp.json()
         reply = body.get("reply", "")
@@ -118,7 +118,7 @@ def run_whatsapp_resilience_tests():
         resp = requests.post(WHATSAPP_SIMULATE_URL, headers=bridge_headers(), json={
             "customer_message": "What is the Digital Egypt Pioneers Initiative?",
             "full_name": "Ahmed",
-            "phone_number": "+201000000011"
+            "phone_number": "+200000000011"
         }, timeout=65)
         body = resp.json()
         reply = body.get("reply", "")

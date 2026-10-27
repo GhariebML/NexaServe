@@ -60,6 +60,31 @@ Still open from Phase 1:
 - **n8n webhooks are unauthenticated** (`customer-service`, `agent-response`, `agent-manage`, `kb-admin`, `csat-submit`, `analytics-report`). They bind to 127.0.0.1, but anything on the Docker network or host can message customers via `agent-response`. Add header auth (n8n credential) and send it from the dashboard and bridge.
 - Tokens still live in `localStorage`; moving to an HttpOnly cookie needs CSRF protection and is worth doing with the router split in Phase 4.
 
+### Phase 1 completion — 2026-10-27
+
+Live and verified:
+- **Single database.** n8n had been writing operational data to `customerservice` while the dashboard
+  and knowledge base used `nexaserve_final`. Post-split rows were merged (`scripts/db_merge_customerservice.py`,
+  idempotent; CSV backups in `backups/db_merge_20261026_235804/`) and every NexaServe workflow now uses
+  `CS_PG_FINAL_01`. `customerservice` is no longer written to; keep it read-only until you drop it.
+- **No stray WhatsApp sends.** 06 dispatches only explicit agent replies (04D), never to a placeholder number.
+- **Agent replies** reach the real ticket (04D lookup bug fixed) and are delivered over WhatsApp for WhatsApp tickets.
+- **Escalation tickets** attach to the real customer/conversation (04C).
+- **Webhook auth** (`X-NexaServe-Webhook-Token`) on customer-service, agent-response, csat-submit,
+  analytics-report and customer-service-candidate. Wrong/missing token → 403.
+- **Lifecycle tracking enabled** (`WHATSAPP_LIFECYCLE_API` in `.env`): one row per message, bot replies
+  claimed rather than duplicated, delivery receipts recorded (replay test 7/7).
+
+Still open:
+- `agent-manage` (10) and `kb-admin` (11) webhooks are **unauthenticated**: n8n refuses to publish them
+  because their Postgres nodes have no credential (it was stored under `parameters`). Fixed in the repo;
+  pushing the repo versions fixes both. Same credential bug in 09.
+- 123 tickets / 1,190 messages remain on placeholder customer `a0000000-…-0001` (historical; new ones are correct).
+- n8n API returns 404 for `iCaqLqFkUvx3L2SR`, `eLlfjgNzIdgszmA7`, `jyb6y54uLD3ZoNHF`; delete/archive them in the UI.
+  `4FyNJ9LFrf1o2Lh4` is an active duplicate of 07 that cannot register its path; deactivate it.
+- C: drive is 99% full (3.8 GB free) — the likely cause of the Docker Desktop hang. Docker was recovered by moving
+  stale socket folders aside (`%LOCALAPPDATA%\Docker\run.broken-*`, `docker-secrets-engine.broken-*`).
+
 ## Phase 2 — Reliability & correctness (P2)
 
 | # | Issue | Location | Fix |
