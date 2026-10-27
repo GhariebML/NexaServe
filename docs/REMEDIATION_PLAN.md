@@ -79,12 +79,10 @@ Live and verified:
   All 7 live webhooks now require the service token.
 
 Still open:
-- **10/11 never route a request.** Their "Route Action" switch rules lack an operator (pre-2.x format), so no
-  branch matches and nothing responds. 11 is also miswired (`update` → search query, `search` → no query).
-  Both build SQL by string interpolation from the request body; fix with parameterised queries when repairing.
-- **09 Automation Rules never runs**: its `cronTrigger` node type no longer exists in n8n 2.x, so it cannot be
-  published (0 executions ever). Converting it to `scheduleTrigger` would start it every 15 minutes; its final
-  `respondToWebhook` node must be removed first or every run errors.
+- ~~10/11 never route a request; 09 never runs~~ — repaired and live (commit `cb744f5`): switch operators,
+  11 wiring (`update` → 501, edits go through content approval), parameterised SQL, explicit write results,
+  KB drafts created inactive; 09 on `scheduleTrigger`. Note: 09 now runs every 15 minutes; with no active
+  rows in `automation_rules` it does nothing.
 - 123 tickets / 1,190 messages remain on placeholder customer `a0000000-…-0001` (historical; new ones are correct).
 - n8n API returns 404 for `iCaqLqFkUvx3L2SR`, `eLlfjgNzIdgszmA7`, `jyb6y54uLD3ZoNHF`; delete/archive them in the UI.
   `4FyNJ9LFrf1o2Lh4` is an active duplicate of 07 that cannot register its path; deactivate it.
