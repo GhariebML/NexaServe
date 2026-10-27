@@ -84,7 +84,7 @@ function replyBilingual(ar, en, lang) {
 }
 
 const JID_CACHE_FILE = path.join(AUTH_DIR, 'jid_cache.json');
-let jidMap = { "127182672252935": "127182672252935@lid" };
+let jidMap = {};
 try {
   if (fs.existsSync(JID_CACHE_FILE)) {
     jidMap = { ...jidMap, ...JSON.parse(fs.readFileSync(JID_CACHE_FILE, 'utf8')) };

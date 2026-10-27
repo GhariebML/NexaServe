@@ -44,7 +44,7 @@ All six items above are fixed and deployed to the local stack (backup: `backups/
 | 1.4 | n8n API key is sent to webhook endpoints (`X-N8N-API-KEY` on every webhook POST), where it ends up in n8n execution data. | `routes.py:_n8n_webhook_post` | Drop the header from webhook calls; use a dedicated webhook header-auth credential if auth is needed. |
 | 1.5 | Unescaped `err.message` in `innerHTML` (≈12 places) — server `detail` strings can carry user input → DOM XSS in the admin console. | `dashboard/frontend/app.js` 611, 656, 707, 864, 920, 956, 992, 1017, 1175, 1290, 1439 | Wrap with existing `escapeHtml()`, or use `textContent`. |
 | 1.6 | `node_modules` for the WhatsApp bridge is committed (2,892 files). | `infra/whatsapp/node_modules` | `git rm -r --cached`, add to `.gitignore`; build installs from `package-lock.json` with `npm ci`. |
-| 1.7 | Hardcoded LID mapping in source (`jidMap = { "127182672252935": … }`) and Saudi default phone `+966500000000` in `/simulate`. | `server.js:167, 740` | Remove; load only from `jid_cache.json`; require phone in simulate or use an obviously synthetic test number. |
+| 1.7 | Hardcoded LID mapping in source (a real customer's WhatsApp id in `jidMap`) and Saudi default phone `+966500000000` in `/simulate`. | `server.js:167, 740` | Remove; load only from `jid_cache.json`; require phone in simulate or use an obviously synthetic test number. |
 
 ### Phase 1 status — branch `fix/p1-security` (2026-10-26)
 
