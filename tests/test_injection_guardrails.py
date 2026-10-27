@@ -65,7 +65,7 @@ def test_knowledge_base_detector_blocks_retrieval_for_injection(message):
     code = _node_code("04B_knowledge_base_faq.json", "Program Detector & Query Normalizer")
     out = _run(code, {"customer_message": message})
     assert out["prompt_injection_detected"] is True
-    assert out["is_out_of_scope"] is True and out["program_filter"] == "FALSE"
+    assert out["is_out_of_scope"] is True and out["retrieval_mode"] == "NONE"
 
 
 def _validate(answer, locale="en"):

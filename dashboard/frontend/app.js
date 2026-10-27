@@ -942,16 +942,22 @@ async function loadTickets() {
             </a>
           </td>
           <td>
-            <div style="font-weight:600;">${escapeHtml(t.customer_name || 'Unknown')}</div>
-            <div style="font-size:0.75rem; color:var(--text-muted);">${escapeHtml(truncatedTitle)}</div>
+            <div style="font-weight:600;">${escapeHtml(truncatedTitle)}</div>
+            ${t.reason && t.reason !== displayTitle ? `<div style="font-size:0.75rem; color:var(--text-muted);">${escapeHtml(t.reason.length > 60 ? t.reason.substring(0, 57) + '...' : t.reason)}</div>` : ''}
           </td>
-          <td><span class="badge ${t.program === 'DEPI' ? 'badge-depi' : 'badge-digilians'}">${escapeHtml(t.program || 'DEPI')}</span></td>
+          <td>
+            <div style="font-weight:600;">${escapeHtml(t.customer_name || 'Unknown')}</div>
+            <span class="badge ${t.program === 'DEPI' ? 'badge-depi' : 'badge-digilians'}">${escapeHtml(t.program || 'DEPI')}</span>
+          </td>
           <td><span class="badge badge-normal">${escapeHtml(t.source_channel || t.channel || 'whatsapp')}</span></td>
+          <td>${escapeHtml(STATE.currentLang === 'ar' ? (t.category_name_ar || t.category_name || '') : (t.category_name || ''))}</td>
           <td><span class="badge badge-${escapeHtml(t.priority)}">${escapeHtml(t.priority)}</span></td>
           <td><span class="badge badge-${escapeHtml(t.status)}">${escapeHtml(t.status)}</span></td>
           <td>${escapeHtml(t.assigned_agent || 'Unassigned')}</td>
-          <td>${t.sla_deadline ? new Date(t.sla_deadline).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) : 'None'}</td>
-          <td><span class="badge ${slaClass}">${escapeHtml(t.sla_status || 'ON_TRACK')}</span></td>
+          <td>
+            <span class="badge ${slaClass}">${escapeHtml(t.sla_status || 'ON_TRACK')}</span>
+            <div style="font-size:0.7rem; color:var(--text-muted);">${t.sla_deadline ? new Date(t.sla_deadline).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) : ''}</div>
+          </td>
           <td>${t.created_at ? new Date(t.created_at).toLocaleDateString() : 'N/A'}</td>
           <td>
             <div style="display:flex; gap:6px;">

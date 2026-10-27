@@ -965,10 +965,6 @@ async def get_tickets(
     where_clauses = ["1=1"]
     params: List[Any] = []
 
-    if status and status.lower() != "all":
-        where_clauses.append("t.status = %s")
-        params.append(status.lower())
-
     if priority and priority.lower() != "all":
         where_clauses.append("t.priority = %s")
         params.append(priority.lower())
@@ -995,10 +991,26 @@ async def get_tickets(
     elif sla_breached is False:
         where_clauses.append("(t.status != 'open' OR t.sla_due_at >= NOW())")
 
+    # KPI cards summarise every status for the other active filters.
+    metrics_row = query_one(f"""
+        SELECT COUNT(*) AS total,
+               COUNT(*) FILTER (WHERE t.status = 'open') AS open,
+               COUNT(*) FILTER (WHERE t.status IN ('in_progress', 'assigned')) AS pending,
+               COUNT(*) FILTER (WHERE t.status = 'open' AND t.sla_due_at < NOW()) AS breached,
+               COUNT(*) FILTER (WHERE t.status IN ('resolved', 'closed')) AS resolved
+        FROM tickets t
+        JOIN customers c ON t.customer_id = c.id
+        WHERE {" AND ".join(where_clauses)}
+    """, tuple(params)) or {}
+
+    if status and status.lower() != "all":
+        where_clauses.append("t.status = %s")
+        params.append(status.lower())
+
     where_sql = " AND ".join(where_clauses)
 
     total_row = query_one(f"""
-        SELECT COUNT(*) as count 
+        SELECT COUNT(*) as count
         FROM tickets t
         JOIN customers c ON t.customer_id = c.id
         WHERE {where_sql}
@@ -1076,6 +1088,7 @@ async def get_tickets(
             "updated_at": r["updated_at"].isoformat() if r["updated_at"] else None,
             "closed_at": r["closed_at"].isoformat() if r["closed_at"] else None
         } for r in rows],
+        "metrics": {key: int(metrics_row.get(key) or 0) for key in ("total", "open", "pending", "breached", "resolved")},
         "total": total_count,
         "page": page,
         "limit": limit,
