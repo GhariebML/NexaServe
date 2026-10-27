@@ -16,7 +16,8 @@
         "httpMethod": "POST",
         "path": "kb-admin",
         "responseMode": "responseNode",
-        "authentication": "headerAuth"
+        "authentication": "headerAuth",
+        "options": {}
       },
       "credentials": {
         "httpHeaderAuth": {
@@ -26,10 +27,10 @@
       }
     },
     {
-      "id": "n2",
+      "id": "node-kb-route",
       "name": "Route Action",
       "type": "n8n-nodes-base.switch",
-      "typeVersion": 2,
+      "typeVersion": 3.2,
       "position": [
         340,
         300
@@ -40,99 +41,172 @@
             {
               "conditions": {
                 "options": {
-                  "caseSensitive": false
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
                 },
                 "conditions": [
                   {
-                    "leftValue": "={{ $json.body?.action }}",
-                    "rightValue": "create"
+                    "leftValue": "={{ String($json.body?.action || '').trim().toLowerCase() }}",
+                    "rightValue": "create",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
                   }
-                ]
-              }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "create"
             },
             {
               "conditions": {
                 "options": {
-                  "caseSensitive": false
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
                 },
                 "conditions": [
                   {
-                    "leftValue": "={{ $json.body?.action }}",
-                    "rightValue": "update"
+                    "leftValue": "={{ String($json.body?.action || '').trim().toLowerCase() }}",
+                    "rightValue": "update",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
                   }
-                ]
-              }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "update"
             },
             {
               "conditions": {
                 "options": {
-                  "caseSensitive": false
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
                 },
                 "conditions": [
                   {
-                    "leftValue": "={{ $json.body?.action }}",
-                    "rightValue": "search"
+                    "leftValue": "={{ String($json.body?.action || '').trim().toLowerCase() }}",
+                    "rightValue": "search",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
                   }
-                ]
-              }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "search"
             }
-          ],
-          "fallbackOutput": 3
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "unsupported"
         }
       }
     },
     {
-      "id": "n3a",
+      "id": "node-kb-create",
       "name": "KB - Create",
       "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2,
+      "typeVersion": 2.5,
       "position": [
         580,
         100
       ],
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "INSERT INTO knowledge_base (category, question, answer, keywords, question_ar, answer_ar, keywords_ar, is_active) VALUES ('{{ $json.body?.category || \"general\" }}', '{{ ($json.body?.question || '').replace(/'/g, \"''\") }}', '{{ ($json.body?.answer || '').replace(/'/g, \"''\") }}', ARRAY['general'], '{{ ($json.body?.question_ar || '').replace(/'/g, \"''\") }}', '{{ ($json.body?.answer_ar || '').replace(/'/g, \"''\") }}', ARRAY['general'], TRUE) RETURNING *;"
-      },
       "credentials": {
         "postgres": {
           "id": "CS_PG_FINAL_01",
           "name": "CustomerService Postgres Final"
         }
+      },
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH ins AS (INSERT INTO knowledge_base (category, question, answer, question_ar, answer_ar, keywords, keywords_ar, program, retrieval_scope, source_attribution, is_active) SELECT COALESCE(NULLIF($1::text, ''), 'general'), $2::text, $3::text, NULLIF($4::text, ''), NULLIF($5::text, ''), '{}'::text[], '{}'::text[], CASE WHEN $6::text IN ('DEPI', 'DEBI', 'DIGILIANS', 'COMMON') THEN $6::text ELSE 'DEPI' END, NULL, 'kb-admin webhook (pending review)', FALSE WHERE length(trim($2::text)) > 0 AND length(trim($3::text)) > 0 RETURNING id, category, program, question, is_active) SELECT 'created' AS result, ins.* FROM ins UNION ALL SELECT 'rejected', NULL::int, NULL, NULL, NULL, NULL WHERE NOT EXISTS (SELECT 1 FROM ins);",
+        "options": {
+          "queryReplacement": "={{ [String($json.body?.category || '').trim(), String($json.body?.question || ''), String($json.body?.answer || ''), String($json.body?.question_ar || ''), String($json.body?.answer_ar || ''), String($json.body?.program || 'DEPI').trim().toUpperCase()] }}"
+        }
       }
     },
     {
-      "id": "n3b",
-      "name": "KB - Search",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2,
+      "id": "node-kb-update-unsupported",
+      "name": "Respond Update Not Supported",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
       "position": [
         580,
-        300
-      ],
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "SELECT * FROM knowledge_base WHERE is_active = TRUE AND (question ILIKE '%{{ $json.body?.query || '' }}%' OR answer ILIKE '%{{ $json.body?.query || '' }}%') LIMIT 20;"
-      },
-      "credentials": {
-        "postgres": {
-          "id": "CS_PG_FINAL_01",
-          "name": "CustomerService Postgres Final"
-        }
-      }
-    },
-    {
-      "id": "n4",
-      "name": "Respond KB",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 2,
-      "position": [
-        820,
-        300
+        250
       ],
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={ $json }"
+        "responseBody": "={{ { \"error\": \"not_supported\", \"detail\": \"Knowledge base edits go through the content approval pipeline.\" } }}",
+        "options": {
+          "responseCode": 501
+        }
+      }
+    },
+    {
+      "id": "node-kb-search",
+      "name": "KB - Search",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        580,
+        400
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "CS_PG_FINAL_01",
+          "name": "CustomerService Postgres Final"
+        }
+      },
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, category, program, retrieval_scope, question, answer, question_ar, answer_ar, is_active FROM knowledge_base WHERE is_active = TRUE AND length($1::text) > 0 AND (question ILIKE '%' || $1::text || '%' OR answer ILIKE '%' || $1::text || '%' OR question_ar ILIKE '%' || $1::text || '%' OR answer_ar ILIKE '%' || $1::text || '%') ORDER BY id LIMIT 20;",
+        "options": {
+          "queryReplacement": "={{ [String($json.body?.query || '').trim().slice(0, 200)] }}"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "node-kb-respond",
+      "name": "Respond KB",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        840,
+        300
+      ],
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "node-kb-unsupported",
+      "name": "Respond Unsupported Action",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        580,
+        600
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"error\": \"unsupported_action\", \"action\": $json.body?.action ?? null } }}",
+        "options": {
+          "responseCode": 400
+        }
       }
     }
   ],
@@ -159,6 +233,13 @@
         ],
         [
           {
+            "node": "Respond Update Not Supported",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
             "node": "KB - Search",
             "type": "main",
             "index": 0
@@ -166,7 +247,7 @@
         ],
         [
           {
-            "node": "Respond KB",
+            "node": "Respond Unsupported Action",
             "type": "main",
             "index": 0
           }
